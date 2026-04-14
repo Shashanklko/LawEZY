@@ -1,0 +1,166 @@
+:root {
+  --heritage-parchment: #fdfaf3;
+  --strategic-gold: #b8995e;
+  --deep-burgundy: #7f1d1d;
+  --text-dark: #1a1a1a;
+  --glass-white: rgba(255, 255, 255, 0.95);
+  --glass-border: rgba(184, 153, 94, 0.2);
+}
+
+.contact-page {
+  padding: 120px 5% 80px;
+  background-color: var(--heritage-parchment);
+  min-height: 100vh;
+  font-family: 'Inter', sans-serif;
+}
+
+.contact-header {
+  text-align: center;
+  max-width: 800px;
+  margin: 0 auto 60px;
+}
+
+.contact-header h1 {
+  font-family: 'Spectral', serif;
+  font-size: 3rem;
+  color: var(--text-dark);
+  margin-bottom: 20px;
+}
+
+.contact-header h1 span {
+  color: var(--strategic-gold);
+}
+
+.contact-grid {
+  display: block;
+  max-width: 650px;
+  margin: 0 auto;
+}
+
+/* CONTACT CARD FOR SEEKERS & PROFESSIONALS */
+.contact-form-card {
+  background: white;
+  padding: 50px;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.05);
+  border: 1px solid var(--glass-border);
+}
+
+.form-group {
+  margin-bottom: 25px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #888;
+  margin-bottom: 10px;
+  letter-spacing: 1px;
+}
+
+.form-group input, .form-group textarea, .form-group select {
+  width: 100%;
+  padding: 15px;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 1rem;
+  transition: all 0.3s;
+}
+
+.form-group input:focus, .form-group textarea:focus {
+  border-color: var(--strategic-gold);
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(184, 153, 94, 0.1);
+}
+
+.btn-contact-submit {
+  width: 100%;
+  padding: 18px;
+  background: var(--deep-burgundy);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 800;
+  font-size: 0.9rem;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.3s;
+  margin-top: 10px;
+}
+
+.btn-contact-submit:hover {
+  background: #6b1717;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(127, 29, 29, 0.2);
+}
+
+/* INFO SECTION */
+.contact-info-section {
+  padding: 20px;
+}
+
+.info-block {
+  margin-bottom: 50px;
+}
+
+.info-block h3 {
+  font-family: 'Spectral', serif;
+  font-size: 1.5rem;
+  color: var(--text-dark);
+  margin-bottom: 20px;
+  border-left: 4px solid var(--strategic-gold);
+  padding-left: 15px;
+}
+
+.info-item {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 25px;
+}
+
+.info-icon {
+  font-size: 1.5rem;
+  color: var(--strategic-gold);
+}
+
+.info-text strong {
+  display: block;
+  font-size: 1.1rem;
+  margin-bottom: 5px;
+}
+
+.info-text p {
+  color: #666;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+/* OFFICE MAPS PLACEHOLDER */
+.offices-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.office-box {
+  padding: 25px;
+  background: white;
+  border: 1px solid #eee;
+  border-radius: 10px;
+}
+
+.office-box h4 {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--deep-burgundy);
+  margin-bottom: 10px;
+}
+
+@media (max-width: 968px) {
+  .contact-grid { grid-template-columns: 1fr; }
+  .contact-form-card { padding: 30px; }
+  .offices-grid { grid-template-columns: 1fr; }
+}

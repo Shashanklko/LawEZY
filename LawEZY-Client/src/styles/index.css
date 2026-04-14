@@ -1,0 +1,160 @@
+:root {
+  /* McKinsey-Grade 'Red Heritage' Palette (No Black/Blue) */
+  --primary-bg: #FFFFFF;
+  --secondary-bg: #FFF8F1;
+  /* Warm Semi-White */
+  --accent-burgundy: #7F1D1D;
+  --accent-red: #EF4444;
+  /* Light Red Action */
+  --accent-gold: #FDE68A;
+  /* Soft Orange/Gold Accent */
+  --text-main: #450A0A;
+  /* Deep Burgundy Black (Authority) */
+  --text-muted: #94A3B8;
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(127, 29, 29, 0.1);
+
+  /* Typography: Elite Institutional Stack */
+  --font-heading: 'Spectral', serif;
+  --font-body: 'Hanken Grotesk', sans-serif;
+  --font-accent: 'Inter', sans-serif;
+
+  /* Spacing & Radii */
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 32px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 24px;
+
+  /* Shadows */
+  --shadow-premium: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: hidden !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+#root {
+  width: 100%;
+  max-width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--primary-bg);
+  color: var(--text-main);
+  line-height: 1.6;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  overflow-x: hidden !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100% !important;
+}
+
+section,
+footer {
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+
+h1,
+h2,
+h3,
+h4,
+.btn-premium,
+.btn-secondary,
+.nav-link,
+.brand-signature {
+  font-family: var(--font-heading);
+  letter-spacing: -0.02em;
+}
+
+h1,
+h2 {
+  font-weight: 700;
+  line-height: 1.05;
+  /* Tighter line height for elite spacing */
+}
+
+h1 {
+  font-size: 3.5rem;
+}
+
+h2 {
+  font-size: 2.8rem;
+}
+
+h3 {
+  font-size: 1.8rem;
+}
+
+.meta-label {
+  font-family: var(--font-body);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-weight: 700;
+  font-size: 0.7rem;
+  /* Slightly smaller badge text */
+  color: var(--accent-burgundy);
+  display: block;
+  margin-bottom: 10px;
+}
+
+/* Glassmorphism Utility */
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-premium);
+}
+
+/* Luxury Gradient Text */
+.accent-text {
+  background: linear-gradient(135deg, var(--accent-burgundy), var(--accent-gold));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Premium Button */
+.btn-premium {
+  padding: 12px 28px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-burgundy);
+  color: var(--text-main);
+  font-weight: 600;
+  border: 1px solid var(--accent-gold);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: var(--font-heading);
+}
+
+.btn-premium:hover {
+  transform: translateY(-2px);
+  background: var(--accent-gold);
+  color: var(--primary-bg);
+  box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+}
+
+.section-container {
+  width: 100%;
+  margin: 0;
+  padding: var(--spacing-lg) var(--spacing-md);
+}

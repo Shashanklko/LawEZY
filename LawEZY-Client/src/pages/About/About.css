@@ -1,0 +1,254 @@
+:root {
+  --heritage-parchment: #fdfaf3;
+  --strategic-gold: #b8995e;
+  --deep-charcoal: #1a1a1a;
+  --institutional-white: #ffffff;
+  --glass-border: rgba(184, 153, 94, 0.2);
+  --body-font: 'Inter', system-ui, -apple-system, sans-serif;
+  --serif-font: 'Spectral', serif;
+}
+
+.about-page {
+  background-color: var(--heritage-parchment);
+  min-height: 100vh;
+  color: var(--deep-charcoal);
+  font-family: var(--body-font);
+}
+
+/* HERO SECTION */
+.about-hero {
+  position: relative;
+  height: 60vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background: url('/legal_heritage_hero_1775675184926.png') center/cover no-repeat;
+  color: white;
+}
+
+.about-hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(180deg, rgba(26,26,26,0.6) 0%, rgba(26,26,26,0.8) 100%);
+  z-index: 1;
+}
+
+.hero-overlay {
+  position: relative;
+  z-index: 2;
+  max-width: 900px;
+  padding: 0 20px;
+}
+
+.about-hero h1 {
+  font-family: var(--serif-font);
+  font-size: 3.5rem;
+  font-weight: 700;
+  letter-spacing: -1px;
+  margin-bottom: 20px;
+}
+
+.about-hero h1 span {
+  color: var(--strategic-gold);
+}
+
+.hero-subtitle {
+  font-size: 1.25rem;
+  font-weight: 400;
+  opacity: 0.9;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+/* DUAL PATHWAYS */
+.about-grid-section {
+  max-width: 1200px;
+  margin: -80px auto 60px;
+  padding: 0 5%;
+  position: relative;
+  z-index: 3;
+}
+
+.dual-pathway-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  background: white;
+  padding: 60px;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.05);
+  border: 1px solid var(--glass-border);
+}
+
+.pathway-card {
+  padding: 40px;
+  border-radius: 12px;
+  transition: all 0.3s;
+}
+
+.pathway-card.seekers {
+  background: var(--heritage-parchment);
+}
+
+.pathway-card.professionals {
+  background: #f8f9fa;
+}
+
+.pathway-card h2 {
+  font-family: var(--serif-font);
+  font-size: 2rem;
+  margin-bottom: 25px;
+  color: var(--deep-charcoal);
+}
+
+.pathway-card p {
+  font-size: 1.05rem;
+  line-height: 1.7;
+  color: #555;
+  margin-bottom: 30px;
+}
+
+.pathway-features {
+  list-style: none;
+  padding: 0;
+}
+
+.pathway-features li {
+  margin-bottom: 12px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--deep-charcoal);
+}
+
+/* MISSION SECTION */
+.mission-horizontal {
+  background: var(--deep-charcoal);
+  color: white;
+  padding: 100px 0;
+  text-align: center;
+}
+
+.mission-wrapper {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.mission-horizontal h2 {
+  font-family: var(--serif-font);
+  font-size: 2.5rem;
+  margin-bottom: 30px;
+  color: var(--strategic-gold);
+}
+
+.mission-horizontal p {
+  font-size: 1.4rem;
+  line-height: 1.6;
+  font-weight: 300;
+  font-style: italic;
+  opacity: 0.9;
+}
+
+/* PILLARS SECTION */
+.pillars-section {
+  padding: 100px 5%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.section-tag {
+  color: var(--strategic-gold);
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  display: block;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.pillars-section h2 {
+  font-family: var(--serif-font);
+  font-size: 2.75rem;
+  text-align: center;
+  margin-bottom: 60px;
+}
+
+.pillars-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 30px;
+}
+
+.pillar-card {
+  padding: 40px;
+  background: white;
+  border: 1px solid #eee;
+  border-radius: 12px;
+  transition: all 0.3s;
+}
+
+.pillar-card:hover {
+  border-color: var(--strategic-gold);
+  transform: translateY(-5px);
+  box-shadow: 0 10px 40px rgba(184,153,94,0.1);
+}
+
+.pillar-icon {
+  font-size: 2.5rem;
+  margin-bottom: 25px;
+  display: block;
+}
+
+.pillar-card h3 {
+  font-family: var(--serif-font);
+  font-size: 1.5rem;
+  margin-bottom: 20px;
+}
+
+.pillar-card p {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: #666;
+}
+
+/* VALUES SECTION */
+.values-banner {
+  padding: 80px 0;
+  border-top: 1px solid #eee;
+}
+
+.values-scroll {
+  display: flex;
+  gap: 100px;
+  justify-content: center;
+  align-items: center;
+}
+
+.value-item {
+  text-align: center;
+}
+
+.value-label {
+  font-family: var(--serif-font);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #333;
+}
+
+@media (max-width: 968px) {
+  .vision-card {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+  .pillars-grid {
+    grid-template-columns: 1fr;
+  }
+}

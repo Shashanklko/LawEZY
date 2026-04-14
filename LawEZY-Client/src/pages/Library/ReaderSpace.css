@@ -1,0 +1,107 @@
+.reader-mode {
+  cursor: default;
+}
+
+.reader-main-title {
+  font-size: 42px;
+  font-weight: 700;
+  margin-bottom: 24px;
+  color: var(--notion-text);
+  line-height: 1.2;
+}
+
+.reader-block-wrapper {
+  margin-bottom: 4px;
+}
+
+.reader-h1 { font-size: 28px; font-weight: 600; margin-top: 24px; margin-bottom: 8px; }
+.reader-h2 { font-size: 22px; font-weight: 600; margin-top: 20px; margin-bottom: 6px; }
+.reader-h3 { font-size: 18px; font-weight: 600; margin-top: 16px; margin-bottom: 4px; }
+
+.reader-text {
+  font-size: 16px;
+  line-height: 1.6;
+  margin: 4px 0;
+  color: var(--notion-text);
+}
+
+.reader-bullet {
+  padding-left: 24px;
+  position: relative;
+  font-size: 16px;
+  line-height: 1.6;
+  margin: 4px 0;
+}
+
+.reader-bullet:before {
+  content: "•";
+  position: absolute;
+  left: 6px;
+  top: 0;
+  font-size: 20px;
+  opacity: 0.5;
+}
+
+.reader-quote {
+  border-left: 3px solid var(--notion-text);
+  padding: 8px 0 8px 20px;
+  font-style: italic;
+  font-size: 18px;
+  opacity: 0.8;
+  margin: 16px 0;
+}
+
+.reader-callout {
+  background: var(--notion-secondary);
+  border: 1px solid var(--notion-border);
+  border-radius: 8px;
+  padding: 20px;
+  display: flex;
+  gap: 16px;
+  font-size: 15px;
+  margin: 20px 0;
+  line-height: 1.5;
+}
+
+.reader-callout:before {
+  content: "💡";
+  font-size: 20px;
+}
+
+.reader-divider {
+  height: 1px;
+  background: var(--notion-border);
+  margin: 24px 0;
+}
+
+.reader-code {
+  background: var(--notion-secondary);
+  border-radius: 8px;
+  padding: 16px;
+  font-size: 14px;
+  font-family: 'SFMono-Regular', Consolas, monospace;
+  overflow-x: auto;
+  margin: 16px 0;
+}
+
+.reader-image img {
+  width: 100%;
+  border-radius: 12px;
+  margin: 20px 0;
+  display: block;
+}
+
+.reader-check-list {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 6px 0;
+}
+
+.reader-mode .notion-table {
+  cursor: default;
+}
+
+.reader-mode .notion-table td {
+  padding: 12px 16px;
+}

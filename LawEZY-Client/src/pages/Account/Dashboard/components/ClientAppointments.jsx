@@ -1,0 +1,178 @@
+import React, { useState, useEffect } from 'react';
+import apiClient from '../../../../services/apiClient';
+import AppointmentCard from './AppointmentCard';
+import ReviewModal from './ReviewModal';
+
+const ClientAppointments = ({ user }) => {
+    const [appointments, setAppointments] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [filter, setFilter] = useState('PROPOSALS');
+    const [showReviewModal, setShowReviewModal] = useState(false);
+    const [selectedAppt, setSelectedAppt] = useState(null);
+
+    useEffect(() => {
+        fetchAppointments();
+    }, []);
+
+    const fetchAppointments = async () => {
+        try {
+            setLoading(true);
+            const res = await apiClient.get('/api/appointments/client');
+            setAppointments(res.header ? res.data.data : res.data);
+        } catch (err) {
+            console.error("Failed to recall client ledger:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleAction = async (appt, action) => {
+        try {
+            if (action === 'accept') {
+                await apiClient.post(`/api/appointments/${appt.id}/accept`);
+                alert("Strategic Schedule Confirmed. Proceeding to finalization.");
+            } else if (action === 'paid') {
+                await apiClient.patch(`/api/appointments/${appt.id}/status?status=PAID`);
+                alert("Institutional payment verified. Access to room granted.");
+            } else if (action === 'revoke') {
+                await apiClient.patch(`/api/appointments/${appt.id}/status?status=CANCELLED`);
+                alert("Strategic Revocation Dispatched: Protocol terminated.");
+            } else if (action === 'review') {
+                setSelectedAppt(appt);
+                setShowReviewModal(true);
+                return; // Modal handles the rest
+            }
+            fetchAppointments();
+        } catch (err) {
+            alert(`Strategic action failed: ${action}`);
+        }
+    };
+
+    const handleNegotiate = async (appt, percent) => {
+        try {
+            const currentPrice = appt.fee;
+            const discount = Math.round(currentPrice * (percent / 100));
+            const newPrice = currentPrice - discount;
+            
+            // Note: -100 to remove platform fee before sending base back
+            await apiClient.post(`/api/appointments/${appt.id}/negotiate?baseFee=${newPrice - 100}`);
+            alert("Counter-proposal dispatched to expert ledger.");
+            fetchAppointments();
+        } catch (err) {
+            alert("Negotiation failed.");
+        }
+    };
+
+    const filtered = appointments.filter(a => {
+        const apptStatus = a.status || a.appointmentStatus || 'PROPOSED';
+        if (filter === 'PROPOSALS') return apptStatus === 'PROPOSED' || apptStatus === 'COUNTERED';
+        if (filter === 'UPCOMING') return ['CONFIRMED', 'ACCEPTED', 'AWAITING_PAYMENT', 'PAID', 'PENDING_REVIEW'].includes(apptStatus);
+        
+        if (filter === 'COMPLETED') {
+            if (apptStatus !== 'COMPLETED') return false;
+            
+            // 90-Day Retention Logic
+            const completionDate = a.updatedAt || a.scheduledAt || new Date();
+            const ageInDays = (new Date() - new Date(completionDate)) / (1000 * 60 * 60 * 24);
+            return ageInDays <= 90;
+        }
+        return true;
+    });
+
+    if (loading) return <div style={{ padding: '40px', textAlign: 'center', opacity: 0.6 }}>Synchronizing Strategic Ledger...</div>;
+
+    return (
+        <div className="appointments-tab-container animate-reveal">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px', gap: '20px', flexWrap: 'wrap' }}>
+                <div className="tab-filters" style={{ display: 'flex', gap: '8px', background: 'rgba(212, 175, 55, 0.05)', padding: '6px', borderRadius: '14px', border: '1px solid rgba(212, 175, 55, 0.1)' }}>
+                    {['PROPOSALS', 'UPCOMING', 'COMPLETED'].map(f => (
+                        <button 
+                            key={f}
+                            className={`filter-pill ${filter === f ? 'active' : ''}`}
+                            onClick={() => setFilter(f)}
+                            style={{
+                                padding: '8px 18px', borderRadius: '10px', border: 'none', fontSize: '0.7rem', fontWeight: 800, cursor: 'pointer',
+                                background: filter === f ? 'var(--midnight-primary)' : 'transparent',
+                                color: filter === f ? 'var(--strategic-gold)' : '#64748b',
+                                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                letterSpacing: '0.5px'
+                            }}
+                        >
+                            {f === 'PROPOSALS' ? 'Strategic Proposals' : f === 'UPCOMING' ? 'Confirmed Sessions' : 'Institutional History'}
+                        </button>
+                    ))}
+                </div>
+
+                {filter === 'COMPLETED' && (
+                    <div style={{ 
+                        fontSize: '0.65rem', 
+                        fontWeight: 800, 
+                        color: 'var(--midnight-primary)', 
+                        background: 'rgba(212, 175, 55, 0.1)',
+                        padding: '10px 18px',
+                        borderRadius: '12px',
+                        border: '1px solid rgba(212, 175, 55, 0.2)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px'
+                    }}>
+                        <span style={{ fontSize: '1.2rem' }}>🏛️</span>
+                        INSTITUTIONAL HISTORY IS RETAINED FOR A MAXIMUM OF 90 DAYS
+                    </div>
+                )}
+
+                <button 
+                    onClick={() => window.location.href='/experts'} 
+                    className="btn-save-profile" 
+                    style={{ 
+                        margin: 0, 
+                        padding: '12px 24px', 
+                        fontSize: '0.8rem', 
+                        minWidth: 'auto', 
+                        background: 'var(--midnight-primary)',
+                        color: 'var(--strategic-gold)',
+                        boxShadow: '0 4px 15px rgba(212, 175, 55, 0.15)',
+                        border: '1px solid var(--strategic-gold)'
+                    }}
+                >
+                    + Book New Appointment
+                </button>
+            </div>
+
+            <div className="appointments-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
+                {filtered.map(appt => (
+                    <AppointmentCard 
+                        key={appt.id} 
+                        appt={appt} 
+                        user={user} 
+                        onAction={(action) => handleAction(appt, action)}
+                        onNegotiate={(percent) => handleNegotiate(appt, percent)}
+                        onReschedule={() => alert("Redirecting to Expert Profile for alternate booking...")}
+                    />
+                ))}
+                {filtered.length === 0 && (
+                    <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '60px', background: 'rgba(0,0,0,0.02)', borderRadius: '20px', border: '1px dashed #ddd' }}>
+                        <div style={{ fontSize: '2rem', marginBottom: '15px' }}>📜</div>
+                        <h4 style={{ margin: 0, fontWeight: 800 }}>No Sessions Recorded</h4>
+                        <p style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '8px' }}>Your institutional engagement trail is currently empty. Start by finding a professional.</p>
+                        <button onClick={() => window.location.href='/experts'} className="btn-save-profile" style={{ marginTop: '20px', padding: '10px 20px', fontSize: '0.75rem', minWidth: 'auto' }}>Browse Experts</button>
+                    </div>
+                )}
+            </div>
+
+            {showReviewModal && selectedAppt && (
+                <ReviewModal 
+                    appointment={selectedAppt}
+                    onClose={() => setShowReviewModal(false)}
+                    onSuccess={() => {
+                        setShowReviewModal(false);
+                        fetchAppointments();
+                        alert("Institutional Review Submitted. Strategic Mission COMPLETED.");
+                    }}
+                />
+            )}
+        </div>
+    );
+};
+
+export default ClientAppointments;

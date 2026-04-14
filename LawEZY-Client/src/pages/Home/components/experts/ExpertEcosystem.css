@@ -1,0 +1,202 @@
+.expert-dual-pillars {
+  display: flex;
+  height: 100vh;
+  width: 100%;
+  position: relative;
+  background-color: #111827;
+  overflow: hidden;
+  scroll-snap-align: start;
+}
+
+/* INDIVIDUAL PILLARS */
+.pillar {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  transition: flex 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  border-right: 1px solid rgba(255, 255, 255, 0.05); /* Extra subtle divider */
+}
+
+.pillar:last-child {
+  border-right: none;
+}
+
+.pillar:hover {
+  flex: 1.15;
+}
+
+/* BACKGROUND LAYERS */
+.pillar-bg-layer {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  transform: scale(1.05);
+  transition: transform 12s linear, filter 0.8s ease;
+  z-index: 1;
+}
+
+.pillar:hover .pillar-bg-layer {
+  transform: scale(1);
+}
+
+.pillar-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(0,0,0,0.1) 0%, /* Lighter overlay for better visibility */
+    rgba(0,0,0,0.6) 100%
+  );
+  z-index: 2;
+}
+
+/* EDITORIAL CONTENT BOXES - ALWAYS VISIBLE */
+.pillar-content-box {
+  position: absolute;
+  bottom: 8%;
+  left: 6%;
+  right: 6%;
+  background: white;
+  padding: 30px 35px; /* Reduced from 40px/45px */
+  max-width: 380px; /* Reduced from 440px */
+  width: auto;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.2);
+  z-index: 10;
+  border-radius: 0;
+  transform: translateY(0);
+  opacity: 1; /* Always visible */
+  transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pillar:hover .pillar-content-box {
+  transform: translateY(-10px);
+  box-shadow: 0 45px 90px rgba(0, 0, 0, 0.3);
+}
+
+.pillar-index {
+  font-family: var(--font-heading);
+  font-size: 2.2rem; /* Reduced from 3rem */
+  font-weight: 400;
+  color: #AC8257;
+  font-style: italic;
+  display: block;
+  line-height: 1;
+  margin-bottom: 12px;
+}
+
+.pillar-title {
+  font-family: var(--font-heading);
+  font-size: 1.6rem; /* Reduced from 2rem */
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 12px;
+  letter-spacing: -0.8px;
+  line-height: 1.1;
+}
+
+.pillar-body {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: #4B5563;
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+.pillar-capabilities {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 25px 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pillar-capabilities li {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: #F3F4F6;
+  color: #111827;
+  padding: 5px 12px;
+}
+
+/* PILLAR CTA BUTTONS */
+.pillar-cta-btn {
+  width: 100%;
+  padding: 12px 24px;
+  background-color: #B9E3F3;
+  color: #111827;
+  border: none;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 0.4s ease;
+}
+
+.pillar-cta-btn.gold {
+  background-color: #AC8257;
+  color: white;
+}
+
+.pillar-cta-btn:hover {
+  filter: brightness(1.05);
+  transform: translateY(-2px);
+}
+
+/* SCROLL REVEAL SYSTEM */
+.reveal-hidden .pillar-content-box {
+  opacity: 0;
+}
+
+.reveal-hidden .legal-focus .pillar-content-box {
+  transform: translateX(-40px);
+}
+
+.reveal-hidden .financial-focus .pillar-content-box {
+  transform: translateX(40px);
+}
+
+.reveal-active .pillar-content-box {
+  opacity: 1;
+  transform: translateX(0);
+  transition: all 1s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.reveal-active .legal-focus .pillar-content-box {
+  transition-delay: 0.1s;
+}
+
+.reveal-active .financial-focus .pillar-content-box {
+  transition-delay: 0.3s;
+}
+
+@media (max-width: 1024px) {
+  .expert-dual-pillars { flex-direction: column; height: auto; min-height: 100vh; }
+  .pillar { 
+    height: 500px; /* Fixed height for mobile pillars instead of 100vh */
+    width: 100%; 
+    border-right: none; 
+    border-bottom: 1px solid rgba(255,255,255,0.1); 
+  }
+  
+  .reveal-hidden .legal-focus .pillar-content-box,
+  .reveal-hidden .financial-focus .pillar-content-box {
+    transform: translateY(30px); /* Vertical reveal on mobile */
+  }
+}
+
+@media (max-width: 768px) {
+  .pillar { height: 450px; }
+  .pillar-content-box { padding: 25px; left: 4%; right: 4%; bottom: 5%; max-width: none; }
+  .pillar-index { font-size: 1.8rem; }
+  .pillar-title { font-size: 1.4rem; }
+  .pillar-body { font-size: 0.85rem; margin-bottom: 15px; }
+}

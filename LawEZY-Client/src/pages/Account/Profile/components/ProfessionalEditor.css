@@ -1,0 +1,305 @@
+/* Professional Editor Industrial Theme */
+.professional-editor-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding-bottom: 50px;
+}
+
+.section-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.loading-shimmer {
+    padding: 40px;
+    text-align: center;
+    color: var(--brand-gold);
+    font-weight: 700;
+    font-size: 0.9rem;
+    background: rgba(139, 90, 43, 0.05);
+    border-radius: 8px;
+    border: 1px dashed var(--brand-gold);
+    animation: shimmer-pulse 1.5s infinite;
+}
+
+@keyframes shimmer-pulse {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { opacity: 0.6; }
+}
+
+/* Form Section Extensions */
+.form-section.highlight {
+    background: #FFFBF0;
+    border: 1px solid #FDE68A;
+}
+
+/* Education & Experience Entry Cards */
+.dynamic-entry-card {
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    padding: 15px;
+    border-radius: 6px;
+    margin-bottom: 12px;
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.dynamic-entry-card:hover {
+    border-color: var(--brand-gold);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+}
+
+.btn-add-small {
+    background: transparent;
+    border: none;
+    color: var(--brand-gold);
+    font-size: 0.7rem;
+    font-weight: 800;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.btn-add-small:hover {
+    text-decoration: underline;
+    color: var(--brand-burgundy);
+}
+
+/* Domain Selection Chips */
+.domain-selector-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.domain-chip-btn {
+    padding: 8px 12px;
+    font-size: 0.65rem;
+    background: white;
+    border: 1px solid #E2E8F0;
+    border-radius: 4px;
+    color: #64748B;
+    font-weight: 700;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.2s ease;
+    text-align: center;
+}
+
+.domain-chip-btn:hover {
+    border-color: var(--brand-gold);
+    color: var(--brand-gold);
+}
+
+.domain-chip-btn.active {
+    background: var(--brand-gold);
+    color: white;
+    border-color: var(--brand-gold);
+    box-shadow: 0 4px 10px rgba(139, 90, 43, 0.25);
+}
+
+/* Utility Hints */
+.input-hint {
+    margin-top: 5px;
+    font-size: 0.6rem;
+    color: #94A3B8;
+    font-style: italic;
+}
+
+.mandatory-star {
+    color: var(--brand-burgundy);
+    font-weight: 800;
+    margin-left: 2px;
+}
+
+/* Verification Action */
+.verify-btn {
+    background: linear-gradient(135deg, var(--brand-burgundy) 0%, #450A0A 100%) !important;
+    padding: 12px 30px !important;
+    letter-spacing: 1px;
+    box-shadow: 0 8px 20px rgba(127, 29, 29, 0.3) !important;
+}
+
+.verify-btn:disabled {
+    background: #94A3B8 !important;
+    cursor: not-allowed;
+    box-shadow: none !important;
+}
+
+/* Status Messages */
+.status-msg {
+    padding: 8px 15px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.status-msg.success {
+    background: #DCFCE7;
+    color: #166534;
+    border: 1px solid #BBF7D0;
+}
+
+.status-msg.error {
+    background: #FEE2E2;
+    color: #991B1B;
+    border: 1px solid #FECACA;
+}
+
+/* Section-Level Update Actions */
+.section-footer-action {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px dashed #E2E8F0;
+}
+
+.btn-section-update {
+    background: var(--brand-burgundy);
+    color: white;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 10px rgba(127, 29, 29, 0.2);
+}
+
+.btn-section-update:hover {
+    background: #450A0A;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 15px rgba(127, 29, 29, 0.3);
+}
+
+.btn-section-update:disabled {
+    background: #CBD5E1;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+/* Responsive Grid Overrides */
+@media (max-width: 768px) {
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+.verification-status-banner {
+    padding: 18px 28px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin: 20px 0 10px 0;
+    border-left: 6px solid;
+    font-family: var(--font-professional);
+    backdrop-filter: blur(8px);
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.verification-status-banner.verified {
+    background: linear-gradient(90deg, #F0FDF4 0%, rgba(240, 253, 244, 0.4) 100%);
+    color: #166534;
+    border-color: #22C55E;
+    box-shadow: 0 10px 30px rgba(34, 197, 94, 0.08);
+}
+
+.verification-status-banner.pending {
+    background: linear-gradient(90deg, #FFFBEB 0%, rgba(255, 251, 235, 0.4) 100%);
+    color: #92400E;
+    border-color: #F59E0B;
+    box-shadow: 0 10px 30px rgba(245, 158, 11, 0.08);
+}
+
+.status-icon {
+    font-size: 1.4rem;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.05));
+}
+
+.btn-remove-milestone {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 1px solid #E2E8F0;
+    background: white;
+    color: #94A3B8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    z-index: 5;
+}
+
+.btn-remove-milestone:hover {
+    background: #FEE2E2;
+    color: #EF4444;
+    border-color: #FECACA;
+    transform: rotate(90deg);
+}
+
+/* Fee Breakdown Box Styling */
+.fee-breakdown-box {
+    margin-top: 15px;
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+    padding: 20px;
+    display: flex;
+    gap: 30px;
+}
+
+.fee-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.fee-label {
+    font-size: 0.65rem;
+    color: #64748B;
+    text-transform: uppercase;
+    font-weight: 800;
+}
+
+.fee-value {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--brand-burgundy);
+}
+
+.fee-value.payout {
+    color: var(--brand-gold);
+}
+
+.fee-item small {
+    font-size: 0.55rem;
+    color: #94A3B8;
+    font-style: italic;
+}
+
+@media (max-width: 600px) {
+    .fee-breakdown-box {
+        flex-direction: column;
+        gap: 15px;
+    }
+}

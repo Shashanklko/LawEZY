@@ -1,0 +1,246 @@
+.resourceSection {
+  width: 100%;
+  padding: 60px 10%; /* Normalized Strategic Buffer */
+  background: #F9F7F2; /* Heritage Parchment */
+  color: #111827;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+.resourceHeader {
+  width: 100%;
+  max-width: 1200px;
+  margin-bottom: 40px;
+  text-align: left;
+}
+
+.resourceBadge {
+  font-family: var(--font-body);
+  color: #8B5A2B;
+  text-transform: uppercase;
+  letter-spacing: 4px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  display: block;
+  margin-bottom: 12px;
+}
+
+.resourceTitle {
+  font-family: var(--font-heading);
+  font-size: 2.2rem; /* Normalized Proportional Scale */
+  font-weight: 900;
+  margin: 0 0 12px;
+  color: #111827;
+  letter-spacing: -1.2px;
+  line-height: 1.1;
+}
+
+.resourceSubtitle {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.5;
+  color: #4B5563;
+  max-width: 600px;
+  opacity: 0.8;
+}
+
+.resourceGrid {
+  width: 100%;
+  max-width: 1200px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px; /* Stabilized Grid Gap */
+}
+
+.resourceCard {
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  border-radius: 0;
+  padding: 30px; /* High-Precision Density */
+  transition: all 0.5s cubic-bezier(0.165, 0.84, 0.44, 1);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  min-height: 250px; /* Normalized Height */
+}
+
+.resourceCard:hover {
+  background: #FFFFFF;
+  border-color: #2563EB;
+  transform: translateY(-10px);
+  box-shadow: 0 40px 80px rgba(0, 0, 0, 0.05);
+}
+
+.cardHeader {
+  margin-bottom: 30px;
+}
+
+.cardIcon {
+  font-size: 2rem;
+  filter: grayscale(1) opacity(0.6);
+  transition: all 0.4s ease;
+}
+
+.resourceCard:hover .cardIcon {
+  filter: grayscale(0) opacity(1);
+}
+
+.cardTitle {
+  font-family: var(--font-heading);
+  font-size: 1.5rem;
+  font-weight: 800;
+  margin-bottom: 15px;
+  color: #111827;
+  letter-spacing: -0.5px;
+}
+
+.cardDesc {
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: #6B7280;
+  margin-bottom: 30px;
+  flex: 1;
+}
+
+.cardAction {
+  background: transparent;
+  border: none;
+  color: #2563EB;
+  font-family: var(--font-body);
+  font-weight: 800;
+  font-size: 0.9rem;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: auto; /* Push to bottom for alignment */
+}
+
+.cardAction:hover {
+  color: #1D4ED8;
+  gap: 15px;
+}
+
+/* THE SIXTH CARD: EXPLORE MORE - SYNCED GRID CARD */
+.exploreMoreCard {
+  background: #111827; 
+  border-radius: 0;
+  padding: 30px; /* Synced with .resourceCard */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  transition: all 0.5s ease;
+  position: relative;
+  overflow: hidden;
+  color: white;
+  min-height: 250px; /* Synced with .resourceCard */
+}
+
+.exploreMoreCard:hover {
+  transform: translateY(-10px);
+  background: #000000;
+  box-shadow: 0 40px 80px rgba(0, 0, 0, 0.15);
+}
+
+.exploreContent {
+  display: flex;
+  flex-direction: column; /* Stacked uniformity */
+  align-items: center;
+  gap: 15px;
+  z-index: 2;
+}
+
+.exploreContent h3 {
+  font-family: var(--font-heading);
+  font-size: 1.5rem; /* Synced with .cardTitle */
+  font-weight: 800;
+  margin: 0;
+  color: white;
+  letter-spacing: -0.5px;
+}
+
+.exploreContent p {
+  font-family: var(--font-body);
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0;
+  font-size: 0.85rem; /* High-Density Precision */
+  line-height: 1.5;
+}
+
+.exploreBtn {
+  background: white;
+  color: #111827;
+  border: none;
+  padding: 12px 28px;
+  font-family: var(--font-body);
+  font-weight: 800;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  width: 100%; /* Force full width within card for impact */
+  margin-top: 10px;
+}
+
+.exploreBtn:hover {
+  background: #2563EB;
+  color: white;
+}
+
+/* SCROLL REVEAL SYSTEM */
+.reveal-hidden .resourceHeader {
+  opacity: 0;
+  transform: translateY(30px);
+}
+
+.reveal-active .resourceHeader {
+  opacity: 1;
+  transform: translateY(0);
+  transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.reveal-hidden .resourceCard,
+.reveal-hidden .exploreMoreCard {
+  opacity: 0;
+  transform: translateY(40px);
+}
+
+.reveal-active .resourceCard,
+.reveal-active .exploreMoreCard {
+  opacity: 1;
+  transform: translateY(0);
+  transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* STAGGERED DELAYS (Up to 6 cards) */
+.reveal-active .resourceCard:nth-child(1) { transition-delay: 0.1s; }
+.reveal-active .resourceCard:nth-child(2) { transition-delay: 0.2s; }
+.reveal-active .resourceCard:nth-child(3) { transition-delay: 0.3s; }
+.reveal-active .resourceCard:nth-child(4) { transition-delay: 0.4s; }
+.reveal-active .resourceCard:nth-child(5) { transition-delay: 0.5s; }
+.reveal-active .exploreMoreCard { transition-delay: 0.6s; }
+
+@media (max-width: 1024px) {
+  .resourceGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .resourceSection { padding: 50px 5%; }
+  .resourceTitle { font-size: 1.8rem; }
+  .resourceGrid { grid-template-columns: 1fr; }
+  .exploreMoreCard { min-height: 220px; }
+
+  .reveal-hidden .resourceCard,
+  .reveal-hidden .exploreMoreCard {
+    transform: translateY(20px); /* Simpler reveal for mobile grid */
+  }
+}

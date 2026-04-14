@@ -1,0 +1,45 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: LawEZY-Backend
+
+  # MySQL Configuration
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  # JPA / Hibernate Configurations
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQL8Dialect
+
+  # MongoDB Configuration
+  data:
+    mongodb:
+      uri: ${MONGO_URI}
+
+  # 🏛️ SPRING AI GEMINI CONFIG
+  ai:
+    google:
+      gemini:
+        api-key: ${GEMINI_API_KEY}
+        model: gemini-1.5-pro
+
+# Custom JWT Application Properties
+jwt:
+  secret: ${JWT_SECRET} # Should be 256-bit secure secret
+  expirationMs: 86400000 # 24 hours
+
+# Frontend Origin Configuration
+app:
+  cors:
+    allowed-origins: ${ALLOWED_ORIGINS}

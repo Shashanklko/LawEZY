@@ -1,0 +1,185 @@
+.why-choose-us-professional {
+  padding: 40px 8%; /* Aggressively reduced from 60px */
+  background-color: var(--secondary-bg);
+  min-height: auto; /* Allow natural flow */
+  display: flex;
+  flex-direction: column;
+  scroll-snap-align: start;
+  position: relative;
+}
+
+.sovereign-header {
+  margin-bottom: 50px; /* Reduced from 80px */
+  max-width: 900px;
+  z-index: 2;
+}
+
+.heritage-badge {
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #8B5A2B;
+  margin-bottom: 20px;
+  display: block;
+}
+
+.sovereign-title {
+  font-size: 2.2rem; /* Strategic reduction for 'Elite' density */
+  font-weight: 800;
+  color: var(--text-main);
+  margin-bottom: 15px;
+  letter-spacing: -1.2px;
+  line-height: 1.1;
+  font-family: var(--font-heading);
+}
+
+.sovereign-title span {
+  color: var(--accent-burgundy);
+}
+
+.sovereign-subtitle {
+  font-size: 1.1rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+  max-width: 750px;
+  opacity: 0.8;
+}
+
+/* STRATEGIC PORTFOLIO GRID */
+.strategic-portfolio-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0; /* Cards touch, hover creates depth */
+  width: 100%;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.strategic-card {
+  padding: 22px 20px; /* High-density padding */
+  display: flex;
+  flex-direction: column;
+  min-height: 250px; /* Aggressive height reduction */
+  transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+  background: transparent;
+  position: relative;
+  border-right: 1px solid rgba(0, 0, 0, 0.04);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+  cursor: pointer;
+}
+
+.strategic-card:hover {
+  background: #ffffff;
+  box-shadow: 0 50px 100px rgba(0, 0, 0, 0.1);
+  transform: translateY(-8px);
+  z-index: 10;
+  border-color: transparent;
+}
+
+.card-heading {
+  font-family: var(--font-heading);
+  font-size: 1.25rem; 
+  color: #111827;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.title-chevron {
+  color: #2563EB; /* McKinsey Blue accent */
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: 1.8rem;
+  line-height: 1;
+  margin-top: -4px;
+}
+
+.card-summary {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  color: #4B5563;
+  line-height: 1.6;
+  margin-bottom: 40px;
+  flex: 1;
+}
+
+.learn-more-link {
+  margin-top: auto;
+  font-family: var(--font-body);
+  font-size: 0.75rem; /* Precise link text */
+  font-weight: 700;
+  color: #2563EB; /* Institutional Blue */
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.learn-more-link:hover {
+  gap: 10px;
+  color: #1E40AF; /* Deeper blue on hover */
+}
+
+.strategic-card:hover .learn-more-link {
+  gap: 12px;
+}
+
+/* FEATURED INSIGHT SPECIAL STYLE */
+.featured-insight {
+  border-top: 4px solid var(--accent-gold);
+}
+
+/* SCROLL REVEAL SYSTEM */
+.reveal-hidden .sovereign-header {
+  opacity: 0;
+  transform: translateY(30px);
+}
+
+.reveal-active .sovereign-header {
+  opacity: 1;
+  transform: translateY(0);
+  transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.reveal-hidden .strategic-card {
+  opacity: 0;
+  transform: translateY(40px);
+}
+
+.reveal-active .strategic-card {
+  opacity: 1;
+  transform: translateY(0);
+  transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* STAGGERED DELAYS (Up to 8 cards) */
+.reveal-active .strategic-card:nth-child(1) { transition-delay: 0.1s; }
+.reveal-active .strategic-card:nth-child(2) { transition-delay: 0.2s; }
+.reveal-active .strategic-card:nth-child(3) { transition-delay: 0.3s; }
+.reveal-active .strategic-card:nth-child(4) { transition-delay: 0.4s; }
+.reveal-active .strategic-card:nth-child(5) { transition-delay: 0.5s; }
+.reveal-active .strategic-card:nth-child(6) { transition-delay: 0.6s; }
+.reveal-active .strategic-card:nth-child(7) { transition-delay: 0.7s; }
+.reveal-active .strategic-card:nth-child(8) { transition-delay: 0.8s; }
+
+@media (max-width: 1200px) {
+  .strategic-portfolio-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 768px) {
+  .strategic-portfolio-grid { grid-template-columns: 1fr; }
+  .sovereign-title { font-size: 2.2rem; }
+  .why-choose-us-professional { padding: 50px 5%; min-height: auto; }
+  .strategic-card { min-height: 280px; padding: 25px; }
+  .card-heading { font-size: 1.3rem; }
+  .card-summary { font-size: 0.9rem; margin-bottom: 25px; }
+
+  .reveal-hidden .strategic-card {
+    transform: translateY(20px); /* Simpler reveal for mobile grid */
+  }
+}

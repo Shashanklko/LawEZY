@@ -1,0 +1,73 @@
+# LawEZY Monorepo - Comprehensive Production Gitignore
+
+# === 🛡️ Institutional Security ===
+.env
+.env.*
+!.env.example
+secrets.json
+*.pem
+*.key
+
+# === 💻 IDE / System ===
+.vscode/
+.idea/
+.classpath
+.project
+.settings/
+*.iml
+*.log
+.DS_Store
+Thumbs.db
+
+# === ☕ Java / Backend (LawEZY-Backend) ===
+**/target/
+**/*.class
+**/*.jar
+**/*.war
+**/*.nar
+**/*.ear
+**/*.zip
+**/*.tar.gz
+**/*.rar
+**/build/
+.mvn/
+**/bin/
+
+# === ⚛️ React / Frontend (LawEZY-Client) ===
+**/node_modules/
+**/dist/
+**/build/
+**/out/
+.vite/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnp*
+.eslintcache
+
+# === 🟢 Node.js (LawEZY-Messenger) ===
+# (Covered by node_modules pattern above)
+**/logs/
+**/pids/
+*.pid
+*.seed
+*.pid.lock
+
+# === 🐍 Python (LawEZY-AI-Service) ===
+**/venv/
+**/env/
+**/ENV/
+**/__pycache__/
+**/*.py[cod]
+**/*$py.class
+**/.pytest_cache/
+**/.python-version
+**/.venv
+**/pip-log.txt
+**/pip-delete-this-directory.txt
+
+# === 🗄️ Database / Local State ===
+**/h2_db/
+**/db-data/
+**/mongo-data/
+**/dump.rdb
