@@ -11,7 +11,20 @@ Welcome to the **LawEZY** Monorepo. This repository centralizes our high-fidelit
 | **[LawEZY-Client](file:///e:/Project/LawEZY/LawEZY-Client)** | React + Vite | Institutional Portal (Clients & Experts) |
 | **[LawEZY-Backend](file:///e:/Project/LawEZY/LawEZY-Backend)** | Java + Spring Boot | Auth, Financials, and Appointment Engine |
 | **[LawEZY-Messenger](file:///e:/Project/LawEZY/LawEZY-Messenger)** | Node.js + Socket.io | Real-time Hub & Strategic Credit Governance |
-| **[LawEZY-AI-Service](file:///e:/Project/LawEZY/LawEZY-AI-Service)** | Python/Node | Legal Intelligence & Research Engine |
+| **[LawEZY-AI-Service](file:///e:/Project/LawEZY/LawEZY-AI-Service)** | Python (FastAPI) | LawinoAI - Legal & Financial Intelligence |
+
+---
+
+## 🏗️ Service Architecture & Features
+
+### 🤖 LawinoAI (v6.0)
+The **LawEZY-AI-Service** is a domain-restricted intelligence engine powered by Google Gemini.
+
+**Core Capabilities**:
+- **Domain Restriction**: Expert knowledge limited to Indian Law, CA (Tax/GST), and CFA (Finance/Investments).
+- **Tactical Interception**: A local NLP layer that handles greetings and common queries to optimize resource usage.
+- **Strategic Routing**: Automatically identifies personal cases and prompts users to connect with human LawEZY Experts.
+- **Persistent Memory**: Full session persistence via MongoDB Atlas for long-form consultation history.
 
 ---
 
@@ -19,21 +32,30 @@ Welcome to the **LawEZY** Monorepo. This repository centralizes our high-fidelit
 
 To boot the entire ecosystem locally:
 
-1.  **Backend (Java)**:
-    ```bash
-    cd LawEZY-Backend
-    mvn clean spring-boot:run
-    ```
-2.  **Messenger (Real-time Hub)**:
-    ```bash
-    cd LawEZY-Messenger
-    npm start
-    ```
-3.  **Frontend (Portal)**:
-    ```bash
-    cd LawEZY-Client
-    npm run dev
-    ```
+### 1. Backend (Java/Maven)
+```bash
+cd LawEZY-Backend
+mvn clean spring-boot:run
+```
+
+### 2. Messenger (Real-time Hub)
+```bash
+cd LawEZY-Messenger
+npm start
+```
+
+### 3. AI Service (Python/FastAPI)
+```bash
+cd LawEZY-AI-Service
+# Setup: python -m venv venv && ./venv/Scripts/activate && pip install -r requirements.txt
+python main.py
+```
+
+### 4. Frontend (React Portal)
+```bash
+cd LawEZY-Client
+npm run dev
+```
 
 ---
 
