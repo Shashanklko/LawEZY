@@ -24,6 +24,7 @@ public class AiController {
     private final AiService aiService;
     private final AiChatSessionService sessionService;
     private final com.LawEZY.common.service.AuditLogService auditLogService;
+    private final com.LawEZY.user.repository.WalletRepository walletRepository;
 
     @PostMapping("/copilot")
     public ResponseEntity<ApiResponse<Map<String, Object>>> copilot(
@@ -43,6 +44,23 @@ public class AiController {
         if (sessionId == null || sessionId.trim().isEmpty() || sessionId.equals("null")) {
             AiChatSession session = sessionService.startSession(userId, query);
             sessionId = session.getId();
+        }
+
+        // 2. Handle Governance (Token Deduction per query)
+        if (userId != null && !userId.equals("null")) {
+            com.LawEZY.user.entity.Wallet wallet = walletRepository.findById(userId).orElse(null);
+            if (wallet != null) {
+                if (wallet.getIsUnlimited() == null || !wallet.getIsUnlimited()) {
+                    if (wallet.getFreeAiTokens() <= 0) {
+                        return ResponseEntity.status(403).body(ApiResponse.error("AI Quota exhausted. Please refill institutional units in your wallet."));
+                    }
+                    wallet.setFreeAiTokens(wallet.getFreeAiTokens() - 1);
+                    walletRepository.save(wallet);
+                    log.info("📡 [GOVERNANCE] Deducted 1 AI Token from user: {}. Remaining: {}", userId, wallet.getFreeAiTokens());
+                } else {
+                    log.info("💎 [GOVERANCE] Unlimited AI access granted to user: {}", userId);
+                }
+            }
         }
 
         // 2. Log and Persist User Message

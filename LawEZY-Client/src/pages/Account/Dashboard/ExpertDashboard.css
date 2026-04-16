@@ -26,7 +26,7 @@
 .brand-label {
     font-size: 0.6rem;
     font-weight: 900;
-    color: var(--strategic-gold);
+    color: var(--elite-gold);
     letter-spacing: 2px;
     margin-bottom: 20px;
     opacity: 1; /* Maximum visibility */
@@ -73,7 +73,7 @@
 
 .id-text .role-tag {
     font-size: 0.6rem;
-    color: var(--strategic-gold);
+    color: var(--elite-gold);
     font-weight: 600;
     text-transform: uppercase;
 }
@@ -109,7 +109,7 @@
 }
 
 .nav-link-item.active {
-    background: var(--strategic-gold);
+    background: var(--elite-gold);
     color: var(--midnight-primary); /* High contrast active state */
     box-shadow: 0 4px 15px rgba(197, 165, 114, 0.2);
 }
@@ -134,7 +134,7 @@
     margin-top: 1px;
 }
 
-/* DENSE STRATEGIC BRIDGES */
+/* DENSE INSTITUTIONAL BRIDGES */
 .seeker-bridge-btn, .expert-bridge-btn {
     padding: 8px 16px !important;
     border: 1px solid rgba(212, 175, 55, 0.2) !important;
@@ -198,7 +198,7 @@
 }
 
 .metric-card-mini.gold {
-    border-left-color: var(--strategic-gold);
+    border-left-color: var(--elite-gold);
     background: linear-gradient(135deg, white 0%, #fffbeb 100%);
 }
 
@@ -219,7 +219,7 @@
 
 .m-value small {
     font-size: 0.8rem;
-    color: var(--strategic-gold);
+    color: var(--elite-gold);
 }
 
 /* CONTENT GRID */
@@ -286,7 +286,7 @@
     width: 40px;
     height: 40px;
     background: var(--midnight-primary);
-    color: var(--strategic-gold);
+    color: var(--elite-gold);
     border-radius: 10px;
     display: flex;
     align-items: center;
@@ -392,11 +392,45 @@
 
 .institutional-footer {
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
+    gap: 12px;
     margin-top: 25px;
     font-size: 0.55rem;
     color: #64748b;
     font-weight: 600;
+}
+
+.footer-actions-dual {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.btn-logout-minimal, .btn-exit-dash {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.6);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 0.6rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: left;
+    width: 100%;
+    letter-spacing: 1px;
+}
+
+.btn-logout-minimal:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    border-color: rgba(239, 68, 68, 0.2);
+}
+
+.btn-exit-dash:hover {
+    background: rgba(212, 175, 55, 0.1);
+    color: var(--elite-gold);
+    border-color: rgba(212, 175, 55, 0.2);
 }
 
 /* WALLET PANE IN DASHBOARD */

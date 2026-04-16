@@ -26,7 +26,7 @@ const WhyChooseUs = () => {
     };
   }, []);
 
-  const strategicCapabilities = [
+  const institutionalCapabilities = [
     {
       id: "01",
       title: "Legal Consultations",
@@ -36,7 +36,7 @@ const WhyChooseUs = () => {
     },
     {
       id: "02",
-      title: "Financial Strategic Advisory",
+      title: "Financial Institutional Advisory",
       description: "Elite support from top-tier Chartered Accountants (CAs) and CS professionals to manage your compliance.",
       linkText: "Meet our Financial Advisor",
       path: "/experts?category=financial"
@@ -62,7 +62,7 @@ const WhyChooseUs = () => {
     },
     {
       id: "06",
-      title: "Strategic Education",
+      title: "Institutional Education",
       description: "Curated resources and professional masterclasses to empower your legal and financial literacy.",
       linkText: "Explore E-Resource",
     },
@@ -92,11 +92,11 @@ const WhyChooseUs = () => {
         <h2 className="sovereign-title">The Sovereign <span>Advantage</span>.</h2>
       </div>
 
-      <div className="strategic-portfolio-grid">
-        {strategicCapabilities.map((item) => (
+      <div className="institutional-portfolio-grid">
+        {institutionalCapabilities.map((item) => (
           <div 
             key={item.id} 
-            className={`strategic-card ${item.isFeatured ? 'featured-insight' : ''}`}
+            className={`institutional-card ${item.isFeatured ? 'featured-insight' : ''}`}
             onClick={() => item.path && navigate(item.path)}
             style={{ cursor: item.path ? 'pointer' : 'default' }}
           >

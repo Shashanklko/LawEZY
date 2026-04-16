@@ -32,7 +32,7 @@ public class FinancialService {
     public FinancialTransaction createWithdrawalRequest(String userId, Double amount) {
         User user = findUserByIdentifier(userId);
         
-        // Strategic Liquidation Check
+        // Institutional Liquidation Check
         validateSufficientFunds(user.getId(), amount);
 
         String refId = "TXN-" + (1000 + (int)(Math.random() * 9000));
@@ -65,7 +65,7 @@ public class FinancialService {
         // If amountRequired is negative, we are checking Token Balance (Booking)
         if (amountRequired < 0) {
             if (wallet.getTokenBalance().doubleValue() < Math.abs(amountRequired)) {
-                throw new RuntimeException("Institutional protocol failure: Insufficient Strategic Tokens (Required: " + Math.abs(amountRequired) + ")");
+                throw new RuntimeException("Institutional protocol failure: Insufficient Institutional Tokens (Required: " + Math.abs(amountRequired) + ")");
             }
         } else {
             if (wallet.getEarnedBalance() < amountRequired) {
@@ -89,7 +89,7 @@ public class FinancialService {
             throw new RuntimeException("Insufficient Funds. Available: " + availableFunds + ", Required: " + cost);
         }
 
-        // 2. Strategic Deduction
+        // Institutional Deduction
         if (isExpert && wallet.getEarnedBalance() >= cost) {
             wallet.setEarnedBalance(wallet.getEarnedBalance() - cost);
         } else {
@@ -100,7 +100,7 @@ public class FinancialService {
         wallet.setTokenBalance(wallet.getTokenBalance() + tokenCount);
         
         // 4. Ledger Entry
-        recordTransaction(userId, "Strategic Token Purchase: " + tokenCount + " Credits", -cost, "COMPLETED", "DEBIT");
+        recordTransaction(userId, "Institutional Token Purchase: " + tokenCount + " Credits", -cost, "COMPLETED", "DEBIT");
         
         return walletRepository.save(wallet);
     }
@@ -131,7 +131,7 @@ public class FinancialService {
 
             Wallet wallet = walletService.getWalletByUserId(user.getId());
             if (amount < 0) {
-                // Client deduction (Strategic Tokens)
+                // Client deduction (Institutional Tokens)
                 if (description.contains("Appointment") || description.contains("Session")) {
                     // Actual cash deduction for appointments
                     wallet.setCashBalance(wallet.getCashBalance() - Math.abs(amount));

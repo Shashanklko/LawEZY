@@ -19,7 +19,7 @@ const ExpertAppointments = () => {
             const res = await apiClient.get('/api/appointments/expert');
             setAppointments(res.header ? res.data.data : res.data); // Flex for ApiResponse wrap
         } catch (err) {
-            console.error("Strategic Recall failure:", err);
+            console.error("Institutional Recall failure:", err);
         } finally {
             setLoading(false);
         }
@@ -35,10 +35,10 @@ const ExpertAppointments = () => {
                 alert(`Negotiation Honored: Session confirmed with -${appt.discountPercent}% discount.`);
             } else if (action === 'reject') {
                 await apiClient.post(`/api/appointments/${appt.id}/reject`, { reason: data.reason });
-                alert("Strategic Rejection Dispatched. Protocol terminated.");
+                alert("Institutional Rejection Dispatched. Protocol terminated.");
             } else if (action === 'paid') {
                 await apiClient.patch(`/api/appointments/${appt.id}/status?status=PAID`);
-                alert("Strategic Bridge Synchronized: Meeting Room Initialized.");
+                alert("Institutional Bridge Synchronized: Meeting Room Initialized.");
             } else if (action === 'completed') {
                 await apiClient.patch(`/api/appointments/${appt.id}/status?status=PENDING_REVIEW`);
                 alert("Institutional Protocol: Session marked for review. Awaiting client feedback.");
@@ -51,7 +51,7 @@ const ExpertAppointments = () => {
             }
             fetchAppointments();
         } catch (err) {
-            alert(`Strategic action failed: ${action}`);
+            alert(`Institutional action failed: ${action}`);
         }
     };
 
@@ -85,7 +85,7 @@ const ExpertAppointments = () => {
                             style={{
                                 padding: '8px 18px', borderRadius: '10px', border: 'none', fontSize: '0.7rem', fontWeight: 800, cursor: 'pointer',
                                 background: filter === f ? 'var(--midnight-primary)' : 'transparent',
-                                color: filter === f ? 'var(--strategic-gold)' : '#64748b',
+                                color: filter === f ? 'var(--elite-gold)' : '#64748b',
                                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                                 letterSpacing: '0.5px'
                             }}
@@ -110,7 +110,7 @@ const ExpertAppointments = () => {
             {filteredAppointments.length === 0 && (
                 <div style={{ textAlign: 'center', padding: '80px', background: 'var(--heritage-parchment)', borderRadius: '24px', border: '1px solid rgba(212, 175, 55, 0.2)', boxShadow: 'inset 0 2px 10px rgba(0,0,0,0.02)' }}>
                     <div style={{ fontSize: '3rem', marginBottom: '15px' }}>📅</div>
-                    <h3 style={{ margin: 0, fontWeight: 900, color: 'var(--midnight-primary)', fontSize: '1.5rem' }}>No Strategy Sessions</h3>
+                    <h3 style={{ margin: 0, fontWeight: 900, color: 'var(--midnight-primary)', fontSize: '1.5rem' }}>No Institutional Sessions</h3>
                     <p style={{ color: '#64748b', fontSize: '0.9rem', fontWeight: 600, marginTop: '10px' }}>Your professional queue is currently idle. Awaiting institutional client requests.</p>
                 </div>
             )}

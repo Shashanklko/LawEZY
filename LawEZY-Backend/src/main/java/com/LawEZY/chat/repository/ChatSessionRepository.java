@@ -23,6 +23,8 @@ public interface ChatSessionRepository extends MongoRepository<ChatSession, Stri
 
     List<ChatSession> findByUserIdAndStatus(String userId, ChatStatus status);
     List<ChatSession> findByProfessionalIdAndStatus(String professionalId, ChatStatus status);
+    List<ChatSession> findByUserIdAndProfessionalIdAndStatus(String userId, String professionalId, ChatStatus status);
+    List<ChatSession> findByUserIdAndProUidAndStatus(String userId, String proUid, ChatStatus status);
     List<ChatSession> findByProUid(String proUid);
 }
 

@@ -25,7 +25,7 @@ const ReviewModal = ({ appointment, onClose, onSuccess }) => {
             });
             onSuccess();
         } catch (err) {
-            alert("Strategic Error: Failed to submit feedback ledger.");
+            alert("Institutional Error: Failed to submit feedback ledger.");
         } finally {
             setLoading(false);
         }
@@ -59,7 +59,7 @@ const ReviewModal = ({ appointment, onClose, onSuccess }) => {
                 <form onSubmit={handleSubmit}>
                     <div style={{ marginBottom: '30px', textAlign: 'center' }}>
                         <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--midnight-primary)', marginBottom: '15px' }}>
-                            Strategic Performance Rating
+                            Institutional Performance Rating
                         </label>
                         <div style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
                             {[1, 2, 3, 4, 5].map((star) => (
@@ -119,8 +119,8 @@ const ReviewModal = ({ appointment, onClose, onSuccess }) => {
                         style={{
                             width: '100%', margin: 0, padding: '18px', borderRadius: '16px',
                             background: rating === 0 ? '#cbd5e0' : 'var(--midnight-primary)',
-                            color: 'var(--strategic-gold)', fontWeight: 900, cursor: rating === 0 ? 'not-allowed' : 'pointer',
-                            fontSize: '1rem', border: '1px solid var(--strategic-gold)',
+                            color: 'var(--elite-gold)', fontWeight: 900, cursor: rating === 0 ? 'not-allowed' : 'pointer',
+                            fontSize: '1rem', border: '1px solid var(--elite-gold)',
                             boxShadow: rating === 0 ? 'none' : '0 10px 25px rgba(212, 175, 55, 0.2)'
                         }}
                     >

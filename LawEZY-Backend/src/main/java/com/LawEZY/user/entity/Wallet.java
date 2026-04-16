@@ -19,18 +19,17 @@ public class Wallet {
 
     @Id
     @Column(length = 25)
-    private String id; // Shared Strategic ID Glue
+    private String id; // Shared Institutional ID Glue
 
     @OneToOne
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    private Integer tokenBalance = 5; // Paid Strategic Balance
+    private Integer tokenBalance = 5; // Paid Institutional Balance
     private Integer freeAiTokens = 5; // Tiered Free AI Quota
     private Integer freeChatTokens = 5; // Tiered Free Chat Quota
     private Boolean isUnlimited = false; // "God Mode" Toggle
     private Double earnedBalance = 0.0; // Professional Revenue
-    private Double cashBalance = 0.0; // Strategic Deposits for Clients
+    private Double cashBalance = 0.0; // Institutional Deposits for Clients
     private String currency = "INR";
 }
-

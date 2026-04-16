@@ -4,7 +4,7 @@
   --heritage-parchment: #F9F7F2;
   --heritage-stone: #F0EDE8;
   --deep-charcoal: #1C1917;
-  --strategic-gold: #8E6B47;
+  --elite-gold: #8E6B47;
   --brand-gold: #F5C467; /* Institutional accent gold */
   --grid-line: rgba(0, 0, 0, 0.03);
   --glass-gold: rgba(142, 107, 71, 0.1);
@@ -85,7 +85,7 @@
   font-size: 0.6rem;
   text-transform: uppercase;
   letter-spacing: 2px;
-  color: var(--strategic-gold);
+  color: var(--elite-gold);
   margin-bottom: 12px;
   font-weight: 850;
   opacity: 0.6;
@@ -126,15 +126,15 @@
 }
 
 .filter-btn:hover {
-  border-color: var(--strategic-gold);
+  border-color: var(--elite-gold);
   background: var(--heritage-stone);
   transform: translateX(4px);
 }
 
 .filter-btn.active {
-  background: var(--strategic-gold);
+  background: var(--elite-gold);
   color: var(--heritage-parchment);
-  border-color: var(--strategic-gold);
+  border-color: var(--elite-gold);
   box-shadow: 0 8px 15px rgba(142, 107, 71, 0.2);
 }
 
@@ -158,13 +158,13 @@
 }
 
 .filter-select:hover {
-  border-color: var(--strategic-gold);
+  border-color: var(--elite-gold);
   background-color: var(--heritage-stone);
 }
 
 .filter-select:focus {
   outline: none;
-  border-color: var(--strategic-gold);
+  border-color: var(--elite-gold);
   box-shadow: 0 0 0 3px rgba(142, 107, 71, 0.1);
 }
 
@@ -177,7 +177,7 @@
 .domain-chip-btn {
   background: white;
   border: 1px solid var(--glass-border);
-  color: var(--strategic-gold);
+  color: var(--elite-gold);
   padding: 6px 12px;
   border-radius: 6px;
   font-size: 0.55rem;
@@ -192,14 +192,14 @@
 
 .domain-chip-btn:hover {
   background: var(--heritage-stone);
-  border-color: var(--strategic-gold);
+  border-color: var(--elite-gold);
   transform: translateY(-1px);
 }
 
 .domain-chip-btn.selected {
-  background: var(--strategic-gold);
+  background: var(--elite-gold);
   color: var(--heritage-parchment);
-  border-color: var(--strategic-gold);
+  border-color: var(--elite-gold);
   box-shadow: 0 4px 12px rgba(142, 107, 71, 0.2);
 }
 
@@ -241,12 +241,12 @@
 
 .verified-pill {
   background: var(--glass-gold);
-  color: var(--strategic-gold);
+  color: var(--elite-gold);
   border: 1px solid var(--glass-border);
   font-weight: 850;
 }
 
-.header-right-tactical {
+.header-right-elite {
   display: flex;
   gap: 20px;
   align-items: center;
@@ -265,12 +265,12 @@
 }
 
 .search-dock:focus-within {
-  border-color: var(--strategic-gold);
+  border-color: var(--elite-gold);
   box-shadow: 0 8px 25px rgba(142, 107, 71, 0.1);
   width: 400px;
 }
 
-.search-icon { color: var(--strategic-gold); opacity: 0.6; }
+.search-icon { color: var(--elite-gold); opacity: 0.6; }
 
 .search-dock input {
   border: none;
@@ -291,7 +291,7 @@
 .sort-label {
   font-size: 0.55rem;
   text-transform: uppercase;
-  color: var(--strategic-gold);
+  color: var(--elite-gold);
   font-weight: 850;
   letter-spacing: 1px;
   opacity: 0.6;
@@ -311,6 +311,75 @@
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238E6B47' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'%3E%3C/path%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 8px center;
+}
+
+/* PREMIUM INSTITUTIONAL SKELETONS */
+.loading-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    gap: 25px;
+    width: 100%;
+}
+
+.skeleton-card {
+    height: 480px;
+    background: white;
+    border-radius: 20px;
+    border: 1px solid var(--grid-line);
+    padding: 30px;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.skeleton-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -150%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(142, 107, 71, 0.05),
+        transparent
+    );
+    animation: institutional-shimmer 1.8s infinite;
+}
+
+@keyframes institutional-shimmer {
+    0% { left: -150%; }
+    100% { left: 150%; }
+}
+
+.skeleton-card::after {
+    content: "";
+    display: block;
+    background: #f1f5f9;
+    border-radius: 50%;
+    width: 80px;
+    height: 80px;
+    margin-bottom: 10px;
+}
+
+/* Internal skeleton bones */
+.skeleton-card {
+    background-image: 
+        linear-gradient(#f1f5f9 20px, transparent 0),
+        linear-gradient(#f1f5f9 15px, transparent 0),
+        linear-gradient(#f1f5f9 40px, transparent 0);
+    background-repeat: no-repeat;
+    background-size: 
+        60% 20px,
+        40% 15px,
+        100% 40px;
+    background-position: 
+        30px 140px,
+        30px 170px,
+        30px 220px;
 }
 
 .experts-grid {
@@ -336,7 +405,7 @@
   grid-column: 1 / -1;
   text-align: center;
   padding: 120px 0;
-  color: var(--strategic-gold);
+  color: var(--elite-gold);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -344,7 +413,7 @@
 }
 
 .btn-clear-filters {
-  background: var(--strategic-gold);
+  background: var(--elite-gold);
   border: none;
   color: var(--heritage-parchment);
   padding: 12px 24px;
@@ -385,7 +454,7 @@
     align-items: flex-start;
     gap: 25px;
   }
-  .header-right-tactical {
+  .header-right-elite {
     width: 100%;
     flex-direction: column;
     align-items: stretch;

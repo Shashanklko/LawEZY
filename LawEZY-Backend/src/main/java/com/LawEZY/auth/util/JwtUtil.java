@@ -3,15 +3,14 @@ package com.LawEZY.auth.util;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
+import org.springframework.security.core.userdetails.UserDetails;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Function;
 
 @Component // Tells Spring to create one instance of this utility we can use anywhere
 public class JwtUtil {
@@ -60,7 +59,7 @@ public class JwtUtil {
     public String generateToken(UserDetails userDetails) {
         Map<String, Object> claims = new HashMap<>(); 
         
-        // Strategic Identity Bridge: Extract Hex ID and Public UID from our Custom wrapper
+        // Institutional Identity Bridge: Extract Hex ID and Public UID from our Custom wrapper
         if (userDetails instanceof com.LawEZY.auth.dto.CustomUserDetails) {
             com.LawEZY.auth.dto.CustomUserDetails custom = (com.LawEZY.auth.dto.CustomUserDetails) userDetails;
             claims.put("id", custom.getId());

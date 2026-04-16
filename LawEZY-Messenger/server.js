@@ -16,7 +16,7 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 8081;
 
-// --- STRATEGIC DATABASES ---
+// --- INSTITUTIONAL DATABASES ---
 
 // 1. MySQL Pool (Auth/Wallet Ledger)
 const mysqlPool = mysql.createPool({
@@ -28,12 +28,12 @@ const mysqlPool = mysql.createPool({
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
-    ssl: { rejectUnauthorized: false } // Required for strategic TiDB Cloud connectivity
+    ssl: { rejectUnauthorized: false } // Required for institutional TiDB Cloud connectivity
 });
 
 // 2. MongoDB (Chat Sessions/Messages)
 mongoose.connect(process.env.MONGO_URI)
-    .then(() => console.log('🛡️ [MONGODB] Connected to Strategic Chat Ledger'))
+    .then(() => console.log('🛡️ [MONGODB] Connected to Institutional Chat Ledger'))
     .catch(err => console.error('❌ [MONGODB] Connection Failure:', err));
 
 // --- DATA SCHEMAS (Mirroring Java Entities) ---
@@ -73,6 +73,17 @@ const io = new Server(server, {
     }
 });
 
+// --- INTERNAL BRIDGES ---
+app.post('/api/internal/emit-notification', (req, res) => {
+    const { userId, notification } = req.body;
+    if (userId && notification) {
+        io.to(userId).emit('notification_received', notification);
+        console.log(`📡 [BRIDGE] Dispatched notification pulse to user: ${userId}`);
+        return res.status(200).send({ status: 'OK' });
+    }
+    res.status(400).send({ error: 'Missing userId or notification payload' });
+});
+
 // --- JWT SHIELD ---
 
 io.use((socket, next) => {
@@ -89,16 +100,20 @@ io.use((socket, next) => {
 // --- EVENT HANDLERS ---
 
 io.on('connection', (socket) => {
-    // Identity Resolution: Prioritize 'id' (Hex), fallback to 'sub' (Email)
-    const strategicId = socket.user.id || socket.user.sub;
-    console.log(`📡 [HANDSHAKE] Secure connection established: ${socket.id} (Strategic ID: ${strategicId})`);
+    // Identity Resolution: Support 'uid' (Public Institutional), 'id' (Hex Storage), and 'sub' (Email)
+    const institutionalId = socket.user.id || socket.user.sub;
+    const publicUid = socket.user.uid;
+    console.log(`📡 [HANDSHAKE] Secure connection established: ${socket.id} (Hex ID: ${institutionalId}, Public UID: ${publicUid})`);
 
-    // 🛡️ Join Global Personal Room for discovery/paging
-    socket.join(strategicId);
+    // 🛡️ Join Global Personal Rooms for discovery/paging/notification delivery
+    socket.join(institutionalId);
+    if (publicUid) {
+        socket.join(publicUid);
+    }
 
     socket.on('join_session', (sessionId) => {
         socket.join(sessionId);
-        console.log(`👥 [INTERNAL] Entity ${strategicId} joined session room: ${sessionId}`);
+        console.log(`👥 [INTERNAL] Entity ${publicUid || institutionalId} joined session room: ${sessionId}`);
     });
 
 
@@ -145,7 +160,7 @@ io.on('connection', (socket) => {
             await newMessage.save();
             session.lastUpdateAt = new Date();
             
-            // 5. Financial Governance (Strategic Quota Ledger)
+            // 5. Financial Governance (Institutional Quota Ledger)
             const authId = socket.user.id || socket.user.sub || socket.user.email;
             
             if (senderId === authId || senderId === socket.user.id || senderId === socket.user.sub) {
@@ -170,7 +185,13 @@ io.on('connection', (socket) => {
                             const wallet = wallets[0];
                             const freeChatTokens = wallet.free_chat_tokens !== undefined ? wallet.free_chat_tokens : (wallet.freeChatTokens || 0);
                             const tokenBalance = wallet.token_balance !== undefined ? wallet.token_balance : (wallet.tokenBalance || 0);
-                            const isUnlimited = wallet.is_unlimited !== undefined ? wallet.is_unlimited : (wallet.isUnlimited || false);
+                            let isUnlimitedRaw = wallet.is_unlimited !== undefined ? wallet.is_unlimited : wallet.isUnlimited;
+                            let isUnlimited = false;
+                            if (Buffer.isBuffer(isUnlimitedRaw)) {
+                                isUnlimited = isUnlimitedRaw[0] === 1;
+                            } else {
+                                isUnlimited = !!isUnlimitedRaw;
+                            }
 
                             if (!isUnlimited) {
                                 let quotaDeducted = false;
@@ -196,14 +217,14 @@ io.on('connection', (socket) => {
                                     await ChatMessage.findByIdAndDelete(newMessage._id);
                                     io.to(chatSessionId).emit('quota_exhausted_alert', { 
                                         userId: senderId, 
-                                        message: "Strategic units exhausted. Please refill credits." 
+                                        message: "Institutional units exhausted. Please refill credits." 
                                     });
-                                    if (callback) callback({ success: false, error: 'STRATEGIC_QUOTA_EXHAUSTED' });
+                                    if (callback) callback({ success: false, error: 'INSTITUTIONAL_QUOTA_EXHAUSTED' });
                                     return;
                                 }
                             }
                         } else {
-                            console.error(`🛑 [SECURITY] Missing wallet for ${senderId}`);
+                            console.error(`❌ [IDENTITY_LEDGER_MISSING] No wallet entry found for Institutional ID/Email: [${senderId}]. Handshake denied.`);
                             await ChatMessage.findByIdAndDelete(newMessage._id);
                             if (callback) callback({ success: false, error: 'IDENTITY_LEDGER_MISSING' });
                             return;
@@ -223,7 +244,7 @@ io.on('connection', (socket) => {
 
         } catch (err) {
             console.error('❌ [MESSENGER ERROR]', err);
-            if (callback) callback({ success: false, error: 'Strategic handshake failed.' });
+            if (callback) callback({ success: false, error: 'Institutional handshake failed.' });
         }
     });
 

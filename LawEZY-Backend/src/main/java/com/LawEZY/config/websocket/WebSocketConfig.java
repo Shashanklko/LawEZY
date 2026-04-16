@@ -19,7 +19,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     private String[] allowedOrigins;
 
     @Override
-    public void configureMessageBroker(MessageBrokerRegistry config) {
+    public void configureMessageBroker(@org.springframework.lang.NonNull MessageBrokerRegistry config) {
         // Enable a simple memory-based message broker
         config.enableSimpleBroker("/topic", "/queue");
         
@@ -28,15 +28,15 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     }
 
     @Override
-    public void registerStompEndpoints(StompEndpointRegistry registry) {
+    public void registerStompEndpoints(@org.springframework.lang.NonNull StompEndpointRegistry registry) {
         // The URL where clients connect to the WebSocket server
         registry.addEndpoint("/ws")
-                .setAllowedOrigins(allowedOrigins)
+                .setAllowedOrigins(allowedOrigins != null ? allowedOrigins : new String[]{"*"})
                 .withSockJS();
     }
 
     @Override
-    public void configureClientInboundChannel(ChannelRegistration registration) {
+    public void configureClientInboundChannel(@org.springframework.lang.NonNull ChannelRegistration registration) {
         // Register our Anti-Leakage interceptor to scan all incoming messages
         registration.interceptors(chatChannelInterceptor);
     }

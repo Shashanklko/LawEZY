@@ -30,13 +30,13 @@ const ClientAppointments = ({ user }) => {
         try {
             if (action === 'accept') {
                 await apiClient.post(`/api/appointments/${appt.id}/accept`);
-                alert("Strategic Schedule Confirmed. Proceeding to finalization.");
+                alert("Institutional Schedule Confirmed. Proceeding to finalization.");
             } else if (action === 'paid') {
                 await apiClient.patch(`/api/appointments/${appt.id}/status?status=PAID`);
                 alert("Institutional payment verified. Access to room granted.");
             } else if (action === 'revoke') {
                 await apiClient.patch(`/api/appointments/${appt.id}/status?status=CANCELLED`);
-                alert("Strategic Revocation Dispatched: Protocol terminated.");
+                alert("Institutional Revocation Dispatched: Protocol terminated.");
             } else if (action === 'review') {
                 setSelectedAppt(appt);
                 setShowReviewModal(true);
@@ -44,7 +44,7 @@ const ClientAppointments = ({ user }) => {
             }
             fetchAppointments();
         } catch (err) {
-            alert(`Strategic action failed: ${action}`);
+            alert(`Institutional action failed: ${action}`);
         }
     };
 
@@ -79,7 +79,7 @@ const ClientAppointments = ({ user }) => {
         return true;
     });
 
-    if (loading) return <div style={{ padding: '40px', textAlign: 'center', opacity: 0.6 }}>Synchronizing Strategic Ledger...</div>;
+    if (loading) return <div style={{ padding: '40px', textAlign: 'center', opacity: 0.6 }}>Synchronizing Institutional Ledger...</div>;
 
     return (
         <div className="appointments-tab-container animate-reveal">
@@ -93,12 +93,12 @@ const ClientAppointments = ({ user }) => {
                             style={{
                                 padding: '8px 18px', borderRadius: '10px', border: 'none', fontSize: '0.7rem', fontWeight: 800, cursor: 'pointer',
                                 background: filter === f ? 'var(--midnight-primary)' : 'transparent',
-                                color: filter === f ? 'var(--strategic-gold)' : '#64748b',
+                                color: filter === f ? 'var(--elite-gold)' : '#64748b',
                                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                                 letterSpacing: '0.5px'
                             }}
                         >
-                            {f === 'PROPOSALS' ? 'Strategic Proposals' : f === 'UPCOMING' ? 'Confirmed Sessions' : 'Institutional History'}
+                            {f === 'PROPOSALS' ? 'Institutional Proposals' : f === 'UPCOMING' ? 'Confirmed Sessions' : 'Institutional History'}
                         </button>
                     ))}
                 </div>
@@ -130,9 +130,9 @@ const ClientAppointments = ({ user }) => {
                         fontSize: '0.8rem', 
                         minWidth: 'auto', 
                         background: 'var(--midnight-primary)',
-                        color: 'var(--strategic-gold)',
+                        color: 'var(--elite-gold)',
                         boxShadow: '0 4px 15px rgba(212, 175, 55, 0.15)',
-                        border: '1px solid var(--strategic-gold)'
+                        border: '1px solid var(--elite-gold)'
                     }}
                 >
                     + Book New Appointment
@@ -167,7 +167,7 @@ const ClientAppointments = ({ user }) => {
                     onSuccess={() => {
                         setShowReviewModal(false);
                         fetchAppointments();
-                        alert("Institutional Review Submitted. Strategic Mission COMPLETED.");
+                        alert("Institutional Review Submitted. Institutional Mission COMPLETED.");
                     }}
                 />
             )}

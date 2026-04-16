@@ -87,7 +87,7 @@ export const renderContentWithLinks = (text) => {
               href={href} 
               target="_blank" 
               rel="noopener noreferrer" 
-              style={{ color: 'var(--strategic-gold)', textDecoration: 'underline', fontWeight: 600, wordBreak: 'break-all' }}
+              style={{ color: 'var(--elite-gold)', textDecoration: 'underline', fontWeight: 600, wordBreak: 'break-all' }}
             >
               {sub}
             </a>

@@ -101,7 +101,7 @@ const Signup = () => {
             </Link> – The high-precision bridge for legal and financial brilliance. 
             A unified ecosystem where discerning clients access elite professional services, 
             and top-tier experts deliver institutional-grade solutions to meet complex 
-            strategic needs.
+            institutional needs.
           </p>
         </div>
 

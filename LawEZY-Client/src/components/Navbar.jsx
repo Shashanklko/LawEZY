@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 
 import useAuthStore from '../store/useAuthStore'
 import apiClient from '../services/apiClient'
+import { getSocket } from '../services/socket'
 
 const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -10,7 +11,7 @@ const Navbar = () => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   
   // Real Auth State from Zustand Store
-  const { user, isAuthenticated, logout } = useAuthStore();
+  const { user, token, isAuthenticated, logout } = useAuthStore();
   const location = useLocation();
   const isLoggedIn = isAuthenticated;
   
@@ -29,20 +30,74 @@ const Navbar = () => {
   const isExpert = ['LAWYER', 'CA', 'CFA', 'OTHER', 'PRO'].includes(user?.role?.toUpperCase());
   
   const [walletBalance, setWalletBalance] = useState('₹ 0');
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   
+  // Professional Pulse: Socket Listener for Global Alerts
+  useEffect(() => {
+    if (!isAuthenticated || !user?.id || !token) return;
+
+    const socket = getSocket(token);
+    
+    const handleNewNotification = (notification) => {
+      console.log('🔔 [NAVBAR] Real-time link pulse received:', notification);
+      setNotifications(prev => [notification, ...prev].slice(0, 10)); // Keep only recent
+      setUnreadCount(prev => prev + 1);
+      
+      // If the browser supports it, show a native toast or play a brief sound
+      if (Notification.permission === 'granted') {
+          new window.Notification(notification.title, { body: notification.message });
+      }
+    };
+
+    socket.on('notification_received', handleNewNotification);
+    
+    // Initial Sync
+    fetchNotifications();
+    fetchUnreadCount();
+
+    return () => {
+      socket.off('notification_received', handleNewNotification);
+    };
+  }, [isAuthenticated, user?.id, token]);
+
+  const fetchNotifications = async () => {
+    try {
+      const targetId = user.uid || user.id;
+      const response = await apiClient.get(`/api/notifications?userId=${targetId}`);
+      setNotifications(response.data?.data?.slice(0, 5) || []);
+    } catch (err) {
+      console.warn('[NAVBAR] Could not fetch alert history');
+    }
+  };
+
+  const fetchUnreadCount = async () => {
+    try {
+      const targetId = user.uid || user.id;
+      const response = await apiClient.get(`/api/notifications/unread-count?userId=${targetId}`);
+      setUnreadCount(response.data?.data || 0);
+    } catch (err) {
+      console.warn('[NAVBAR] Could not fetch unread tally');
+    }
+  };
+
+  const handleMarkAsRead = async (notifyId) => {
+    try {
+      await apiClient.put(`/api/notifications/${notifyId}/read`);
+      setNotifications(prev => prev.map(n => n.id === notifyId ? { ...n, read: true } : n));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (err) {
+      console.error('[NAVBAR] Failed to update read status');
+    }
+  };
+
   useEffect(() => {
     if (isAuthenticated) {
       apiClient.get('/api/wallet/balance')
         .then(res => setWalletBalance(`₹ ${res.data.earnedBalance?.toLocaleString() || '0'}`))
         .catch(() => setWalletBalance('₹ --'));
     }
-  }, [isAuthenticated, location.pathname]); // Refresh on navigation to catch wallet changes
-  
-  const mockNotifications = [
-    { id: 1, text: "New message from Rajesh Kumar (Advocate)", time: "2m ago", type: "message" },
-    { id: 2, text: "Appointment scheduled: Tomorrow, 10:00 AM", time: "1h ago", type: "event" },
-    { id: 3, text: "Strategic case document updated", time: "3h ago", type: "doc" }
-  ];
+  }, [isAuthenticated, location.pathname]); 
   
   const notifyRef = useRef(null);
   const profileRef = useRef(null);
@@ -128,26 +183,55 @@ const Navbar = () => {
                   {/* 🔔 Notifications (Universal for logged in) */}
                   <div className="nav-notifications-container" ref={notifyRef}>
                     <button 
-                      className={`btn-icon-nav ${isNotificationsOpen ? 'active' : ''}`}
+                      className={`btn-icon-nav ${isNotificationsOpen ? 'active' : ''} ${unreadCount > 0 ? 'alert-pulse' : ''}`}
                       onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
                     >
                       <span className="notify-bell">🔔</span>
-                      <span className="notify-dot"></span>
+                      {unreadCount > 0 && <span className="notify-badge">{unreadCount}</span>}
                     </button>
                     {isNotificationsOpen && (
                       <div className="notifications-dropdown glass">
-                        <div className="notify-header">STRATEGIC UPDATES</div>
+                        <div className="notify-header">NOTIFICATIONS</div>
                         <div className="notify-list">
-                          {mockNotifications.map(n => (
-                            <div key={n.id} className="notify-item">
-                              <span className="notify-text">{n.text}</span>
-                              <span className="notify-time">{n.time}</span>
-                            </div>
-                          ))}
+                          {notifications.length > 0 ? (
+                            notifications.map(n => (
+                              <div 
+                                key={n.id} 
+                                className={`notify-item ${n.read ? 'read' : 'unread'}`}
+                                onClick={() => handleMarkAsRead(n.id)}
+                              >
+                                <div className="notify-status-dot"></div>
+                                <div className="notify-content">
+                                  <span className="notify-title">{n.title}</span>
+                                  <span className="notify-text">{n.message}</span>
+                                  <span className="notify-time">
+                                    {(() => {
+                                      if (!n.timestamp) return 'Just Now';
+                                      try {
+                                        if (Array.isArray(n.timestamp)) {
+                                          const [y, m, d, h, min, s] = n.timestamp;
+                                          return new Date(y, m - 1, d, h, min, s || 0).toLocaleString([], { hour: '2-digit', minute: '2-digit' });
+                                        }
+                                        const d = new Date(n.timestamp);
+                                        return isNaN(d.getTime()) ? 'Just Now' : d.toLocaleString([], { hour: '2-digit', minute: '2-digit' });
+                                      } catch (e) { return 'Just Now'; }
+                                    })()}
+                                  </span>
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="notify-empty">No unread alerts for this cycle.</div>
+                          )}
                         </div>
                       </div>
                     )}
                   </div>
+
+                  {/* 📊 Quick Dashboard Link */}
+                  <Link to="/dashboard" className="btn-secondary dashboard-quick-btn" onClick={closeMenu} style={{ padding: '6px 14px', fontSize: '0.65rem', border: '1.5px solid rgba(139, 90, 43, 0.3)', color: '#8B5A2B' }}>
+                    Dashboard
+                  </Link>
 
                   {/* 👤 Profile Circular Avatar & Dropdown */}
                   <div className="nav-profile-container" ref={profileRef}>
@@ -171,12 +255,8 @@ const Navbar = () => {
                           <span className="user-role-badge">{userRoleLabel}</span>
                         </div>
                         <div className="dropdown-divider"></div>
-                        <Link to="/dashboard" className="dropdown-item" onClick={closeMenu}>
-                          <span className="drop-icon">📊</span> DASHBOARD
-                        </Link>
-                        <div className="dropdown-divider"></div>
                         <button className="dropdown-item logout-item" onClick={() => { logout(); closeMenu(); }}>
-                           <span className="drop-icon">🚪</span> SIGN OUT
+                           Sign out
                         </button>
                       </div>
                     )}
@@ -293,15 +373,38 @@ const Navbar = () => {
           justify-content: center;
           cursor: pointer;
           position: relative;
+          transition: all 0.3s;
         }
-        .notify-dot {
+        .btn-icon-nav.alert-pulse {
+            border-color: #ef4444;
+            animation: nav-border-pulse 2s infinite;
+        }
+        @keyframes nav-border-pulse {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+            70% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        .notify-badge {
           position: absolute;
-          top: 8px;
-          right: 8px;
-          width: 6px;
-          height: 6px;
+          top: -6px;
+          right: -6px;
+          width: 18px;
+          height: 18px;
           background: #ef4444;
+          color: white;
+          font-size: 0.55rem;
+          font-weight: 800;
           border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: 2px solid white;
+          animation: badge-pulse 1s ease-out;
+        }
+        @keyframes badge-pulse {
+            0% { transform: scale(0.5); opacity: 0; }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); opacity: 1; }
         }
         
         .notifications-dropdown {
@@ -309,7 +412,7 @@ const Navbar = () => {
           top: 100%;
           right: 0;
           margin-top: 10px;
-          min-width: 320px;
+          min-width: 340px;
           background: white;
           border: 1px solid rgba(127, 29, 29, 0.1);
           border-radius: 8px;
@@ -325,6 +428,7 @@ const Navbar = () => {
           color: #999;
           letter-spacing: 1.5px;
           background: #fbfbfb;
+          text-transform: uppercase;
         }
         .notify-list {
           max-height: 400px;
@@ -334,24 +438,38 @@ const Navbar = () => {
           padding: 16px 20px;
           border-bottom: 1px solid rgba(0,0,0,0.03);
           display: flex;
-          flex-direction: column;
-          gap: 4px;
+          gap: 12px;
           transition: all 0.2s;
           cursor: pointer;
+          align-items: flex-start;
         }
+        .notify-item.unread { background: rgba(127, 29, 29, 0.025); }
         .notify-item:hover {
-          background: rgba(127, 29, 29, 0.02);
+          background: rgba(127, 29, 29, 0.05);
         }
+        .notify-status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ef4444;
+            margin-top: 4px;
+            flex-shrink: 0;
+            opacity: 0;
+        }
+        .notify-item.unread .notify-status-dot { opacity: 1; }
+        .notify-content { display: flex; flex-direction: column; gap: 2px; }
+        .notify-title { font-size: 0.75rem; font-weight: 800; color: var(--accent-burgundy); }
         .notify-text {
-          font-size: 0.72rem;
-          font-weight: 700;
-          color: #333;
+          font-size: 0.7rem;
+          font-weight: 600;
+          color: #555;
           line-height: 1.4;
         }
         .notify-time {
           font-size: 0.6rem;
-          color: #aaa;
+          color: #999;
           font-weight: 600;
+          margin-top: 4px;
         }
         .notify-empty {
           padding: 30px 20px;
@@ -394,44 +512,45 @@ const Navbar = () => {
           position: absolute;
           top: 100%;
           right: 0;
-          margin-top: 12px;
-          min-width: 220px;
+          margin-top: 8px;
+          min-width: 180px;
           background: white;
-          border: 1px solid rgba(127, 29, 29, 0.1);
-          border-radius: 12px;
-          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+          border: 1px solid rgba(0, 0, 0, 0.06);
+          border-radius: 8px;
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
           z-index: 2500;
           overflow: hidden;
-          padding: 8px 0;
+          padding: 4px 0;
         }
         .profile-dropdown-header {
-          padding: 12px 20px;
+          padding: 10px 16px;
           display: flex;
           flex-direction: column;
           gap: 4px;
         }
-        .user-name { font-size: 0.85rem; font-weight: 800; color: var(--text-main); }
+        .user-name { 
+          font-size: 0.8rem; 
+          font-weight: 700; 
+          color: var(--text-main); 
+          text-transform: capitalize;
+        }
         .user-role-badge { 
-          font-size: 0.6rem; 
+          font-size: 0.55rem; 
           font-weight: 800; 
           color: #8B5A2B; 
           letter-spacing: 1px;
-          background: rgba(139, 90, 43, 0.1);
-          padding: 2px 6px;
-          border-radius: 4px;
-          width: fit-content;
         }
-        .dropdown-divider { height: 1px; background: rgba(0,0,0,0.05); margin: 8px 0; }
+        .dropdown-divider { height: 1px; background: rgba(0,0,0,0.06); margin: 4px 0; }
         
         .dropdown-item {
-          padding: 8px 20px;
+          padding: 10px 16px;
           text-decoration: none;
           color: rgba(15, 23, 42, 0.7);
-          font-size: 0.65rem;
-          font-weight: 800;
+          font-size: 0.7rem;
+          font-weight: 600;
           display: flex;
           align-items: center;
-          gap: 12px;
+          gap: 10px;
           transition: all 0.2s;
           border: none;
           background: transparent;
@@ -439,10 +558,9 @@ const Navbar = () => {
           cursor: pointer;
           text-align: left;
         }
-        .dropdown-item:hover { background: rgba(127, 29, 29, 0.04); color: var(--accent-burgundy); }
-        .drop-icon { font-size: 1rem; opacity: 0.8; }
-        .logout-item { color: #ef4444; }
-        .logout-item:hover { background: rgba(239, 68, 68, 0.05) !important; color: #dc2626 !important; }
+        .dropdown-item:hover { background: rgba(0, 0, 0, 0.03); color: var(--text-main); }
+        .logout-item { color: rgba(15, 23, 42, 0.7); }
+        .logout-item:hover { background: rgba(239, 68, 68, 0.05) !important; color: #ef4444 !important; }
 
         .btn-secondary {
           padding: 8px 16px;

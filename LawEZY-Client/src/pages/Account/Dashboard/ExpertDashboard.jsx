@@ -75,7 +75,7 @@ const ExpertDashboard = ({ onToggleView }) => {
             const newStatus = !isOnline;
             setIsOnline(newStatus);
             await apiClient.patch(`/api/professionals/${user.uid}/status`, { online: newStatus });
-            // Strategic Refresh: Ensure local cache and metadata parity
+            // Institutional Refresh: Ensure local cache and metadata parity
             await refreshMetadata();
         } catch (err) {
             console.error("Status synchronization failed.");
@@ -141,7 +141,7 @@ const ExpertDashboard = ({ onToggleView }) => {
                         onClick={() => setActiveTab('appointments')}
                     >
                         <div className="nav-label-group">
-                            <span className="nav-text">📅 STRATEGIC PIPELINE</span>
+                            <span className="nav-text">📅 INSTITUTIONAL PIPELINE</span>
                             <span className="nav-sub">Manage active consultations</span>
                         </div>
                     </button>
@@ -175,7 +175,7 @@ const ExpertDashboard = ({ onToggleView }) => {
 
                     <button className="nav-link-item seeker-bridge-btn" onClick={onToggleView} style={{ background: 'rgba(212, 175, 55, 0.05)', marginTop: 'auto' }}>
                         <div className="nav-label-group">
-                            <span className="nav-text" style={{ color: 'var(--strategic-gold)', fontWeight: 800 }}>🏛️ SEEKER DASHBOARD</span>
+                            <span className="nav-text" style={{ color: 'var(--elite-gold)', fontWeight: 800 }}>🏛️ SEEKER DASHBOARD</span>
                             <span className="nav-sub">Manage advice you've booked</span>
                         </div>
                     </button>
@@ -191,9 +191,14 @@ const ExpertDashboard = ({ onToggleView }) => {
                     </div>
 
                     <div className="institutional-footer">
-                        <button className="btn-logout-minimal" onClick={() => { useAuthStore.getState().logout(); navigate('/login'); }}>
-                            EXIT COMMAND
-                        </button>
+                        <div className="footer-actions-dual">
+                            <button className="btn-exit-dash" onClick={() => navigate('/')}>
+                                EXIT DASHBOARD
+                            </button>
+                            <button className="btn-logout-minimal" onClick={() => { useAuthStore.getState().logout(); navigate('/login'); }}>
+                                LOG OUT
+                            </button>
+                        </div>
                         <span>v2.4.0-PRO</span>
                     </div>
                 </div>
@@ -243,7 +248,7 @@ const ExpertDashboard = ({ onToggleView }) => {
                     <aside className="communications-feed" style={{ background: '#fff', border: '1px solid #e2e8f0', boxShadow: '0 15px 50px rgba(0,0,0,0.06)' }}>
                         <div className="feed-header">
                             <h3 style={{ color: 'var(--midnight-primary)', fontWeight: 900 }}>Live Conversations</h3>
-                            <button className="btn-text-only" onClick={() => navigate('/messages')} style={{ color: 'var(--strategic-gold)', fontWeight: 800 }}>VIEW HUB →</button>
+                            <button className="btn-text-only" onClick={() => navigate('/messages')} style={{ color: 'var(--elite-gold)', fontWeight: 800 }}>VIEW HUB →</button>
                         </div>
                         <div className="chat-mini-list">
                             {loading ? (
@@ -261,7 +266,7 @@ const ExpertDashboard = ({ onToggleView }) => {
                             ) : chatSessions.length > 0 ? (
                                 chatSessions.slice(0, 4).map(session => (
                                     <div key={session.id} className="chat-item-dash" onClick={() => navigate(`/messages?sessionId=${session.id}`)} style={{ borderBottom: '1px solid #f8fafc' }}>
-                                        <div className="c-avatar" style={{ background: 'var(--midnight-primary)', color: 'var(--strategic-gold)', borderRadius: '12px' }}>{session.clientName?.charAt(0) || 'C'}</div>
+                                        <div className="c-avatar" style={{ background: 'var(--midnight-primary)', color: 'var(--elite-gold)', borderRadius: '12px' }}>{session.clientName?.charAt(0) || 'C'}</div>
                                         <div className="c-info">
                                             <strong style={{ color: 'var(--midnight-primary)', fontSize: '0.9rem' }}>{session.clientName || 'Institutional Client'}</strong>
                                             <p className="last-msg" style={{ color: '#64748b' }}>{session.lastMessage || 'Awaiting synchronization...'}</p>
@@ -272,7 +277,7 @@ const ExpertDashboard = ({ onToggleView }) => {
                             ) : (
                                 <div className="empty-feed" style={{ background: 'rgba(0,0,0,0.01)', borderRadius: '16px', padding: '30px' }}>
                                     <span className="icon" style={{ opacity: 1 }}>📬</span>
-                                    <p style={{ fontWeight: 700, color: '#94a3b8' }}>No active strategic comms.</p>
+                                    <p style={{ fontWeight: 700, color: '#94a3b8' }}>No active institutional comms.</p>
                                 </div>
                             )}
                         </div>

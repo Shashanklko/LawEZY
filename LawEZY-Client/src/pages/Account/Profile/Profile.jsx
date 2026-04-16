@@ -18,7 +18,7 @@ const Profile = () => {
     if (!user) {
         return (
             <div className="profile-loading-overlay">
-                <div className="loader-strategic"></div>
+                <div className="loader-institutional"></div>
                 <p>Authenticating User Session...</p>
             </div>
         );
@@ -26,7 +26,7 @@ const Profile = () => {
 
     const isProfessional = ['LAWYER', 'CA', 'CFA', 'OTHER', 'PRO', 'EXPERT', 'PROFESSIONAL'].includes(user.role?.toUpperCase());
     
-    // The Strategic ID is internal, prioritize the persisted public UID from the database
+    // The Institutional ID is internal, prioritize the persisted public UID from the database
     const uid = profileData?.uid || generateLawEZYUID({
         ...user,
         firstName: profileData?.firstName || user.firstName,

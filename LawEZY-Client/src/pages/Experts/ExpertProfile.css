@@ -1,17 +1,17 @@
-/* ExpertProfile.css - Elite-Grade Strategic Aesthetic (Synced with Lawino.ai) */
+/* ExpertProfile.css - Elite-Grade Institutional Aesthetic (Synced with Lawino.ai) */
 
 :root {
   --heritage-parchment: #FBFBF9;
   --heritage-stone: #F2F1ED;
   --deep-charcoal: #1A1D21;
-  --strategic-gold: #8E6B47;
+  --elite-gold: #8E6B47;
   --gold-glow: rgba(142, 107, 71, 0.08);
   --glass-border: rgba(26, 29, 33, 0.06);
   --halo-shadow: 0 10px 40px rgba(0, 0, 0, 0.04);
   --grid-line: rgba(0, 0, 0, 0.03);
 }
 
-@keyframes strategicReveal {
+@keyframes institutionalReveal {
   from { opacity: 0; transform: translateY(15px); }
   to { opacity: 1; transform: translateY(0); }
 }
@@ -55,7 +55,7 @@
   border-radius: 50%;
   background: transparent;
   border: 1px solid transparent;
-  color: var(--strategic-gold);
+  color: var(--elite-gold);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -79,7 +79,7 @@
   padding: 40px 30px;
   position: relative;
   overflow: visible; /* To allow halo overflow */
-  animation: strategicReveal 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: institutionalReveal 0.8s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .profile-hero-content {
@@ -109,7 +109,7 @@
   gap: 12px;
 }
 
-/* Strategic Halo Effect */
+/* Institutional Halo Effect */
 .profile-avatar-large::before {
   content: '';
   position: absolute;
@@ -187,7 +187,7 @@
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 1.2px;
-  color: var(--strategic-gold);
+  color: var(--elite-gold);
   opacity: 0.7;
 }
 
@@ -204,7 +204,7 @@
   padding: 5px 12px;
   border-radius: 4px;
   font-size: 0.65rem;
-  color: var(--strategic-gold);
+  color: var(--elite-gold);
   letter-spacing: 1.5px;
   margin-bottom: 12px;
   font-weight: 800;
@@ -223,7 +223,7 @@
 
 .expert-designation {
   font-size: 0.9rem;
-  color: var(--strategic-gold);
+  color: var(--elite-gold);
   margin-bottom: 5px;
   font-weight: 500;
   opacity: 0.8;
@@ -244,7 +244,7 @@
 }
 
 .marker-item.verified-premium-stamp {
-  color: var(--strategic-gold);
+  color: var(--elite-gold);
   opacity: 1;
   display: flex;
   align-items: center;
@@ -272,10 +272,10 @@
 }
 
 .license-verify-link {
-  color: var(--strategic-gold);
+  color: var(--elite-gold);
   text-decoration: none;
   font-weight: 700;
-  border-bottom: 1px dashed var(--strategic-gold);
+  border-bottom: 1px dashed var(--elite-gold);
   padding-bottom: 1px;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -302,7 +302,7 @@
 .lang-tag {
   font-size: 0.7rem;
   font-weight: 600;
-  color: var(--strategic-gold);
+  color: var(--elite-gold);
   background: white;
   padding: 2px 10px;
   border-radius: 4px;
@@ -347,7 +347,7 @@
 }
 
 .btn-primary-consult:hover {
-  background: var(--strategic-gold);
+  background: var(--elite-gold);
   transform: translateY(-4px);
   box-shadow: 0 10px 30px rgba(142, 107, 71, 0.3);
 }
@@ -377,7 +377,7 @@
   margin: 0;
   padding-left: 60px;
   padding-bottom: 80px;
-  animation: strategicReveal 1s cubic-bezier(0.16, 1, 0.3, 1) delay 0.2s;
+  animation: institutionalReveal 1s cubic-bezier(0.16, 1, 0.3, 1) delay 0.2s;
 }
 
 .profile-tabs {
@@ -405,7 +405,7 @@
 
 .profile-tabs button.active {
   opacity: 1;
-  color: var(--strategic-gold);
+  color: var(--elite-gold);
 }
 
 .profile-tabs button::after {
@@ -415,7 +415,7 @@
   left: 0;
   width: 0;
   height: 2px;
-  background: var(--strategic-gold);
+  background: var(--elite-gold);
   transition: width 0.4s ease;
 }
 
@@ -454,7 +454,7 @@
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 1.5px;
-  color: var(--strategic-gold);
+  color: var(--elite-gold);
   margin-bottom: 30px;
 }
 
@@ -484,12 +484,12 @@
   height: 11px;
   border-radius: 50%;
   background: var(--heritage-parchment);
-  border: 2px solid var(--strategic-gold);
+  border: 2px solid var(--elite-gold);
   z-index: 2;
 }
 
 .roadmap-item:first-child .roadmap-marker {
-  background: var(--strategic-gold); /* Current role highlight */
+  background: var(--elite-gold); /* Current role highlight */
 }
 
 .roadmap-content {
@@ -501,7 +501,7 @@
 .job-period {
   font-size: 0.65rem;
   font-weight: 800;
-  color: var(--strategic-gold);
+  color: var(--elite-gold);
   opacity: 0.6;
 }
 
@@ -533,7 +533,7 @@
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 1.5px;
-  color: var(--strategic-gold);
+  color: var(--elite-gold);
   margin-bottom: 12px; /* Reduced further from 20px */
 }
 
@@ -570,7 +570,7 @@
   top: 15px;
   right: 15px;
   font-size: 1.2rem; /* Size of the arrow icon */
-  color: var(--strategic-gold);
+  color: var(--elite-gold);
   text-decoration: none;
   opacity: 0.6;
   width: 28px;
@@ -589,7 +589,7 @@
 }
 
 .affiliation-badge:hover {
-  border-color: var(--strategic-gold);
+  border-color: var(--elite-gold);
   transform: translateY(-4px);
   box-shadow: 0 8px 25px rgba(142, 107, 71, 0.1);
 }
@@ -635,7 +635,7 @@
 .service-card-elite:hover {
   transform: translateY(-12px);
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.04);
-  border-color: var(--strategic-gold);
+  border-color: var(--elite-gold);
 }
 
 .service-card-header {
@@ -653,7 +653,7 @@
 .service-price {
   font-size: 0.75rem;
   font-weight: 800;
-  color: var(--strategic-gold);
+  color: var(--elite-gold);
   background: var(--gold-glow);
   padding: 4px 10px;
   border-radius: 4px;
@@ -681,7 +681,7 @@
 }
 
 .btn-service-inquiry:hover {
-  background: var(--strategic-gold);
+  background: var(--elite-gold);
 }
 
 .credentials-list {
@@ -696,7 +696,7 @@
   font-size: 0.9rem;
   text-transform: uppercase;
   letter-spacing: 1.5px;
-  color: var(--strategic-gold);
+  color: var(--elite-gold);
   margin-bottom: 20px;
 }
 
@@ -716,7 +716,7 @@
 
 .credentials-list li::before {
   content: '✦';
-  color: var(--strategic-gold);
+  color: var(--elite-gold);
   font-size: 0.8rem;
 }
 
@@ -745,7 +745,7 @@
 }
 
 .check-icon {
-  color: var(--strategic-gold);
+  color: var(--elite-gold);
   font-size: 1.1rem;
 }
 
@@ -777,7 +777,7 @@
   border: 1px solid var(--glass-border);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
   transition: transform 0.4s ease;
-  animation: strategicReveal 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: institutionalReveal 0.8s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .review-card-premium:hover {
@@ -810,13 +810,13 @@
 }
 
 .review-rating-star {
-  color: var(--strategic-gold);
+  color: var(--elite-gold);
   font-weight: 800;
   font-size: 0.9rem;
 }
 
 .review-content-single {
-  border-left: 3px solid var(--strategic-gold);
+  border-left: 3px solid var(--elite-gold);
   padding-left: 20px;
 }
 
@@ -858,7 +858,7 @@
 /* RESPONSIVE */
 /* EXPERTISE SECTION */
 .expertise-section {
-  animation: strategicReveal 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: institutionalReveal 0.8s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* EXPERIENCE SNAPSHOT ENHANCEMENTS */
@@ -925,7 +925,7 @@
 
 .sticky-text span {
   font-size: 0.75rem;
-  color: var(--strategic-gold);
+  color: var(--elite-gold);
   font-weight: 800;
   letter-spacing: 0.5px;
   text-transform: uppercase;
@@ -948,14 +948,14 @@
 
 .evidence-subsection {
   margin-top: 30px;
-  animation: strategicReveal 1s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: institutionalReveal 1s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .evidence-title {
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 2px;
-  color: var(--strategic-gold);
+  color: var(--elite-gold);
   margin-bottom: 15px;
   padding-bottom: 10px;
   border-bottom: 1px solid var(--glass-border);
@@ -980,7 +980,7 @@
 
 .case-card-elite:hover {
   transform: translateY(-5px);
-  border-color: var(--strategic-gold);
+  border-color: var(--elite-gold);
   box-shadow: 0 10px 30px rgba(142, 107, 71, 0.08);
 }
 
@@ -993,7 +993,7 @@
 .case-year {
   font-size: 0.65rem;
   font-weight: 800;
-  color: var(--strategic-gold);
+  color: var(--elite-gold);
   background: var(--gold-glow);
   padding: 2px 8px;
   border-radius: 4px;
@@ -1162,7 +1162,7 @@
 .snapshot-card-premium:hover {
   transform: translateY(-8px);
   box-shadow: 0 20px 50px rgba(142, 107, 71, 0.15);
-  border-color: var(--strategic-gold);
+  border-color: var(--elite-gold);
 }
 
 .snapshot-media-frame {
@@ -1266,7 +1266,7 @@
   background: white;
   padding: 20px;
   border-radius: 12px;
-  border: 1px solid var(--strategic-gold);
+  border: 1px solid var(--elite-gold);
   background: linear-gradient(135deg, white 0%, var(--heritage-parchment) 100%);
   box-shadow: 0 10px 40px rgba(142, 107, 71, 0.1);
   width: 100%;
@@ -1278,7 +1278,7 @@
   gap: 10px;
   font-size: 0.7rem;
   font-weight: 800;
-  color: var(--strategic-gold);
+  color: var(--elite-gold);
   letter-spacing: 1px;
 }
 
@@ -1287,5 +1287,5 @@
 }
 
 .sticky-actions .btn-primary-consult {
-  background: var(--strategic-gold);
+  background: var(--elite-gold);
 }

@@ -29,7 +29,7 @@ public class AiHistoryCleanupService {
         List<AiChatSession> oldSessions = sessionRepository.findByUpdatedAtBefore(cutOffDate);
         
         if (oldSessions.isEmpty()) {
-            log.info("[CLEANUP] No outdated sessions found. Strategic archives remain intact.");
+            log.info("[CLEANUP] No outdated sessions found. Institutional archives remain intact.");
             return;
         }
 

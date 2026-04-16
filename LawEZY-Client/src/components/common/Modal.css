@@ -1,4 +1,4 @@
-/* Modal.css - Heritage Parchment & Strategic Gold */
+/* Modal.css - Heritage Parchment & Institutional Gold */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -22,7 +22,7 @@
   max-width: 1000px;
   max-height: 90vh;
   background: var(--heritage-parchment, #fdfcf8);
-  border: 1px solid rgba(184, 153, 94, 0.3); /* Strategic Gold Border */
+  border: 1px solid rgba(184, 153, 94, 0.3); /* Institutional Gold Border */
   box-shadow: 0 40px 80px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(184, 153, 94, 0.1);
   border-radius: 4px;
   overflow: hidden;
@@ -51,7 +51,7 @@
 }
 
 .modal-close-btn:hover {
-  background: var(--strategic-gold, #b8995e);
+  background: var(--elite-gold, #b8995e);
   color: white;
   transform: rotate(90deg);
 }

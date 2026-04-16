@@ -11,7 +11,9 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('lawezy_token');
-    if (token) {
+    
+    // Robust check: Prevent sending the strings "null" or "undefined" as Bearer tokens
+    if (token && token !== 'null' && token !== 'undefined') {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;

@@ -48,7 +48,7 @@ const FinancialActivity = ({ profile }) => {
         try {
             const res = await apiClient.post('/api/account/deposit', { amount: 5000.0 });
             setTransactions([res.data, ...transactions]);
-            setMessage('Strategic Funding Secured: ₹5,000 added.');
+            setMessage('Institutional Funding Secured: ₹5,000 added.');
         } catch (err) {
             setMessage('Funding Error: Check authorization.');
         } finally {
@@ -63,7 +63,7 @@ const FinancialActivity = ({ profile }) => {
 
     return (
         <div className="financial-activity-container animate-reveal" style={{maxWidth: '850px'}}>
-            {/* STRATEGIC ASSET CARDS */}
+            {/* INSTITUTIONAL ASSET CARDS */}
             <div className="asset-cards-grid" style={{
                 display: 'grid', 
                 gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
@@ -100,7 +100,7 @@ const FinancialActivity = ({ profile }) => {
                         {isUnlimited ? '∞ UNLIMITED' : `${aiTokens} Sessions`}
                     </div>
                     <div style={{fontSize: '0.55rem', color: '#C7D2FE', marginTop: '5px'}}>
-                        {isUnlimited ? 'Strategic Unlimited Pass' : 'Tiered Free Quota'}
+                        {isUnlimited ? 'Institutional Unlimited Pass' : 'Tiered Free Quota'}
                     </div>
                     <div style={{
                         position: 'absolute', right: '5px', top: '5px', opacity: 0.1, fontSize: '1.5rem'
@@ -132,7 +132,7 @@ const FinancialActivity = ({ profile }) => {
             <div className="form-section highlight" style={{background: 'rgba(15, 23, 42, 0.02)', padding: '15px 20px', border: '1px solid #E2E8F0'}}>
                 <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
                     <div>
-                        <h3 className="section-subtitle" style={{color: '#1E293B', marginBottom: '4px', fontSize: '0.6rem'}}>Strategic Funding Control</h3>
+                        <h3 className="section-subtitle" style={{color: '#1E293B', marginBottom: '4px', fontSize: '0.6rem'}}>Institutional Funding Control</h3>
                         <p style={{fontSize: '0.55rem', color: '#64748B', margin: 0}}>Manage your institutional capital and payout requests.</p>
                     </div>
                     

@@ -72,7 +72,7 @@ const SecuritySettings = () => {
             setActionLoading(true);
             try {
                 await apiClient.delete(`/api/users/${user.id}`);
-                alert("Identity purged successfully. We value your past strategic presence.");
+                alert("Identity purged successfully. We value your past institutional presence.");
                 logout();
             } catch (err) {
                 alert("Purge failed: " + (err.response?.data || 'Server Error'));
@@ -137,7 +137,7 @@ const SecuritySettings = () => {
                 <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
                     <div>
                         <p style={{fontWeight: 700, fontSize: '0.75rem', marginBottom: '2px'}}>Two-Factor Authentication (2FA)</p>
-                        <p style={{fontSize: '0.65rem', color: '#64748B'}}>Add an institutional encryption layer to your strategic sessions.</p>
+                        <p style={{fontSize: '0.65rem', color: '#64748B'}}>Add an institutional encryption layer to your institutional sessions.</p>
                     </div>
                     <button 
                         className="btn-save-profile" 

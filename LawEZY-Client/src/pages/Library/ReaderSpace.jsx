@@ -8,7 +8,7 @@ const ReaderSpace = ({ initialTitle = '', initialBlocks = [], author = '', onExi
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
   
-  const isAuthor = author === 'You (Strategist)';
+  const isAuthor = author === 'You (Institutionalist)';
   
   const blockRefs = useRef({});
 
@@ -56,7 +56,7 @@ const ReaderSpace = ({ initialTitle = '', initialBlocks = [], author = '', onExi
       {/* SIDEBAR */}
       <aside className={`notion-sidebar ${!sidebarOpen ? 'collapsed' : ''}`}>
         <div className="sidebar-header">
-          <div className="strat-brand-logo small">LAWEZY</div>
+          <div className="inst-brand-logo small">LAWEZY</div>
           <button className="btn-ghost" onClick={() => setSidebarOpen(false)}>◀</button>
         </div>
         
@@ -100,7 +100,7 @@ const ReaderSpace = ({ initialTitle = '', initialBlocks = [], author = '', onExi
               <button className="notion-toggle-sidebar" onClick={() => setSidebarOpen(true)}>☰</button>
             </div>
             <div className="notion-collapsed-branding">
-              <div className="strat-brand-logo small">LAWEZY</div>
+              <div className="institutional-brand-logo small">LAWEZY</div>
             </div>
           </>
         )}

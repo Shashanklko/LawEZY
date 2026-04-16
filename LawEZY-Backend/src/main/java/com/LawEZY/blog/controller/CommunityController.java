@@ -21,8 +21,6 @@ public class CommunityController {
     @Autowired
     private PostService postService;
 
-    @Autowired
-    private com.LawEZY.user.repository.UserRepository userRepository;
 
     @PostMapping("/posts")
     public ResponseEntity<Post> createPost(@RequestBody @NonNull PostRequest request) {

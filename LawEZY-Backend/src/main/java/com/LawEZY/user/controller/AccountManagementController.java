@@ -37,7 +37,7 @@ public class AccountManagementController {
     public ResponseEntity<FinancialTransaction> depositFunds(@RequestBody Map<String, Double> payload) {
         String userId = getCurrentUserId();
         Double amount = payload.get("amount");
-        return ResponseEntity.ok(financialService.recordTransaction(userId, "Wallet Deposit (Strategic Funding)", amount, "COMPLETED", "CREDIT"));
+        return ResponseEntity.ok(financialService.recordTransaction(userId, "Wallet Deposit (Institutional Funding)", amount, "COMPLETED", "CREDIT"));
     }
 
     @PostMapping("/withdraw")
@@ -50,7 +50,7 @@ public class AccountManagementController {
     @PostMapping("/admin/approve-payout/{transactionId}")
     public ResponseEntity<FinancialTransaction> approvePayout(@PathVariable String transactionId) {
         // Simulating admin approval
-        return ResponseEntity.ok(financialService.recordTransaction(getCurrentUserId(), "Payout Processed: Strategic Liquidation", 0.0, "PAID", "DEBIT"));
+        return ResponseEntity.ok(financialService.recordTransaction(getCurrentUserId(), "Payout Processed: Institutional Liquidation", 0.0, "PAID", "DEBIT"));
     }
 
     @PostMapping("/pay-appointment/{id}")
@@ -68,7 +68,7 @@ public class AccountManagementController {
         financialService.validateSufficientFunds(userId, -appt.getFee());
 
         // 2. Ledger Update
-        financialService.recordTransaction(userId, "Strategic Appointment Payment - ID: " + id, -appt.getFee(), "COMPLETED", "DEBIT");
+        financialService.recordTransaction(userId, "Institutional Appointment Payment - ID: " + id, -appt.getFee(), "COMPLETED", "DEBIT");
 
         // 3. Status Escalation & Room Activation
         appt.setStatus("PAID");
@@ -92,9 +92,9 @@ public class AccountManagementController {
         String expertUid = (String) payload.get("expertUid");
         Double fee = Double.valueOf(payload.get("fee").toString());
 
-        // Institutional Protocol: Verify sufficient strategic capital before booking
+        // Institutional Protocol: Verify sufficient institutional capital before booking
         financialService.validateSufficientFunds(userId, -fee);
-        // Register strategic appointment in the official registry
+        // Register institutional appointment in the official registry
         appointmentService.createAppointment(com.LawEZY.user.entity.Appointment.builder()
                 .clientUid(userId)
                 .expertUid(expertUid)

@@ -408,7 +408,7 @@ const Community = () => {
         <div className="community-modal-overlay" onClick={() => setIsNewDiscussionModalOpen(false)}>
           <div className="community-modal create-modal" onClick={e => e.stopPropagation()}>
             <button className="close-modal" onClick={() => setIsNewDiscussionModalOpen(false)}>×</button>
-            <h2>Strategic Legal Discussion</h2>
+            <h2>Institutional Legal Discussion</h2>
             <p className="modal-desc">Synthesize insights for the institutional community.</p>
             <div className="create-form">
               <input

@@ -48,7 +48,7 @@ const ExpertProfile = ({ expertId, isModal }) => {
   const handleBookingSubmit = async (e) => {
     e.preventDefault();
     if (!user) {
-      alert("Please login to book a strategic consultation.");
+      alert("Please login to book an institutional consultation.");
       navigate('/login');
       return;
     }
@@ -58,9 +58,9 @@ const ExpertProfile = ({ expertId, isModal }) => {
       const scheduledAt = `${bookingData.date}T${bookingData.time}`;
       
       const payload = {
-        clientUid: user.uid,
-        expertUid: expert.uid,
-        initiatorUid: user.uid,
+        clientUid: user.uid || user.id,
+        expertUid: expert.uid || expert.id,
+        initiatorUid: user.uid || user.id,
         baseFee: expert.consultationFee || 499.0,
         scheduledAt: scheduledAt,
         reason: bookingData.reason,
@@ -68,7 +68,7 @@ const ExpertProfile = ({ expertId, isModal }) => {
       };
 
       await apiClient.post('/api/appointments/propose', payload);
-      alert(`Strategic Proposal Dispatched to ${expert.name}. Institutional tracking active in your dashboard.`);
+      alert(`Institutional Proposal Dispatched to ${expert.name}. Institutional tracking active in your dashboard.`);
       setShowBookingModal(false);
       navigate('/dashboard');
     } catch (err) {
@@ -96,8 +96,8 @@ const ExpertProfile = ({ expertId, isModal }) => {
 
   if (!expert) return (
     <div className="loading-state">
-      <div className="loader-strategic"></div>
-      Initializing Strategic Profile...
+      <div className="loader-institutional"></div>
+      Initializing Institutional Profile...
     </div>
   );
 
@@ -119,7 +119,7 @@ const ExpertProfile = ({ expertId, isModal }) => {
               </div>
               <div className="expert-stats-row-header">
                 <span className="rating-v">★ {expert.rating}</span>
-                <span className="rating-l">STRATEGIC RATING</span>
+                <span className="rating-l">INSTITUTIONAL RATING</span>
               </div>
             </div>
             
@@ -202,7 +202,7 @@ const ExpertProfile = ({ expertId, isModal }) => {
               <div className="bio-split-layout">
                 <div className="bio-text-main">
                   <h3>Professional Summary & Strategy</h3>
-                  <p>{expert.bio || expert.bioSmall || 'Strategic professional at LawEZY Elite Network.'}</p>
+                  <p>{expert.bio || expert.bioSmall || 'Institutional professional at LawEZY Elite Network.'}</p>
                 </div>
 
                 <div className="bio-credentials-sidebar">
@@ -292,7 +292,7 @@ const ExpertProfile = ({ expertId, isModal }) => {
                     <span className="check-icon">◈</span>
                     <div className="expertise-text">
                       <strong>{domain}</strong>
-                      <p>Institutional-grade counsel and strategic execution in this high-impact domain.</p>
+                      <p>Institutional-grade counsel and institutional execution in this high-impact domain.</p>
                     </div>
                   </div>
                 ))}
@@ -304,7 +304,7 @@ const ExpertProfile = ({ expertId, isModal }) => {
             <div className="reviews-section animate-reveal">
               <div className="reviews-header-group">
                 <h3>Verified Client Testimonials</h3>
-                <p className="section-subtitle">Direct feedback on strategic execution and professional satisfaction.</p>
+                <p className="section-subtitle">Direct feedback on institutional execution and professional satisfaction.</p>
               </div>
 
               <div className="reviews-list-v2">
@@ -368,7 +368,7 @@ const ExpertProfile = ({ expertId, isModal }) => {
         <div className="modal-overlay-premium" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }} onClick={() => setShowBookingModal(false)}>
           <div className="booking-modal-card animate-reveal-up" style={{ background: 'var(--heritage-parchment)', width: '100%', maxWidth: '450px', borderRadius: '24px', padding: '35px', boxShadow: '0 30px 60px -12px rgba(0,0,0,0.4)', border: '1px solid var(--glass-border)' }} onClick={e => e.stopPropagation()}>
             <div style={{ textAlign: 'center', marginBottom: '25px' }}>
-              <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'var(--midnight-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px', color: 'var(--strategic-gold)', fontSize: '1.5rem', boxShadow: '0 8px 20px rgba(13, 27, 42, 0.2)' }}>⚖️</div>
+              <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'var(--midnight-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px', color: 'var(--elite-gold)', fontSize: '1.5rem', boxShadow: '0 8px 20px rgba(13, 27, 42, 0.2)' }}>⚖️</div>
               <h2 style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 900, color: 'var(--midnight-primary)', margin: 0 }}>Secure 1:1 Booking</h2>
               <p style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '5px' }}>Initiating institutional consultation with {expert.name}</p>
             </div>
@@ -429,8 +429,8 @@ const ExpertProfile = ({ expertId, isModal }) => {
 
               <div style={{ display: 'flex', gap: '12px', marginTop: '10px' }}>
                 <button type="button" onClick={() => setShowBookingModal(false)} style={{ flex: 1, padding: '14px', borderRadius: '12px', border: 'none', background: '#e2e8f0', color: '#475569', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer', transition: 'all 0.2s' }}>Abstain</button>
-                <button type="submit" disabled={isSubmitting} style={{ flex: 2, padding: '14px', borderRadius: '12px', border: 'none', background: 'var(--midnight-primary)', color: 'var(--strategic-gold)', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer', boxShadow: '0 8px 15px rgba(13, 27, 42, 0.2)', transition: 'all 0.2s' }}>
-                  {isSubmitting ? 'Dispatching...' : 'Submit Strategic Request →'}
+                <button type="submit" disabled={isSubmitting} style={{ flex: 2, padding: '14px', borderRadius: '12px', border: 'none', background: 'var(--midnight-primary)', color: 'var(--elite-gold)', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer', boxShadow: '0 8px 15px rgba(13, 27, 42, 0.2)', transition: 'all 0.2s' }}>
+                  {isSubmitting ? 'Dispatching...' : 'Submit Institutional Request →'}
                 </button>
               </div>
             </form>

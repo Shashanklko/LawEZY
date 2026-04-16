@@ -36,7 +36,7 @@ const FAQ = () => {
   return (
     <div className="faq-page">
       <div className="faq-header">
-        <h1>LawEZY <span>Strategic Support</span>.</h1>
+        <h1>LawEZY <span>Institutional Support</span>.</h1>
         <p>Find institutional answers to your questions about the LawEZY ecosystem. Whether you are a seeker of justice or a provider of expertise, we are here to help.</p>
       </div>
 

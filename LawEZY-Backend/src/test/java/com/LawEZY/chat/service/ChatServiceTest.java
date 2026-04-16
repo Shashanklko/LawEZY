@@ -13,6 +13,11 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.mockito.MockedStatic;
+import com.LawEZY.auth.dto.CustomUserDetails;
 
 import java.util.Optional;
 
@@ -37,12 +42,45 @@ class ChatServiceTest {
     @Mock
     private com.LawEZY.user.repository.WalletRepository walletRepository;
 
+    @Mock
+    private com.LawEZY.user.repository.ClientProfileRepository clientProfileRepository;
+
+    @Mock
+    private com.LawEZY.user.repository.LawyerProfileRepository lawyerProfileRepository;
+
+    @Mock
+    private com.LawEZY.user.service.UserService userService;
+
+    @Mock
+    private com.LawEZY.user.service.FinancialService financialService;
+
+    @Mock
+    private com.LawEZY.common.service.AuditLogService auditLogService;
+
+    @Mock
+    private com.LawEZY.ai.service.AiService aiService;
+
     @InjectMocks
     private ChatServiceImp chatService;
+
+    private MockedStatic<SecurityContextHolder> securityContextHolderMock;
+    private SecurityContext securityContext;
+    private Authentication authentication;
+    private CustomUserDetails customUserDetails;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        
+        // Mock Security Context
+        securityContext = mock(SecurityContext.class);
+        authentication = mock(Authentication.class);
+        customUserDetails = mock(CustomUserDetails.class);
+        
+        SecurityContextHolder.setContext(securityContext);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.isAuthenticated()).thenReturn(true);
+        when(authentication.getPrincipal()).thenReturn(customUserDetails);
     }
 
     @Test
@@ -71,6 +109,7 @@ class ChatServiceTest {
         when(walletRepository.findById(professionalUserId)).thenReturn(Optional.of(wallet));
         when(professionalProfileRepository.findById(professionalUserId)).thenReturn(Optional.of(profile));
         when(chatSessionRepository.save(any(ChatSession.class))).thenReturn(session);
+        when(customUserDetails.getId()).thenReturn(professionalUserId);
 
         chatService.unlockReply(sessionId);
 

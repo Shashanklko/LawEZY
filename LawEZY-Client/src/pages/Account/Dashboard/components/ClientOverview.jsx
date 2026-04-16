@@ -26,7 +26,7 @@ const ClientOverview = ({ user, profile, wallet, sessions, transactions }) => {
                 </div>
                 <div className="stat-card">
                     <div className="stat-header">
-                        <span className="stat-label">Strategic Investment</span>
+                        <span className="stat-label">Institutional Investment</span>
                         <span className="stat-icon">📈</span>
                     </div>
                     <div className="stat-value">₹{totalSpent.toLocaleString()}</div>
@@ -36,7 +36,7 @@ const ClientOverview = ({ user, profile, wallet, sessions, transactions }) => {
 
             <div className="data-section" style={{ marginTop: '25px' }}>
                 <div className="section-header">
-                    <h2 className="section-title">Recent Strategic Engagement</h2>
+                    <h2 className="section-title">Recent Institutional Engagement</h2>
                     <Link to="/messages" className="btn-save-profile" style={{fontSize: '0.7rem', padding: '6px 12px', minWidth: 'auto'}}>Open Secure Chat</Link>
                 </div>
                 <div className="recent-activity-list" style={{ padding: '0 24px 24px 24px' }}>
@@ -52,7 +52,7 @@ const ClientOverview = ({ user, profile, wallet, sessions, transactions }) => {
                         </div>
                     )) : (
                         <div style={{ padding: '40px', textAlign: 'center', opacity: 0.5 }}>
-                            No active strategic consultations initialized.
+                            No active institutional consultations initialized.
                         </div>
                     )}
                 </div>

@@ -12,7 +12,7 @@ import org.springframework.data.mongodb.repository.config.EnableMongoRepositorie
 
 @Configuration
 @EnableMongoRepositories(
-    basePackages = {"com.LawEZY.chat.repository", "com.LawEZY.ai.repository"},
+    basePackages = {"com.LawEZY.chat.repository"},
     mongoTemplateRef = "chatMongoTemplate"
 )
 public class ChatMongoConfig {
@@ -27,7 +27,9 @@ public class ChatMongoConfig {
     @Primary
     @Bean
     public MongoDatabaseFactory chatMongoDatabaseFactory() {
-        return new SimpleMongoClientDatabaseFactory(chatMongoProperties().getUri());
+        String uri = chatMongoProperties().getUri();
+        if (uri == null) throw new IllegalStateException("Chat MongoDB URI must not be null");
+        return new SimpleMongoClientDatabaseFactory(uri);
     }
 
     @Primary

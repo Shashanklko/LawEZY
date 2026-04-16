@@ -9,7 +9,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -20,8 +19,6 @@ import java.io.IOException;
 @Component
 public class JwtRequestFilter extends OncePerRequestFilter {
 
-    @Autowired
-    private CustomUserDetailsService userDetailsService;
 
     @Autowired
     private JwtUtil jwtUtil;
@@ -31,7 +28,9 @@ public class JwtRequestFilter extends OncePerRequestFilter {
 
     // This method fires BEFORE every single HTTP request hits a Controller
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+    protected void doFilterInternal(@org.springframework.lang.NonNull HttpServletRequest request, 
+                                    @org.springframework.lang.NonNull HttpServletResponse response, 
+                                    @org.springframework.lang.NonNull FilterChain chain)
             throws ServletException, IOException {
 
         // 1. Look for the VIP Pass in the "Authorization" HTTP Header
@@ -43,10 +42,17 @@ public class JwtRequestFilter extends OncePerRequestFilter {
         // 2. A JWT should look like: "Bearer asdf123.zxvc456.qwer789"
         if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
             jwt = authorizationHeader.substring(7); // Cut off the word "Bearer " to isolate the exact token
+            
+            // Safety Guard: Suppress alerts for known frontend sync glitches
+            if ("null".equals(jwt) || "undefined".equals(jwt)) {
+                chain.doFilter(request, response);
+                return;
+            }
+
             try {
                 username = jwtUtil.extractUsername(jwt); // Use our math machine to extract the user's email
             } catch (Exception e) {
-                // If the token is "null", "undefined", or just garbage, we catch the crash here.
+                // If the token is garbage, we catch the crash here.
                 String ip = request.getRemoteAddr();
                 auditLogService.logSecurityAlert(
                     "Malformed JWT received",

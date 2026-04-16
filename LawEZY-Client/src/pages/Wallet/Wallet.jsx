@@ -33,10 +33,10 @@ const Wallet = () => {
         setProcessing(true);
         setMessage('');
         try {
-            // Mocking strategic funding for demo/test purposes as discussed
+            // Mocking Expert funding for demo/test purposes as discussed
             const res = await apiClient.post('/api/account/deposit', { amount: 5000.0 });
             setTransactions([res.data, ...transactions]);
-            setMessage('Strategic Funding Secured: ₹5,000 added.');
+            setMessage('Expert Funding Secured: ₹5,000 added.');
             refreshMetadata(); // Sync global balance
         } catch (err) {
             setMessage('Funding Error: Check authorization.');
@@ -74,22 +74,22 @@ const Wallet = () => {
 
     if (loading) return (
         <div className="profile-loading-overlay">
-            <div className="loader-strategic"></div>
-            <p>Synchronizing Institutional Strategic Ledger...</p>
+            <div className="loader-Expert"></div>
+            <p>Synchronizing Institutional Expert Ledger...</p>
         </div>
     );
 
     return (
         <div className="wallet-page-wrapper animate-reveal">
             <header className="wallet-header">
-                <h1>Strategic Wallet</h1>
+                <h1>Expert Wallet</h1>
                 <p>Manage your professional earnings and institutional deposits.</p>
             </header>
 
             <div className="wallet-assets-grid">
                 {/* PRIMARY CASH BALANCE (Deposits) */}
                 <div className="wallet-asset-card">
-                    <span className="asset-type-label">Strategic Deposits</span>
+                    <span className="asset-type-label">Expert Deposits</span>
                     <div className="asset-main-val">₹{cashBalance.toLocaleString()}</div>
                     <span className="asset-sub-val">● Liquid Capital</span>
                     <div className="asset-icon-watermark">💳</div>
@@ -97,8 +97,8 @@ const Wallet = () => {
 
                 {/* EARNED BALANCE (Professional Revenue) */}
                 {isProfessional && (
-                    <div className="wallet-asset-card" style={{ background: 'linear-gradient(135deg, #0d1b2a 0%, #16213e 100%)', border: '1px solid var(--strategic-gold)' }}>
-                        <span className="asset-type-label" style={{ color: 'var(--strategic-gold)' }}>Consolidated Revenue</span>
+                    <div className="wallet-asset-card" style={{ background: 'linear-gradient(135deg, #0d1b2a 0%, #16213e 100%)', border: '1px solid var(--elite-gold)' }}>
+                        <span className="asset-type-label" style={{ color: 'var(--elite-gold)' }}>Consolidated Revenue</span>
                         <div className="asset-main-val" style={{ color: 'white' }}>₹{earnedBalance.toLocaleString()}</div>
                         <span className="asset-sub-val" style={{ color: 'rgba(255,255,255,0.6)' }}>● Professional Earnings</span>
                         <div className="asset-icon-watermark" style={{ opacity: 0.1 }}>🏛️</div>
@@ -112,7 +112,7 @@ const Wallet = () => {
                         {isUnlimited ? '∞ UNLIMITED' : `${aiTokens} Sessions`}
                     </div>
                     <span className="asset-sub-val" style={{color: '#c7d2fe'}}>
-                        {isUnlimited ? 'Elite Strategic Pass' : 'Tiered Quota Active'}
+                        {isUnlimited ? 'Elite Expert Pass' : 'Tiered Quota Active'}
                     </span>
                     <div className="asset-icon-watermark">🤖</div>
                 </div>
@@ -132,16 +132,16 @@ const Wallet = () => {
 
             <div className="wallet-action-bar">
                 <div className="action-intro">
-                    <h3>Strategic Capital Control</h3>
+                    <h3>Expert Capital Control</h3>
                     <p>Manage your institutional reserve and payout requests.</p>
                     {message && <div style={{fontSize: '0.7rem', color: '#10b981', fontWeight: 800, marginTop: '5px'}}>{message}</div>}
                 </div>
                 <div className="action-buttons">
                     <button className="btn-wallet-action btn-deposit" onClick={handleDeposit} disabled={processing}>
-                        {processing ? '...' : (isProfessional ? 'Add Strategic Float' : 'Add Credits')}
+                        {processing ? '...' : (isProfessional ? 'Add Expert Float' : 'Add Credits')}
                     </button>
                     {isProfessional && (
-                         <button className="btn-wallet-action btn-withdraw" onClick={handleWithdraw} disabled={processing || earnedBalance <= 0} style={{ background: 'var(--strategic-gold)', color: 'var(--midnight-primary)', fontWeight: 800 }}>
+                         <button className="btn-wallet-action btn-withdraw" onClick={handleWithdraw} disabled={processing || earnedBalance <= 0} style={{ background: 'var(--elite-gold)', color: 'var(--midnight-primary)', fontWeight: 800 }}>
                             {processing ? '...' : 'Request Revenue Payout'}
                         </button>
                     )}
@@ -189,7 +189,7 @@ const Wallet = () => {
                         {transactions.length === 0 && (
                             <tr>
                                 <td colSpan="6" style={{textAlign: 'center', padding: '40px', opacity: 0.5}}>
-                                    No strategic entries found in the institutional ledger.
+                                    No Expert entries found in the institutional ledger.
                                 </td>
                             </tr>
                         )}

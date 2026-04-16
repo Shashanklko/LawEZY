@@ -1,6 +1,6 @@
 :root {
   --heritage-parchment: #fdfaf3;
-  --strategic-gold: #b8995e;
+  --elite-gold: #b8995e;
   --deep-burgundy: #7f1d1d;
   --text-dark: #1a1a1a;
   --glass-white: rgba(255, 255, 255, 0.95);
@@ -28,7 +28,7 @@
 }
 
 .contact-header h1 span {
-  color: var(--strategic-gold);
+  color: var(--elite-gold);
 }
 
 .contact-grid {
@@ -71,7 +71,7 @@
 }
 
 .form-group input:focus, .form-group textarea:focus {
-  border-color: var(--strategic-gold);
+  border-color: var(--elite-gold);
   outline: none;
   box-shadow: 0 0 0 4px rgba(184, 153, 94, 0.1);
 }
@@ -111,7 +111,7 @@
   font-size: 1.5rem;
   color: var(--text-dark);
   margin-bottom: 20px;
-  border-left: 4px solid var(--strategic-gold);
+  border-left: 4px solid var(--elite-gold);
   padding-left: 15px;
 }
 
@@ -123,7 +123,7 @@
 
 .info-icon {
   font-size: 1.5rem;
-  color: var(--strategic-gold);
+  color: var(--elite-gold);
 }
 
 .info-text strong {

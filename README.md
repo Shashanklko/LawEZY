@@ -1,4 +1,4 @@
-# ⚖️ LawEZY: Strategic Legal Intelligence Platform
+# ⚖️ LawEZY: Institutional Legal Intelligence Platform
 
 Welcome to the **LawEZY** Monorepo. This repository centralizes our high-fidelity legal tech ecosystem, integrating real-time professional consultation, AI-driven legal research, and secure financial governance.
 
@@ -10,7 +10,7 @@ Welcome to the **LawEZY** Monorepo. This repository centralizes our high-fidelit
 | :--- | :--- | :--- |
 | **[LawEZY-Client](file:///e:/Project/LawEZY/LawEZY-Client)** | React + Vite | Institutional Portal (Clients & Experts) |
 | **[LawEZY-Backend](file:///e:/Project/LawEZY/LawEZY-Backend)** | Java + Spring Boot | Auth, Financials, and Appointment Engine |
-| **[LawEZY-Messenger](file:///e:/Project/LawEZY/LawEZY-Messenger)** | Node.js + Socket.io | Real-time Hub & Strategic Credit Governance |
+| **[LawEZY-Messenger](file:///e:/Project/LawEZY/LawEZY-Messenger)** | Node.js + Socket.io | Real-time Hub & Institutional Credit Governance |
 | **[LawEZY-AI-Service](file:///e:/Project/LawEZY/LawEZY-AI-Service)** | Python (FastAPI) | LawinoAI - Legal & Financial Intelligence |
 
 ---
@@ -23,7 +23,7 @@ The **LawEZY-AI-Service** is a domain-restricted intelligence engine powered by 
 **Core Capabilities**:
 - **Domain Restriction**: Expert knowledge limited to Indian Law, CA (Tax/GST), and CFA (Finance/Investments).
 - **Tactical Interception**: A local NLP layer that handles greetings and common queries to optimize resource usage.
-- **Strategic Routing**: Automatically identifies personal cases and prompts users to connect with human LawEZY Experts.
+- **Institutional Routing**: Automatically identifies personal cases and prompts users to connect with human LawEZY Experts.
 - **Persistent Memory**: Full session persistence via MongoDB Atlas for long-form consultation history.
 
 ---
@@ -59,7 +59,7 @@ npm run dev
 
 ---
 
-## 🛡️ Strategic Handshake Protocol (V2.1)
+## 🛡️ Institutional Handshake Protocol (V2.1)
 LawEZY utilizes a proprietary synchronization handshake between the **Messenger** and the **Backend** to ensure:
 - **Zero-Drift Credit Governance**: Units are deducted atomically during consultation.
 - **Expert Mobilization**: Professionals are automatically prompted for refills/appointments when client tokens are exhausted.
@@ -70,7 +70,7 @@ LawEZY utilizes a proprietary synchronization handshake between the **Messenger*
 ## 🔒 Security & Data
 - **Relational Data**: Powered by TiDB (Cloud MySQL) for global scale.
 - **Chat Ledger**: Stored in MongoDB for high-fidelity archival.
-- **Auth**: Secure JWT with strategic role-based access control.
+- **Auth**: Secure JWT with institutional role-based access control.
 
 ---
 **Status: HARDENING (Phase 2 - Development)**

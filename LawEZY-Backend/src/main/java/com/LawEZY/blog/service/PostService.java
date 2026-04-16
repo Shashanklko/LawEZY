@@ -38,6 +38,8 @@ public class PostService {
 
     public Post createPost(@NonNull PostRequest request) {
         String identifier = request.getAuthorId();
+        if (identifier == null) throw new IllegalArgumentException("Author identifier is required");
+        
         User author = userRepository.findById(identifier)
                 .or(() -> userRepository.findByEmail(identifier))
                 .orElseThrow(() -> new ResourceNotFoundException("Author not found: " + identifier));
@@ -59,10 +61,13 @@ public class PostService {
 
     @NonNull
     public List<Post> getFeed(@Nullable PostType type) {
+        List<Post> posts;
         if (type != null) {
-            return postRepository.findByTypeOrderByCreatedAtDesc(type);
+            posts = postRepository.findByTypeOrderByCreatedAtDesc(type);
+        } else {
+            posts = postRepository.findAllByOrderByCreatedAtDesc();
         }
-        return postRepository.findAllByOrderByCreatedAtDesc();
+        return posts != null ? posts : java.util.Collections.emptyList();
     }
 
     public void toggleLike(@NonNull String postId, @NonNull String userId) {

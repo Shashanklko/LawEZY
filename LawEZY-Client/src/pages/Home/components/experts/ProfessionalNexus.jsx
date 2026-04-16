@@ -32,7 +32,7 @@ const ProfessionalNexus = () => {
     >
       <div className="nexus-container">
         <div className="nexus-content-left">
-          <span className="nexus-eyebrow">Strategic Collaboration</span>
+          <span className="nexus-eyebrow">Institutional Collaboration</span>
           <h2 className="nexus-heading">Are you a Legal or Financial Professional?</h2>
           <p className="nexus-tagline">
             Join our exclusive ecosystem of top-tier practitioners to scale your 
@@ -40,7 +40,7 @@ const ProfessionalNexus = () => {
           </p>
           
           <ul className="nexus-perks">
-            <li><span>01</span> Strategic Case Hand-off</li>
+            <li><span>01</span> Institutional Case Hand-off</li>
             <li><span>02</span> Global Professional Branding</li>
             <li><span>03</span> Elite Network Collaboration</li>
           </ul>
@@ -50,7 +50,7 @@ const ProfessionalNexus = () => {
         
         <div className="nexus-image-right">
           <div className="nexus-image-frame">
-            <img src={financeImg} alt="Professional Financial Strategic Advisory" />
+            <img src={financeImg} alt="Professional Financial Institutional Advisory" />
           </div>
         </div>
       </div>

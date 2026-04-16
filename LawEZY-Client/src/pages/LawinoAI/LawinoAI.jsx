@@ -30,7 +30,7 @@ const LawinoAI = () => {
   const { user } = useAuthStore();
   const { updateUser } = useAuthStore();
   const userName = user?.email?.split('@')[0] || 'Guest User';
-  const userRole = user?.role || 'Strategic Tier';
+  const userRole = user?.role || 'Expert Tier';
 
   // Load History on Mount
   useEffect(() => {
@@ -38,24 +38,25 @@ const LawinoAI = () => {
   }, []);
 
   // Wallet Refresh: ensure sidebar quota reflects live DB state
-  useEffect(() => {
+  const refreshWallet = async () => {
     if (!user?.id) return;
-    const refreshWallet = async () => {
-      try {
-        const response = await apiClient.get(`/api/users/${user.id}`);
-        const fresh = response.data;
-        if (fresh) {
-          updateUser({
-            freeAiTokens: fresh.freeAiTokens,
-            freeChatTokens: fresh.freeChatTokens,
-            tokenBalance: fresh.tokenBalance,
-            isUnlimited: fresh.isUnlimited,
-          });
-        }
-      } catch (err) {
-        console.warn('[WALLET] Could not refresh AI token balance:', err.message);
+    try {
+      const response = await apiClient.get(`/api/users/${user.id}`);
+      const fresh = response.data;
+      if (fresh) {
+        updateUser({
+          freeAiTokens: fresh.freeAiTokens,
+          freeChatTokens: fresh.freeChatTokens,
+          tokenBalance: fresh.tokenBalance,
+          isUnlimited: fresh.isUnlimited,
+        });
       }
-    };
+    } catch (err) {
+      console.warn('[WALLET] Could not refresh AI token balance:', err.message);
+    }
+  };
+
+  useEffect(() => {
     refreshWallet();
   }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -89,7 +90,7 @@ const LawinoAI = () => {
 
   const handleDeleteSession = async (e, id) => {
     e.stopPropagation();
-    if (!window.confirm("Are you sure you want to delete this strategic archive? This action cannot be undone.")) return;
+    if (!window.confirm("Are you sure you want to delete this Expert archive? This action cannot be undone.")) return;
     
     try {
       await apiClient.delete(`/api/ai/sessions/${id}`);
@@ -150,7 +151,7 @@ const LawinoAI = () => {
     setAttachedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  // Custom Markdown Components for Strategic Interaction
+  // Custom Markdown Components for Expert Interaction
   const MarkdownComponents = {
     a: ({ node, ...props }) => {
       const { href, children } = props;
@@ -189,7 +190,7 @@ const LawinoAI = () => {
     }
   };
 
-  // Strategic URI Transformer: Allows 'internal:' protocol tactical mapping
+  // Expert URI Transformer: Allows 'internal:' protocol tactical mapping
   const transformUri = (uri) => {
     console.log('URI Transformer Pulse:', uri);
     if (uri.startsWith('internal:') || uri.includes('/experts')) return uri;
@@ -247,7 +248,7 @@ const LawinoAI = () => {
         fetchHistory(); // Refresh sidebar history
       }
 
-      const fullResponse = data?.response || "Strategic protocols interrupted.";
+      const fullResponse = data?.response || "Expert protocols interrupted.";
       
       // Industrial Grade Typewriter: Stream characters into the message state
       const newAiMessage = { role: 'ai', content: '' };
@@ -272,6 +273,9 @@ const LawinoAI = () => {
           clearInterval(interval);
         }
       }, 5); // Fast tactical streaming
+      
+      // Update Expert Units
+      refreshWallet();
     } catch (err) {
       console.error('AI Error:', err);
       setMessages(prev => [...prev, { 
@@ -323,6 +327,7 @@ const LawinoAI = () => {
       
       const aiResponse = { role: 'ai', content: data?.response };
       setMessages(prev => [...prev, aiResponse]);
+      refreshWallet();
     } catch (err) {
       console.error('AI Edit Error:', err);
       setMessages(prev => [...prev, { 
@@ -357,7 +362,7 @@ const LawinoAI = () => {
         <div className="sidebar-backdrop" onClick={() => setIsMobileSidebarOpen(false)}></div>
       )}
 
-      {/* Strategic Left Sidebar */}
+      {/* Expert Left Sidebar */}
       <aside className={`ai-sidebar ${isSidebarCollapsed ? 'collapsed' : ''} ${isMobile && isMobileSidebarOpen ? 'mobile-open' : ''}`}>
         <button 
           className="sidebar-toggle" 
@@ -606,7 +611,7 @@ const LawinoAI = () => {
                 </div>
               </div>
             </div>
-            <p className="command-disclaimer">Strategic guidance for orientation only. Verify with LawEZY Experts.</p>
+            <p className="command-disclaimer">Expert guidance for orientation only. Verify with LawEZY Experts.</p>
           </div>
         </div>
       </main>

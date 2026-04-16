@@ -11,14 +11,14 @@ public class ChatSessionResponse {
     private String id;
     private String userId;
     private String professionalId; 
-    private String proUid; // Strategic Public Identifier
+    private String proUid; // Institutional Public Identifier
     private String otherPartyName;
     private String otherPartyAvatar;
     private String lastMessage;
     private String lastMessageTime;
     private Integer unreadCount;
     private ChatStatus status;
-    private Integer peerTokenBalance; // Strategic visibility for liquidity status
+    private Integer peerTokenBalance; // Institutional visibility for liquidity status
     private LocalDateTime createdAt;
     private LocalDateTime lastUpdateAt;
 }

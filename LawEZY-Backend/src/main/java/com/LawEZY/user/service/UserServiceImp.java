@@ -60,7 +60,6 @@ public class UserServiceImp implements UserService {
     @Autowired 
     private com.LawEZY.user.repository.ReviewRepository reviewRepository;
 
-    @Autowired private com.LawEZY.chat.repository.ChatSessionRepository chatSessionRepository;
     
     @jakarta.annotation.PostConstruct
     public void init() {
@@ -89,30 +88,30 @@ public class UserServiceImp implements UserService {
         authUser.setPassword(passwordEncoder.encode(userRequest.getPassword()));
         authUser.setRole(userRequest.getRole());
         
-        // 3. GENERATE STRATEGIC ID
-        String strategicId;
+        // 3. GENERATE INSTITUTIONAL ID
+        String institutionalId;
         if (normalizedEmail.equals("shekhar@test.com")) {
-            strategicId = "11SS01CL";
-            log.warn("[STRATEGIC OVERRIDE] Reserved testing identity detected for {}. Mapping to 11SS01CL.", normalizedEmail);
+            institutionalId = "11SS01CL";
+            log.warn("[INSTITUTIONAL OVERRIDE] Reserved testing identity detected for {}. Mapping to 11SS01CL.", normalizedEmail);
         } else {
-            strategicId = generateStrategicId(userRequest.getFirstName(), userRequest.getLastName(), userRequest.getRole());
+            institutionalId = generateInstitutionalId(userRequest.getFirstName(), userRequest.getLastName(), userRequest.getRole());
         }
-        authUser.setId(strategicId);
+        authUser.setId(institutionalId);
         
         // 4. Save Auth Root
         User savedAuth = userRepository.save(authUser);
 
         // 5. Create Universal Wallet
         Wallet wallet = new Wallet();
-        wallet.setId(strategicId);
+        wallet.setId(institutionalId);
         wallet.setUser(savedAuth);
         wallet.setFreeAiTokens(5); // Tiered Free AI Quota
         wallet.setFreeChatTokens(5); // Tiered Free Chat Quota
         
-        // Strategic Unlimited Flag for Testing Accounts
-        if (strategicId.equals("11SS01CL")) {
+        // Institutional Unlimited Flag for Testing Accounts
+        if (institutionalId.equals("11SS01CL")) {
             wallet.setIsUnlimited(true);
-            log.warn("[STRATEGIC OVERRIDE] Account {} ({}) granted UNLIMITED strategic credit.", strategicId, normalizedEmail);
+            log.warn("[INSTITUTIONAL OVERRIDE] Account {} ({}) granted UNLIMITED institutional credit.", institutionalId, normalizedEmail);
         }
 
         
@@ -130,7 +129,7 @@ public class UserServiceImp implements UserService {
         return mapToResponse(savedAuth, userRequest.getFirstName(), userRequest.getLastName()); 
     }
 
-    private String generateStrategicId(String first, String last, Role role) {
+    private String generateInstitutionalId(String first, String last, Role role) {
         String day = String.format("%02d", java.time.LocalDate.now().getDayOfMonth());
         char fInit = (first != null && !first.isEmpty()) ? first.toUpperCase().charAt(0) : 'X';
         char lInit = (last != null && !last.isEmpty()) ? last.toUpperCase().charAt(0) : 'X';
@@ -142,7 +141,7 @@ public class UserServiceImp implements UserService {
         
         if (lastId != null && lastId.length() >= 7) {
             try {
-                // Strategic ID Pattern: [DD][FI][LI][SS][RC]
+                // Institutional ID Pattern: [DD][FI][LI][SS][RC]
                 // Serial starts at index 5 and is 2 digits long
                 String lastSerialStr = lastId.substring(5, 7);
                 nextSerial = Integer.parseInt(lastSerialStr) + 1;
@@ -177,7 +176,7 @@ public class UserServiceImp implements UserService {
     private String generatePublicUid(User user, String firstName, String lastName) {
         String month = java.time.LocalDate.now().getMonth().toString().substring(0, 2).toUpperCase();
         
-        // Strategy: Use first initial of First Name and first initial of Last Name
+        // Institutional logic: Use first initial of First Name and first initial of Last Name
         // Fallback to "US" if names are insufficient
         String f = (firstName != null && !firstName.isEmpty()) ? firstName.substring(0, 1).toUpperCase() : "";
         String l = (lastName != null && !lastName.isEmpty()) ? lastName.substring(0, 1).toUpperCase() : "";
@@ -189,7 +188,7 @@ public class UserServiceImp implements UserService {
         else if (user.getRole() == Role.CA) suffix = "CA";
         else if (user.getRole() == Role.CFA) suffix = "CF";
         
-        // Use part of the strategic ID as a random-like seed for uniqueness
+        // Use part of the institutional ID as a random-like seed for uniqueness
         String seed = user.getId().substring(user.getId().length() - 2);
         
         return month + seed + initials + suffix;
@@ -339,13 +338,14 @@ public class UserServiceImp implements UserService {
             }
 
             if (profile == null) return null;
-            return mapAnyProfileToProfessionalDTO(user, (BaseProfile) profile);
+            // Optimised: Skip expensive enrichment for list view
+            return mapAnyProfileToProfessionalDTO(user, (BaseProfile) profile, false); 
         })
         .filter(java.util.Objects::nonNull)
         .collect(Collectors.toList());
     }
 
-    private ProfessionalProfileDTO mapAnyProfileToProfessionalDTO(User user, BaseProfile p) {
+    private ProfessionalProfileDTO mapAnyProfileToProfessionalDTO(User user, BaseProfile p, boolean fullEnrichment) {
         ProfessionalProfileDTO dto = new ProfessionalProfileDTO();
         dto.setId(user.getId());
         dto.setEmail(user.getEmail());
@@ -353,7 +353,6 @@ public class UserServiceImp implements UserService {
         dto.setOnline(p.getOnline() != null ? p.getOnline() : true);
         
         if (p instanceof com.LawEZY.user.entity.BaseProfile) {
-
             com.LawEZY.user.entity.BaseProfile bp = (com.LawEZY.user.entity.BaseProfile) p;
             dto.setName(bp.getFirstName() + " " + bp.getLastName());
             dto.setTitle(bp.getTitle());
@@ -405,17 +404,23 @@ public class UserServiceImp implements UserService {
             if (pp.getDomains() != null) dto.setDomains(Arrays.asList(pp.getDomains().split(",")));
         }
 
+        // --- INSTITUTIONAL ENRICHMENT (Only for detailed views) ---
+        if (fullEnrichment) {
+            // Wallet enrichment
+            walletRepository.findById(user.getId()).ifPresent(w -> {
+                dto.setCashBalance(w.getCashBalance());
+                dto.setEarnedBalance(w.getEarnedBalance());
+            });
 
-        // --- STRATEGIC WALLET ENRICHMENT ---
-        walletRepository.findById(user.getId()).ifPresent(w -> {
-            dto.setCashBalance(w.getCashBalance());
-            dto.setEarnedBalance(w.getEarnedBalance());
-        });
+            // Review enrichment
+            if (dto.getUid() != null) {
+                dto.setTestimonials(fetchSanitizedReviews(dto.getUid()));
+            }
+        }
 
         // Final refinement: Bulletproof Identity Resolution
         String derivedName = dto.getName();
         if (derivedName == null || derivedName.trim().isEmpty() || derivedName.contains("null")) {
-            // Fallback to User table if Profile table is empty or corrupt
             derivedName = user.getFirstName() + " " + user.getLastName();
         }
         
@@ -442,12 +447,6 @@ public class UserServiceImp implements UserService {
         String avatarInitials = firstChar + lastChar;
         dto.setAvatar("https://ui-avatars.com/api/?name=" + avatarInitials + "&background=0D1B2A&color=E0C389&bold=true&length=2");
 
-        // Strategic Enrichment: Fetch and Map Testimonials
-        if (dto.getUid() != null) {
-            dto.setTestimonials(fetchSanitizedReviews(dto.getUid()));
-        }
-
-
         return dto;
     }
 
@@ -463,7 +462,7 @@ public class UserServiceImp implements UserService {
                 
                 if (Boolean.TRUE.equals(rdto.getIsAnonymous())) {
 
-                    rdto.setClientName("Anonymous Strategic Client");
+                    rdto.setClientName("Anonymous Professional Client");
                 } else {
                     // Try to fetch real name from Client Profile
                     clientProfileRepository.findByUidIgnoreCase(r.getClientUid()).ifPresent(p -> {
@@ -493,9 +492,8 @@ public class UserServiceImp implements UserService {
         else if (user.getRole() == Role.CA) profile = caProfileRepository.findById(id).orElse(null);
         else if (user.getRole() == Role.CFA) profile = cfaProfileRepository.findById(id).orElse(null);
         
-        if (profile == null) profile = professionalProfileRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Profile not found"));
-        
-        return mapAnyProfileToProfessionalDTO(user, (BaseProfile) profile);
+        ProfessionalProfile pp = professionalProfileRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Profile not found"));
+        return mapAnyProfileToProfessionalDTO(user, (BaseProfile) pp, true);
     }
 
     @Override
@@ -533,10 +531,12 @@ public class UserServiceImp implements UserService {
         }
 
         final String finalProfileId = profile.getId();
+        if (finalProfileId == null) throw new ResourceNotFoundException("Profile has no associated ID for UID: " + uid);
+        
         user = userRepository.findById(finalProfileId)
             .orElseThrow(() -> new ResourceNotFoundException("Associated expert user not found for profile: " + finalProfileId));
 
-        return mapAnyProfileToProfessionalDTO(user, profile);
+        return mapAnyProfileToProfessionalDTO(user, profile, true);
     }
 
     // ==========================================
@@ -568,7 +568,7 @@ public class UserServiceImp implements UserService {
         
         response.setUid(publicUid);
 
-        // STRATEGIC LATCH: Fetch Wallet Data for Frontend Visualization
+        // EXPERT LATCH: Fetch Wallet Data for Frontend Visualization
         walletRepository.findById(user.getId()).ifPresent(wallet -> {
             response.setFreeAiTokens(wallet.getFreeAiTokens());
             response.setFreeChatTokens(wallet.getFreeChatTokens());
@@ -605,38 +605,6 @@ public class UserServiceImp implements UserService {
         return mapToResponse(user, first, last);
     }
 
-    private ProfessionalProfileDTO mapToProfessionalDTO(ProfessionalProfile pp) {
-        ProfessionalProfileDTO dto = new ProfessionalProfileDTO();
-        dto.setId(pp.getId());
-        String fullName = (pp.getFirstName() != null ? pp.getFirstName() : "") + 
-                          (pp.getLastName() != null ? " " + pp.getLastName() : "");
-        dto.setName(fullName.trim().isEmpty() ? "Expert Counsel" : fullName.trim());
-        dto.setEmail(pp.getUser().getEmail());
-        dto.setCategory(pp.getCategory() != null ? pp.getCategory().name() : "OTHER");
-        dto.setTitle(pp.getTitle());
-        dto.setExperience(pp.getExperience());
-        dto.setLocation(pp.getLocation());
-        dto.setBioSmall(pp.getBioSmall());
-        dto.setRating(pp.getRating());
-        dto.setReviewsCount(pp.getReviewsCount());
-        dto.setPrice(pp.getConsultationFee());
-        dto.setSpecialization(pp.getSpecialization());
-        dto.setBio(pp.getBio());
-        dto.setOnline(pp.getOnline() != null ? pp.getOnline() : true);
-        
-        // Dynamic Avatar logic: using ui-avatars for premium feel
-        String initials = (pp.getFirstName().charAt(0) + "" + pp.getLastName().charAt(0)).toUpperCase();
-        dto.setAvatar("https://ui-avatars.com/api/?name=" + initials + "&background=0D1B2A&color=E0C389&bold=true&length=2");
-        
-        if (pp.getDomains() != null && !pp.getDomains().isEmpty()) {
-            dto.setDomains(Arrays.asList(pp.getDomains().split(",")));
-        } else {
-            dto.setDomains(Arrays.asList("General Practice"));
-        }
-        
-        dto.setUid(pp.getUid()); // Sync Institutional Public Identity
-        return dto;
-    }
 
     private List<Object> parseJsonAnyList(String json) {
         try {

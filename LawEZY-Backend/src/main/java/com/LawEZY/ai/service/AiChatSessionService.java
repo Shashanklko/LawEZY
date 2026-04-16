@@ -37,6 +37,7 @@ public class AiChatSessionService {
     }
 
     public void saveMessage(String sessionId, String role, String content) {
+        if (sessionId == null) return;
         AiChatMessage message = new AiChatMessage();
         message.setSessionId(sessionId);
         message.setRole(role);
@@ -52,6 +53,7 @@ public class AiChatSessionService {
     }
 
     public void deleteSession(String sessionId) {
+        if (sessionId == null) return;
         messageRepository.deleteBySessionId(sessionId);
         sessionRepository.deleteById(sessionId);
     }

@@ -21,13 +21,13 @@ logger = logging.getLogger(__name__)
 # Boot-Time Validation
 API_KEY = os.getenv("GEMINI_API_KEY")
 if not API_KEY:
-    logger.critical("GEMINI_API_KEY missing from tactical environment. Strategic grid offline.")
+    logger.critical("GEMINI_API_KEY missing from tactical environment. Institutional grid offline.")
     exit(1)
 
 # Configure Gemini
 genai.configure(api_key=API_KEY)
 
-# Strategic Model Persona: Ultra-Restricted LawinoAI (v6.0)
+# Institutional Model Persona: Ultra-Restricted LawinoAI (v6.0)
 SYSTEM_PROMPT = """
 You are LawinoAI, a domain-restricted expert assistant.
 
@@ -57,7 +57,7 @@ Classify user query into ONE:
 3. FACTUAL → definition, law, section, concept
 4. PROCEDURAL → "how to", steps
 5. SCENARIO → situation-based
-6. STRATEGIC → planning, tax saving, optimization
+6. INSTITUTIONAL → planning, tax saving, optimization
 7. PERSONAL CASE → "what should I do", personal issue
 
 -----------------------------------
@@ -82,7 +82,7 @@ Classify user query into ONE:
 👉 SCENARIO:
 - Give logical example + outcome
 
-👉 STRATEGIC:
+👉 INSTITUTIONAL:
 - Provide 2–4 actionable insights
 - Include financial/tax angle ONLY if relevant
 
@@ -359,7 +359,7 @@ SAFETY_SETTINGS = [
     {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
 ]
 
-app = FastAPI(title="LawEZY Strategic AI Service")
+app = FastAPI(title="LawEZY Institutional AI Service")
 
 # CORS configuration
 app.add_middleware(
@@ -370,13 +370,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Persistent Strategic Memory Layer (MongoDB Atlas)
+# Persistent Institutional Memory Layer (MongoDB Atlas)
 MONGO_URI = os.getenv("MONGO_URI")
 mongo_client = MongoClient(MONGO_URI)
-db = mongo_client.get_database() # Sourced from URI (lawezy_chat)
+db = mongo_client.get_database("lawezy_chat") # Sourced from URI (lawezy_chat)
 sessions_col = db["chat_sessions"]
 
-def get_strategic_session(session_id: str):
+def get_institutional_session(session_id: str):
     """Retrieves session from MongoDB with fallback to fresh initialization."""
     session = sessions_col.find_one({"sessionId": session_id})
     if not session:
@@ -388,7 +388,7 @@ def get_strategic_session(session_id: str):
         }
     return session
 
-def save_strategic_session(session_data: dict):
+def save_institutional_session(session_data: dict):
     """Persists tactical session state to MongoDB."""
     sessions_col.update_one(
         {"sessionId": session_data["sessionId"]},
@@ -404,7 +404,7 @@ class CopilotRequest(BaseModel):
 
 @app.get("/api/ai/health")
 async def health_check():
-    return {"status": "operational", "strategic_layer": "active"}
+    return {"status": "operational", "institutional_layer": "active"}
 
 @app.get("/api/ai/history")
 async def get_history():
@@ -424,7 +424,7 @@ async def get_session(session_id: str):
     """Retrieves the full message thread from persistent storage."""
     session = sessions_col.find_one({"sessionId": session_id})
     if not session:
-        raise HTTPException(status_code=404, detail="Strategic session not found.")
+        raise HTTPException(status_code=404, detail="Institutional session not found.")
     return {"data": session["messages"]}
 
 def handle_local_intercept(query: str) -> Optional[str]:
@@ -453,9 +453,9 @@ def handle_local_intercept(query: str) -> Optional[str]:
 
 @app.post("/api/ai/copilot")
 async def copilot_interaction(request: CopilotRequest):
-    # Strategic Session Initialization
+    # Institutional Session Initialization
     sid = request.sessionId or str(uuid.uuid4())
-    session_data = get_strategic_session(sid)
+    session_data = get_institutional_session(sid)
     
     # Initialize title if fresh
     if not session_data["messages"]:
@@ -476,14 +476,14 @@ async def copilot_interaction(request: CopilotRequest):
             "content": local_response,
             "timestamp": datetime.datetime.now().isoformat()
         })
-        save_strategic_session(session_data)
+        save_institutional_session(session_data)
         return {
             "response": local_response,
             "model_used": "tactical-interceptor",
             "sessionId": sid
         }
 
-    # Strategic Models Pool (Optimized for Tactical Resilience)
+    # Institutional Models Pool (Optimized for Tactical Resilience)
     models_to_try = [
         "gemini-2.0-flash",    # Primary next-gen
         "gemini-flash-latest", # Reliable flash-latest
@@ -509,7 +509,7 @@ async def copilot_interaction(request: CopilotRequest):
     last_error = None
     for model_name in models_to_try:
         try:
-            # Initialize Model with Strategic Persona as System Instruction
+            # Initialize Model with Institutional Persona as System Instruction
             model = genai.GenerativeModel(
                 model_name=model_name,
                 generation_config=GENERATION_CONFIG,
@@ -517,7 +517,7 @@ async def copilot_interaction(request: CopilotRequest):
                 system_instruction=SYSTEM_PROMPT
             )
             
-            # Prepare Strategic History (Last 10 messages for context)
+            # Prepare Institutional History (Last 10 messages for context)
             history = []
             raw_messages = session_data["messages"][:-1]
             
@@ -533,9 +533,9 @@ async def copilot_interaction(request: CopilotRequest):
             response = chat.send_message(current_parts)
             
             if not response or not response.text:
-                raise Exception("Empty strategic pulse.")
+                raise Exception("Empty institutional pulse.")
                 
-            # Log AI Strategic Response
+            # Log AI Institutional Response
             ai_content = response.text
             session_data["messages"].append({
                 "role": "ai",
@@ -544,7 +544,7 @@ async def copilot_interaction(request: CopilotRequest):
             })
             
             # FINAL PERSISTENCE
-            save_strategic_session(session_data)
+            save_institutional_session(session_data)
             
             return {
                 "response": ai_content, 
@@ -557,7 +557,7 @@ async def copilot_interaction(request: CopilotRequest):
             logger.warning(f"Tactical link failed via {model_name}: {last_error}")
             continue
 
-    raise HTTPException(status_code=500, detail=f"Strategic grid offline: {last_error}")
+    raise HTTPException(status_code=500, detail=f"Institutional grid offline: {last_error}")
 
 @app.post("/api/ai/guard")
 async def safety_guard(request: CopilotRequest):

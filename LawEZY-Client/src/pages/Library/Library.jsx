@@ -50,7 +50,7 @@ const Library = () => {
     const newArticle = {
       id: Date.now(),
       title: title || 'Untitled Intelligence',
-      author: 'You (Strategist)',
+      author: 'You (Institutionalist)',
       category: 'ip',
       cover: 'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=800&auto=format&fit=crop',
       pages: Math.ceil(blocks.length * 1.5),
@@ -91,7 +91,7 @@ const Library = () => {
         author: r.authorName || 'Anonymous',
         category: r.category,
         cover: r.coverUrl || 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=800&auto=format&fit=crop',
-        abstract: r.abstractText || 'Strategic legal resource from institutional archives.',
+        abstract: r.abstractText || 'Expert legal resource from institutional archives.',
         content: r.content,
         driveLink: r.driveLink,
         pages: Math.floor(Math.random() * 800) + 200 // Mock pages for UI since not in backend yet
@@ -197,8 +197,8 @@ const Library = () => {
       { id: 'b4', type: 'h2', content: 'Executive Summary' },
       { id: 'b5', type: 'text', content: activeBook.abstract },
       { id: 'b6', type: 'image', content: activeBook.cover },
-      { id: 'b7', type: 'h2', content: 'Strategic Analysis' },
-      { id: 'b8', type: 'text', content: 'This strategic volume provides essential legal intelligence regarding current precedents and legislative shifts. The commentary explores high-fidelity frameworks for professional execution in complex jurisdictions.' },
+      { id: 'b7', type: 'h2', content: 'Expert Analysis' },
+      { id: 'b8', type: 'text', content: 'This Expert volume provides essential legal intelligence regarding current precedents and legislative shifts. The commentary explores high-fidelity frameworks for professional execution in complex jurisdictions.' },
       { id: 'b9', type: 'bullet', content: 'In-depth analysis of 2024 amendments' },
       { id: 'b10', type: 'bullet', content: 'Practical negotiation frameworks' },
       { id: 'b11', type: 'bullet', content: 'Cross-border compliance metrics' },
@@ -251,7 +251,7 @@ const Library = () => {
               </button>
             ))}
 
-            <div className="nav-section-label" style={{ marginTop: '25px' }}>My Strategic Hub</div>
+            <div className="nav-section-label" style={{ marginTop: '25px' }}>My Expert Hub</div>
             {(user?.role === 'LAWYER' || user?.role === 'CA' || user?.role === 'CFA' || user?.role === 'ADMIN') && (
               <button 
                 className={`nav-item ${showNotion ? 'active' : ''}`}
@@ -287,7 +287,7 @@ const Library = () => {
               </div>
               <div className="user-text">
                 <h4>{user?.name || 'Guest User'}</h4>
-                <p>{user?.role?.replace('_', ' ') || 'Strategic Member'}</p>
+                <p>{user?.role?.replace('_', ' ') || 'Expert Member'}</p>
               </div>
               <button className="settings-btn" onClick={() => navigate('/profile')}>⚙</button>
             </div>
@@ -341,7 +341,7 @@ const Library = () => {
                     className={`bookmark-trigger ${bookmarkedIds.includes(resource.id) ? 'bookmarked' : ''}`}
                     onClick={(e) => toggleBookmark(e, resource.id)}
                   >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill={bookmarkedIds.includes(resource.id) ? "var(--strategic-gold)" : "none"} stroke="currentColor" strokeWidth="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill={bookmarkedIds.includes(resource.id) ? "var(--elite-gold)" : "none"} stroke="currentColor" strokeWidth="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
                   </button>
                 </div>
                 <div className="card-info">
@@ -371,7 +371,7 @@ const Library = () => {
       {showAddModal && (
         <div className="elite-modal-overlay animate-reveal">
           <div className="elite-modal-content glass">
-            <h2>Ingest Strategic Resource</h2>
+            <h2>Ingest Expert Resource</h2>
             <p>Add a new document to the institutional library via external link.</p>
             
             <div className="elite-form-group">

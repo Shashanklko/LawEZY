@@ -23,8 +23,9 @@ const useAuthStore = create(
       },
     }),
     {
-      name: 'lawezy-auth-storage', // name of the item in storage (must be unique)
-      getStorage: () => localStorage, // (optional) by default, 'localStorage' is used
+      name: 'lawezy-auth-storage',
+      version: 1, // Expert versioning: Discard stale stores on schema updates
+      getStorage: () => localStorage,
     }
   )
 );

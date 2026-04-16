@@ -1,12 +1,31 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 
 const MainLayout = () => {
   const location = useLocation();
-  const isAuthPage = location.pathname === '/login' || location.pathname === '/signup';
-  const isWorkspacePage = location.pathname === '/lawino-ai' || location.pathname === '/messages' || location.pathname === '/profile' || location.pathname === '/library' || location.pathname === '/dashboard';
+  const path = location.pathname;
+
+  // 🔄 AUTO SCROLL-TO-TOP ON NAVIGATION
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [path]);
+
+  // 🛡️ FOOTER GOVERNANCE (Hide on Workspace/App Pages)
+  const isAuthPage = path === '/login' || path === '/signup';
+  
+  const hideFooterRoutes = [
+    '/lawino-ai',
+    '/messages',
+    '/dashboard',
+    '/profile',
+    '/account',
+    '/library',
+    '/wallet'
+  ];
+
+  const isWorkspacePage = hideFooterRoutes.some(route => path.startsWith(route));
 
   return (
     <div className="layout-root">
@@ -14,7 +33,7 @@ const MainLayout = () => {
       <main className="content">
         <Suspense fallback={
           <div className="page-loader-inline">
-            <div className="loader-strategic"></div>
+            <div className="loader-institutional"></div>
             <p>Institutional Intel Incoming...</p>
           </div>
         }>

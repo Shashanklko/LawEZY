@@ -10,18 +10,18 @@ export const MOCK_EXPERTS = [
     online: true,
     avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop',
     domains: ['Corporate Law', 'M&A', 'Venture Capital', 'Intellectual Property'],
-    languages: ['English', 'Hindi', 'French (Strategic)'],
+    languages: ['English', 'Hindi', 'French (Institutional)'],
     isVerified: true,
     licenseNo: 'MH/4521/2012',
     affiliations: [
       { name: 'Bar Council of Maharashtra & Goa', verificationLink: '#' },
       { name: 'International Institute of Arbitrators', verificationLink: '#' },
-      { name: 'Strategic Corporate Law Society', verificationLink: '#' }
+      { name: 'Institutional Corporate Law Society', verificationLink: '#' }
     ],
     servicePortfolio: [
       { id: 'p1', title: 'Seed Round Compliance Package', price: 'From ₹45,000', value: 'Complete regulatory scrubbing and investor-ready documentation for early-stage startups.' },
-      { id: 'p2', title: 'M&A Strategic Due Diligence', price: 'Value-Based', value: 'High-precision risk assessment and strategic negotiation support for mid-market acquisitions.' },
-      { id: 'p3', title: '1:1 Strategic Counsel (Monthly)', price: '₹1,50,000/mo', value: 'Ongoing institutional-grade legal and strategic advisory for founders and boards.' }
+      { id: 'p2', title: 'M&A Institutional Due Diligence', price: 'Value-Based', value: 'High-precision risk assessment and institutional negotiation support for mid-market acquisitions.' },
+      { id: 'p3', title: '1:1 Institutional Counsel (Monthly)', price: '₹1,50,000/mo', value: 'Ongoing institutional-grade legal and institutional advisory for founders and boards.' }
     ],
     impactMetrics: [
       { label: 'Advised Transaction Value', value: '₹500Cr+' },
@@ -30,13 +30,13 @@ export const MOCK_EXPERTS = [
       { label: 'Global SaaS Re-domiciliations', value: '12' }
     ],
     projectHighlights: [
-      { title: 'Series B FinTech Exit', body: 'Strategic lead for a ₹200Cr exit, managing multi-jurisdictional compliance and cross-border IP transfers.' },
+      { title: 'Series B FinTech Exit', body: 'Institutional lead for a ₹200Cr exit, managing multi-jurisdictional compliance and cross-border IP transfers.' },
       { title: 'Global SaaS Re-domiciliation', body: 'Restructured a Delaware C-Corp to an Indian entity for a top 10 SaaS firm, identifying ₹1.2Cr in tax efficiencies.' }
     ],
     primaryCourt: 'Bombay High Court',
     licenseNo: 'MH/4521/2012',
     professionalHistory: [
-      { role: 'Founder & Managing Partner', org: 'Khanna & Co. Strategic Advisors', period: '2020 - Present', status: 'Independent' },
+      { role: 'Founder & Managing Partner', org: 'Khanna & Co. Institutional Advisors', period: '2020 - Present', status: 'Independent' },
       { role: 'Senior Associate', org: 'Shardul Amarchand Mangaldas', period: '2015 - 2020', status: 'Firm' },
       { role: 'Legal Consultant', org: 'Clifford Chance (London)', period: '2012 - 2015', status: 'Firm' }
     ],
@@ -47,10 +47,10 @@ export const MOCK_EXPERTS = [
       cases: [
         { title: "Cross-Border FinTech M&A", year: "2023", outcome: "Successful ₹200Cr Exit", desc: "Lead counsel for a complex cross-border acquisition involving IP transfer across 4 jurisdictions." },
         { title: "SaaS Regulatory Re-domiciliation", year: "2022", outcome: "Zero Compliance Friction", desc: "Managed the complete structural flip of a Delaware entity to an Indian HQ for a Series B startup." },
-        { title: "Strategic IP Defense", year: "2021", outcome: "Favorable Settlement", desc: "Defended a core proprietary algorithm for a DeepTech firm against an international patent troll." }
+        { title: "Institutional IP Defense", year: "2021", outcome: "Favorable Settlement", desc: "Defended a core proprietary algorithm for a DeepTech firm against an international patent troll." }
       ],
       achievements: [
-        { url: "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=600", title: "Strategic Counsel of the Year 2024" },
+        { url: "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=600", title: "Institutional Counsel of the Year 2024" },
         { url: "https://images.unsplash.com/photo-1523287562758-66c7fc58967f?w=600", title: "NLSIU Alumni Excellence Award" }
       ],
       videos: [
@@ -63,7 +63,7 @@ export const MOCK_EXPERTS = [
         clientName: 'Rahul M., Founder of Nexus Tech',
         date: '2 months ago',
         rating: 5.0,
-        review: "Adv. Sameer's strategic depth in cross-border M&A is unparalleled. He didn't just handle the legal side; he actively helped us negotiate better terms during our Series B exit."
+        review: "Adv. Sameer's institutional depth in cross-border M&A is unparalleled. He didn't just handle the legal side; he actively helped us negotiate better terms during our Series B exit."
       },
       {
         id: 't2',
@@ -87,7 +87,7 @@ export const MOCK_EXPERTS = [
     domains: ['Family Law', 'Civil Litigation', 'Property Disputes', 'Arbitration'],
     isVerified: false,
     licenseNo: 'DL/1023/2015',
-    bioSmall: 'Dedicated advocate with a focus on resolving complex family and property disputes through strategic litigation and mediation.',
+    bioSmall: 'Dedicated advocate with a focus on resolving complex family and property disputes through institutional litigation and mediation.',
     location: 'Delhi, India',
     experience: '8 Years'
   },
@@ -103,7 +103,7 @@ export const MOCK_EXPERTS = [
     avatar: 'https://images.unsplash.com/photo-1556157382-97eda2d62296?w=400&h=400&fit=crop',
     domains: ['GST Compliance', 'Taxation', 'Statutory Audit', 'Internal Audit'],
     isVerified: true,
-    bioSmall: 'Strategic financial advisor helping MNCs and SMEs navigate the complex Indian tax landscape with precision and integrity.',
+    bioSmall: 'Institutional financial advisor helping MNCs and SMEs navigate the complex Indian tax landscape with precision and integrity.',
     location: 'Bangalore, India',
     experience: '15+ Years'
   },
@@ -125,7 +125,7 @@ export const MOCK_EXPERTS = [
   {
     id: '5',
     name: 'Rohan Deshmukh, CFA',
-    title: 'Investment Strategist',
+    title: 'Investment Institutionalist',
     category: 'financial',
     rating: 5.0,
     reviews: 42,
@@ -134,7 +134,7 @@ export const MOCK_EXPERTS = [
     avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop',
     domains: ['Wealth Management', 'Portfolio Strategy', 'Equity Research', 'Risk Assessment'],
     isVerified: true,
-    bioSmall: 'CFA Charterholder providing institutional-grade wealth management and strategic investment advisory for HNWIs.',
+    bioSmall: 'CFA Charterholder providing institutional-grade wealth management and institutional investment advisory for HNWIs.',
     location: 'Pune, India',
     experience: '10 Years'
   }

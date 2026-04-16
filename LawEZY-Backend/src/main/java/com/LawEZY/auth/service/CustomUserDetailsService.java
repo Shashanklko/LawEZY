@@ -40,21 +40,24 @@ public class CustomUserDetailsService implements UserDetailsService {
 
         // 2. Resolve public UID from profile
         String uid = null;
-        if (user.getRole() == Role.CLIENT) {
-            uid = clientProfileRepository.findById(user.getId()).map(p -> p.getUid()).orElse(null);
-        } else {
-            // Priority 1: Check specialized profile tables for active public UID
-            if (user.getRole() == Role.LAWYER) {
-                uid = lawyerProfileRepository.findById(user.getId()).map(p -> p.getUid()).orElse(null);
-            } else if (user.getRole() == Role.CA) {
-                uid = caProfileRepository.findById(user.getId()).map(p -> p.getUid()).orElse(null);
-            } else if (user.getRole() == Role.CFA) {
-                uid = cfaProfileRepository.findById(user.getId()).map(p -> p.getUid()).orElse(null);
-            }
-            
-            // Priority 2: Fallback to base unified professional profile
-            if (uid == null) {
-                uid = professionalProfileRepository.findById(user.getId()).map(p -> p.getUid()).orElse(null);
+        String userId = user.getId();
+        if (userId != null) {
+            if (user.getRole() == Role.CLIENT) {
+                uid = clientProfileRepository.findById(userId).map(p -> p.getUid()).orElse(null);
+            } else {
+                // Priority 1: Check specialized profile tables for active public UID
+                if (user.getRole() == Role.LAWYER) {
+                    uid = lawyerProfileRepository.findById(userId).map(p -> p.getUid()).orElse(null);
+                } else if (user.getRole() == Role.CA) {
+                    uid = caProfileRepository.findById(userId).map(p -> p.getUid()).orElse(null);
+                } else if (user.getRole() == Role.CFA) {
+                    uid = cfaProfileRepository.findById(userId).map(p -> p.getUid()).orElse(null);
+                }
+                
+                // Priority 2: Fallback to base unified professional profile
+                if (uid == null) {
+                    uid = professionalProfileRepository.findById(userId).map(p -> p.getUid()).orElse(null);
+                }
             }
         }
         

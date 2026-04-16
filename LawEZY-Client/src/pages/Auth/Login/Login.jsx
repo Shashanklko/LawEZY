@@ -33,7 +33,7 @@ const Login = () => {
         email, 
         firstName, 
         lastName, 
-        uid, // Strategic Public Identifier
+        uid, // Institutional Public Identifier
         role: serverRole 
       }, token);
       
@@ -46,7 +46,7 @@ const Login = () => {
       const errorMsg = err.response?.data?.message || 
                      err.response?.data?.data || 
                      (typeof err.response?.data === 'string' ? err.response?.data : null) ||
-                     'Internal strategic server error. Please check backend logs.';
+                     'Internal institutional server error. Please check backend logs.';
                      
       setError(errorMsg);
     } finally {

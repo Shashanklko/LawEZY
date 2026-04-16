@@ -34,8 +34,8 @@ const ExpertCard = ({ expert, onViewProfile, onBookAppointment }) => {
             <span className="expert-experience-tag">{expert.experience || 'NEW'} EXP</span>
           </div>
           <h3 className="expert-name-institutional">{expert.name}</h3>
-          <div className="card-strat-badges">
-             <span className="strat-uid-badge">UID: {expert.uid || `LZY-${expert.id.substring(0, 8)}`}</span>
+          <div className="card-institutional-badges">
+             <span className="institutional-uid-badge">UID: {expert.uid || `LZY-${expert.id.substring(0, 8)}`}</span>
              {expert.location && <span className="expert-location-chip"><span className="loc-icon">📍</span> {expert.location}</span>}
           </div>
         </div>
@@ -46,7 +46,7 @@ const ExpertCard = ({ expert, onViewProfile, onBookAppointment }) => {
       </div>
       
       <div className="card-body">
-        <p className="expert-bio-short">{expert.bioSmall || expert.bio || 'Specialized in multi-jurisdictional compliance and strategic counsel.'}</p>
+        <p className="expert-bio-short">{expert.bioSmall || expert.bio || 'Specialized in multi-jurisdictional compliance and institutional counsel.'}</p>
         <div className="expert-pedigree-mini">
             {expert.educationList?.[0] && <span className="pedigree-item">🎓 {expert.educationList[0].degree}</span>}
         </div>
@@ -63,7 +63,7 @@ const ExpertCard = ({ expert, onViewProfile, onBookAppointment }) => {
           <span className="price-label">Starts from</span>
           <span className="price-value">₹{expert.price || '499'} <span>/ session</span></span>
           <button 
-            className="btn-book-strategic" 
+            className="btn-book-institutional" 
             disabled={!expert.isVerified || isSelf}
             onClick={(e) => {
               e.stopPropagation();

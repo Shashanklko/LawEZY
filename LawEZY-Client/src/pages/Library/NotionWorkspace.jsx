@@ -207,7 +207,7 @@ const NotionWorkspace = ({ onExit, onPublish, initialBlocks = [], initialTitle =
       {/* SIDEBAR */}
       <aside className={`notion-sidebar ${!sidebarOpen ? 'collapsed' : ''}`}>
         <div className="sidebar-header">
-          <div className="strat-brand-logo small">LAWEZY</div>
+          <div className="inst-brand-logo small">LAWEZY</div>
           <button className="btn-ghost" onClick={() => setSidebarOpen(false)}>◀</button>
         </div>
         
@@ -251,7 +251,7 @@ const NotionWorkspace = ({ onExit, onPublish, initialBlocks = [], initialTitle =
               <button className="notion-toggle-sidebar" onClick={() => setSidebarOpen(true)}>☰</button>
             </div>
             <div className="notion-collapsed-branding">
-              <div className="strat-brand-logo small">LAWEZY</div>
+              <div className="institutional-brand-logo small">LAWEZY</div>
             </div>
           </>
         )}

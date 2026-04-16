@@ -271,7 +271,7 @@ const ProfessionalEditor = ({ role, uid, profile, onUpdate }) => {
                             {[...Array(13)].map((_, i) => (
                                 <option key={i+2} value={`${i+2} Years`}>{i+2} Years</option>
                             ))}
-                            <option value="15+ Years">15+ Years (Strategic Senior)</option>
+                            <option value="15+ Years">15+ Years (Institutional Senior)</option>
                         </select>
                     </div>
                 </div>
@@ -305,7 +305,7 @@ const ProfessionalEditor = ({ role, uid, profile, onUpdate }) => {
 
 
             <div className="form-section">
-                <h3 className="section-subtitle">Expertise Bio & Strategic Profile <span className="mandatory-star">*</span></h3>
+                <h3 className="section-subtitle">Expertise Bio & Institutional Profile <span className="mandatory-star">*</span></h3>
                 <div className="input-group">
                     <label>Professional Biography (High Density Summary) <span className="mandatory-star">*</span></label>
                     <textarea name="bio" value={formData.bio || ''} onChange={handleChange} rows="5" required />

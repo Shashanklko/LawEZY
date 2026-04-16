@@ -25,10 +25,10 @@ public class AiService {
             if (response != null && response.containsKey("response")) {
                 return (String) response.get("response");
             }
-            return "Strategy protocols interrupted. Received malformed response from tactical brain.";
+            return "Institutional protocols interrupted. Received malformed response from tactical brain.";
         } catch (Exception e) {
             log.error("[AI] Error calling Python AI service: {}", e.getMessage());
-            return "Tactical link offline. Python strategic core is unreachable. Please retry.";
+            return "Tactical link offline. Python institutional core is unreachable. Please retry.";
         }
     }
 

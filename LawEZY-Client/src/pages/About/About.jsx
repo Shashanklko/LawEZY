@@ -7,7 +7,7 @@ const About = () => {
       {/* HERO: THE UNIFIED BRIDGE */}
       <section className="about-hero">
         <div className="hero-overlay">
-          <span className="hero-subtitle">The Ecosystem for Strategic Justice</span>
+          <span className="hero-subtitle">The Ecosystem for Institutional Justice</span>
           <h1>Connecting <span>Seekers with Expertise</span>.</h1>
         </div>
       </section>
@@ -37,7 +37,7 @@ const About = () => {
               <li>✓ Global Client Reach</li>
               <li>✓ High-Authority AI Workspace</li>
               <li>✓ Zero Logistics Fatigue</li>
-              <li>✓ Strategic Case Management</li>
+              <li>✓ Institutional Case Management</li>
             </ul>
           </div>
         </div>
@@ -48,14 +48,14 @@ const About = () => {
         <div className="mission-wrapper">
           <span className="section-tag">Our Unified Vision</span>
           <h2>"Building a future where legal and financial expertise is as accessible as a conversation, and every professional is empowered to excel without borders."</h2>
-          <p>We are the definitive bridge between a complex challenge and a strategic solution.</p>
+          <p>We are the definitive bridge between a complex challenge and an institutional solution.</p>
         </div>
       </section>
 
       {/* WHY LAWEZY: THE THREE-WAY WIN */}
       <section className="pillars-section">
         <span className="section-tag">The LawEZY Advantage</span>
-        <h2>A Strategic <span>Cycle of Excellence</span></h2>
+        <h2>An Institutional <span>Cycle of Excellence</span></h2>
         
         <div className="pillars-grid">
           <div className="pillar-card">
@@ -73,12 +73,12 @@ const About = () => {
           <div className="pillar-card">
             <span className="pillar-icon">🏛️</span>
             <h3>Elite Professional Growth</h3>
-            <p>Giving <strong>Lawyers</strong> and CAs the tools to scale their practice internationally, focusing on deep strategic work rather than logistical drudgery.</p>
+            <p>Giving <strong>Lawyers</strong> and CAs the tools to scale their practice internationally, focusing on deep institutional work rather than logistical drudgery.</p>
           </div>
         </div>
       </section>
 
-      {/* VALUES: THE STRATEGIC PACT */}
+      {/* VALUES: THE INSTITUTIONAL PACT */}
       <section className="values-banner">
         <div className="values-scroll">
           <div className="value-item">

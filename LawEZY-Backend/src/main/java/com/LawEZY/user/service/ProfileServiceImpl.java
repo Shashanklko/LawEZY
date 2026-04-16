@@ -3,6 +3,7 @@ package com.LawEZY.user.service;
 import com.LawEZY.user.entity.*;
 import com.LawEZY.user.enums.Role;
 import com.LawEZY.user.repository.*;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -39,7 +40,7 @@ public class ProfileServiceImpl implements ProfileService {
 
     private Map<String, Object> enrichProfileResponse(Object profile, User user) {
         if (profile == null) return null;
-        Map<String, Object> response = objectMapper.convertValue(profile, Map.class);
+        Map<String, Object> response = objectMapper.convertValue(profile, new TypeReference<Map<String, Object>>() {});
         response.put("email", user.getEmail());
         String userId = user.getId();
         Role role = user.getRole();
@@ -64,7 +65,7 @@ public class ProfileServiceImpl implements ProfileService {
         response.put("verified", verifiedStatus);
         response.put("isVerified", verifiedStatus);
 
-        // Inject Wallet Strategic Data
+        // Inject Wallet Institutional Data
         walletRepo.findById(userId).ifPresent(w -> {
             response.put("walletBalance", w.getEarnedBalance());
             response.put("tokenBalance", w.getTokenBalance());

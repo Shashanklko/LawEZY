@@ -1,5 +1,5 @@
 .ai-showcase {
-  min-height: 850px; /* Strategic High-Precision Scale */
+  min-height: 850px; /* Institutional High-Precision Scale */
   width: 100%;
   background-color: #0F0000;
   background-image: 
@@ -41,7 +41,7 @@
 
 .ai-container {
   display: grid;
-  grid-template-columns: 1fr 1.3fr; /* Strategic width for images */
+  grid-template-columns: 1fr 1.3fr; /* Institutional width for images */
   gap: 40px; /* Tighter gap for better proximity */
   max-width: 1400px;
   width: 100%;

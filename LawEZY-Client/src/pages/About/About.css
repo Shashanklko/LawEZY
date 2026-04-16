@@ -1,6 +1,6 @@
 :root {
   --heritage-parchment: #fdfaf3;
-  --strategic-gold: #b8995e;
+  --elite-gold: #b8995e;
   --deep-charcoal: #1a1a1a;
   --institutional-white: #ffffff;
   --glass-border: rgba(184, 153, 94, 0.2);
@@ -54,7 +54,7 @@
 }
 
 .about-hero h1 span {
-  color: var(--strategic-gold);
+  color: var(--elite-gold);
 }
 
 .hero-subtitle {
@@ -145,7 +145,7 @@
   font-family: var(--serif-font);
   font-size: 2.5rem;
   margin-bottom: 30px;
-  color: var(--strategic-gold);
+  color: var(--elite-gold);
 }
 
 .mission-horizontal p {
@@ -164,7 +164,7 @@
 }
 
 .section-tag {
-  color: var(--strategic-gold);
+  color: var(--elite-gold);
   font-weight: 800;
   letter-spacing: 2px;
   text-transform: uppercase;
@@ -196,7 +196,7 @@
 }
 
 .pillar-card:hover {
-  border-color: var(--strategic-gold);
+  border-color: var(--elite-gold);
   transform: translateY(-5px);
   box-shadow: 0 10px 40px rgba(184,153,94,0.1);
 }

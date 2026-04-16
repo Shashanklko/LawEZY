@@ -1,4 +1,4 @@
-/* LawinoAI Strategic Workspace - Optimized Design System */
+/* LawinoAI Institutional Workspace - Optimized Design System */
 
 .lawino-ai-container.theme-light {
   --bg-primary: #FCFAF7;
@@ -57,7 +57,7 @@
   position: relative;
 }
 
-/* Strategic Sidebar */
+/* Institutional Sidebar */
 .ai-sidebar {
   width: 260px;
   background-color: var(--bg-secondary);

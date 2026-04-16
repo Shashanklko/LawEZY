@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { io } from 'socket.io-client';
 import apiClient from '../../services/apiClient';
 import useAuthStore from '../../store/useAuthStore';
+import { getSocket } from '../../services/socket';
 import useMetadata from '../../services/useMetadata';
 import AppointmentCard from '../Account/Dashboard/components/AppointmentCard';
 import './Messages.css';
-import { renderContentWithLinks } from '../../utils/strategicFormatter';
+import { renderContentWithLinks } from '../../utils/institutionalFormatter';
 
 let socket = null;
 let socketConnected = false; 
@@ -71,7 +71,13 @@ const Messages = () => {
   const fileInputRef = useRef(null);
   const recordingIntervalRef = useRef(null);
 
-  const activeChat = chats.find(c => c.id === activeChatId);
+  const activeChat = chats.find(c => c.id === activeChatId) || (isConnecting ? {
+    id: 'mobilizing',
+    name: expertNameParam || 'Expert Counsel',
+    avatar: 'https://ui-avatars.com/api/?name=Expert&background=0D1B2A&color=E0C389',
+    history: [],
+    status: 'MOBILIZING'
+  } : null);
 
   // Sync Ref with State for Async Logic
 
@@ -79,31 +85,31 @@ const Messages = () => {
     latestChatsRef.current = chats;
   }, [chats]);
 
-  // --- WEBSOCKET LOGIC (Socket.io Migration) ---
   const connectWebSocket = () => {
-    if (socket) socket.disconnect();
+    // Connect to the Node.js Messenger Service via Shared Provider
+    socket = getSocket(token);
     
-    // Connect to the Node.js Messenger Service
-    const messengerUrl = import.meta.env.VITE_MESSENGER_URL || 'http://localhost:8081'; 
-    socket = io(messengerUrl, {
-      auth: { token },
-      reconnectionAttempts: 10,
-      reconnectionDelay: 2000,
-      timeout: 10000
-    });
-
+    // Register local listeners
     socket.on('connect', () => {
-      // [STRATEGIC SYNC] Join all known sessions on reconnect
+      console.log('🛡️ [INSTITUTIONAL] Socket connected successfully');
+      socketConnected = true;
+      setIsConnecting(false);
+      
+      // Join self room for private messages
+      socket.emit('join_room', user.id);
+
+      // [Expert SYNC] Join all known sessions on reconnect
       if (latestChatsRef.current.length > 0) {
         latestChatsRef.current.forEach(s => {
           socket.emit('join_session', s.id);
         });
       }
-      // If we have an active chat, re-ensure it's the primary room (redundant but safe)
+      // If we have an active chat, re-ensure it's the primary room
       if (activeChatId) socket.emit('join_session', activeChatId);
     });
 
     socket.on('new_message', (msg) => {
+      // console.log('✉️ [SIGNAL] New message received:', msg); // Hidden for security
       onMessageReceived(msg);
     });
 
@@ -116,22 +122,21 @@ const Messages = () => {
     });
 
     socket.on('discovery_sync', (data) => {
-      console.log('📡 [STRATEGIC SYNC] Discovery Ping Received. Syncing ledger...');
+      console.log('📡 [Expert SYNC] Discovery Ping Received. Syncing ledger...');
       fetchSessions();
     });
-
 
     socket.on('chat_deleted', (deletedId) => {
       setChats(prev => prev.filter(c => c.id !== deletedId));
       if (activeChatId === deletedId) {
         setActiveChatId(null);
         setMessages([]);
-        alert("This strategic consultation has been resolved or deleted.");
+        alert("This Expert consultation has been resolved or deleted.");
       }
     });
 
     socket.on('quota_exhausted_alert', (data) => {
-      console.warn('🛑 [STRATEGIC QUOTA EXHAUSTED]:', data.message);
+      console.warn('🛑 [Expert QUOTA EXHAUSTED]:', data.message);
       setQuotaExhaustedBy(data.userId);
       // Real-time peer balance synchronization to trigger Expert Mobilization Hub
       setChats(prev => prev.map(chat => 
@@ -149,11 +154,11 @@ const Messages = () => {
   };
 
   const onMessageReceived = (newMessage) => {
-    // Strategic Sync: Check if we have this chat in our list
+    // Expert Sync: Check if we have this chat in our list
     const sessionExists = latestChatsRef.current.some(c => c.id === newMessage.chatSessionId);
     
     if (!sessionExists) {
-      console.log(`[Strategic Sync] Discovery: New session ${newMessage.chatSessionId} detected. Synchronizing ledger...`);
+      console.log(`[Expert Sync] Discovery: New session ${newMessage.chatSessionId} detected. Synchronizing ledger...`);
       fetchSessions(); // Fetch all sessions to include the new one
       return;
     }
@@ -179,7 +184,7 @@ const Messages = () => {
   const fetchSessions = async () => {
     if (!user) return;
     
-    // Strategic SWR: Load from cache first for instant UX
+    // Expert SWR: Load from cache first for instant UX
     const cached = localStorage.getItem(`lawezy_chats_${user.id}`);
     if (cached) {
       try {
@@ -208,34 +213,42 @@ const Messages = () => {
         avatar: session.otherPartyAvatar || (isPro 
           ? 'https://ui-avatars.com/api/?name=Client&background=0D1B2A&color=E0C389' 
           : 'https://ui-avatars.com/api/?name=Expert&background=0D1B2A&color=E0C389'),
-        lastMessage: session.lastMessage || 'Open conversation',
+        lastMessage: session.lastMessage || 'Begin your Expert consultation...',
         time: 'Active',
         unread: 0,
         online: true,
         status: session.status,
-        peerTokenBalance: session.peerTokenBalance // Strategic Liquidity Sync
+        peerTokenBalance: session.peerTokenBalance // Expert Liquidity Sync
       }));
       
       // Robust Merged State: Use a Map to combine cached, latched, and server sessions
       const sessionMap = new Map();
+      const serverIds = new Set(sessions.map(s => s.id));
       
-      // 1. Populate with Cache (Safe Base)
-      latestChatsRef.current.forEach(c => sessionMap.set(c.id, c));
+      // 1. Populate with Server Data (Primary Truth)
+      sessions.forEach(s => sessionMap.set(s.id, { ...s, isLatching: false }));
       
-      // 2. Overlay Server Data (Truth)
-      sessions.forEach(s => {
-        const existing = sessionMap.get(s.id);
-        sessionMap.set(s.id, { ...existing, ...s, isLatching: false }); // Unset latching once server confirms
+      // 2. Overlay Latching Sessions (In-flight Initiates)
+      latestChatsRef.current.forEach(c => {
+        if (c.isLatching && !serverIds.has(c.id)) {
+          sessionMap.set(c.id, c);
+        }
       });
 
       const mergedSessions = Array.from(sessionMap.values())
         .sort((a, b) => (b.isLatching ? 1 : -1)); // Keep new initiates at top
 
+      // 🛡️ PRUNING LOGIC: If activeChatId is no longer in mergedSessions, clear it to prevent 404s
+      if (activeChatId && !sessionMap.has(activeChatId)) {
+        console.warn(`[Expert Sync] Active session ${activeChatId} not found in server ledger. Resetting...`);
+        setActiveChatId(null);
+      }
+
       setChats(mergedSessions);
       latestChatsRef.current = mergedSessions;
       localStorage.setItem(`lawezy_chats_${user.id}`, JSON.stringify(sessions));
 
-      // [STRATEGIC SYNC] Join all session rooms to ensure real-time updates for all chats
+      // [Expert SYNC] Join all session rooms to ensure real-time updates for all chats
       if (socket && socket.connected) {
         sessions.forEach(s => {
           socket.emit('join_session', s.id);
@@ -254,7 +267,7 @@ const Messages = () => {
     setIsMobilizing(true);
     setError(null);
     try {
-      console.log(`[Strategic Sync] Initializing handshake with ${expertId}...`);
+      // console.log(`[Expert Sync] Initializing handshake with ${expertId}...`); // Hidden for security
       const response = await apiClient.post('/api/chat/start', {
         userId: user.id,
         professionalId: expertId
@@ -274,7 +287,7 @@ const Messages = () => {
           avatar: session.otherPartyAvatar || (isPro 
             ? 'https://ui-avatars.com/api/?name=Client&background=0D1B2A&color=E0C389' 
             : 'https://ui-avatars.com/api/?name=Expert&background=0D1B2A&color=E0C389'),
-          lastMessage: session.lastMessage || 'Open conversation',
+          lastMessage: session.lastMessage || 'Begin your Expert consultation...',
           time: 'Active',
           unread: 0,
           online: true,
@@ -282,13 +295,16 @@ const Messages = () => {
           isLatching: true 
         };
 
-        setChats(prev => [newChat, ...prev]);
-        latestChatsRef.current = [newChat, ...latestChatsRef.current];
+        setChats(prev => {
+          const filtered = prev.filter(c => c.id !== newChat.id);
+          return [newChat, ...filtered];
+        });
+        latestChatsRef.current = [newChat, ...latestChatsRef.current.filter(c => c.id !== newChat.id)];
         setActiveChatId(newChat.id);
         setSearchParams({}); // Clear param after success
         hasInitiatedRef.current = false;
       } else {
-        setError(response.data.message || "Failed to initialize strategic consultation.");
+        setError(response.data.message || "Failed to initialize Expert consultation.");
         hasInitiatedRef.current = false;
       }
     } catch (err) {
@@ -304,39 +320,40 @@ const Messages = () => {
     }
   };
 
-  // Effect 1: Socket — runs ONCE on mount, cleans up on unmount
+  // Effect 1: Socket — runs ONCE on mount
   useEffect(() => {
-    if (socketConnected) return; // Strict Mode double-mount guard
-    socketConnected = true;
-    connectWebSocket();
-    
-    if (socket) {
-      socket.on('quota_exhausted_alert', (data) => {
-        console.warn('⚠️ [GOVERNANCE] Quota Exhausted Alert:', data);
-        setQuotaExhaustedBy(data.userId);
-        
-        // System message for internal awareness
-        const systemMsg = {
-          id: `sys-${Date.now()}`,
-          sender: 'SYSTEM',
-          content: data.message,
-          timestamp: new Date().toISOString(),
-          type: 'SYSTEM_NOTICE'
-        };
-        setMessages(prev => [...prev, systemMsg]);
-      });
-
-      return () => {
-        socket.off('new_message');
-        socket.off('quota_exhausted_alert');
-        socket.disconnect();
-        socket = null;
-        socketConnected = false;
-      };
+    // If socket is already established and connected, just ensure listeners are fresh
+    if (socket && socket.connected) {
+      console.log('🔄 [MESSENGER] Re-using existing stable link');
+      socketConnected = true;
+    } else {
+      connectWebSocket();
     }
+    
+    // Global Quota Listener (survives component lifecycle)
+    const handleQuotaAlert = (data) => {
+      console.warn('⚠️ [GOVERNANCE] Quota Exhausted Alert:', data);
+      setQuotaExhaustedBy(data.userId);
+      const systemMsg = {
+        id: `sys-${Date.now()}`,
+        sender: 'SYSTEM',
+        content: data.message,
+        timestamp: new Date().toISOString(),
+        type: 'SYSTEM_NOTICE'
+      };
+      setMessages(prev => [...prev, systemMsg]);
+    };
+
+    socket.on('quota_exhausted_alert', handleQuotaAlert);
+
+    return () => {
+      // 🛡️ INSTITUTIONAL FIX: Do NOT disconnect the global socket on unmount.
+      // This allows the Messenger to stay "Warm" during dashboard navigation.
+      socket.off('quota_exhausted_alert', handleQuotaAlert);
+    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // --- STRATEGIC SYNCHRONIZATION: DASHBOARD TO CHAT ---
+  // --- Expert SYNCHRONIZATION: DASHBOARD TO CHAT ---
   useEffect(() => {
     if (!activeChatId) return;
     
@@ -361,7 +378,7 @@ const Messages = () => {
               appointmentStatus: appt.status,
               appointmentDate: appt.scheduledAt?.split('T')[0],
               appointmentTime: appt.scheduledAt?.split('T')[1]?.substring(0, 5),
-              content: `📜 STRATEGIC UPDATE: Active proposal for ₹${appt.fee} synchronized from dashboard ledger.`,
+              content: `📜 Expert UPDATE: Active proposal for ₹${appt.fee} synchronized from dashboard ledger.`,
               isVirtual: true
             };
             setMessages(prev => [...prev, virtualMsg]);
@@ -377,7 +394,9 @@ const Messages = () => {
 
   // Wallet Refresh: patch stale localStorage user with live token data
   useEffect(() => {
-    if (!user?.id) return;
+    // Robust Guard: Prevent calls with missing or malformed Expert IDs
+    if (!user?.id || user.id === 'null' || user.id === 'undefined') return;
+    
     const refreshWallet = async () => {
       try {
         const response = await apiClient.get(`/api/users/${user.id}`);
@@ -400,7 +419,7 @@ const Messages = () => {
   // Effect 1.5: Target Lock Reset — Only resets initiation lock when the destination actually changes
   useEffect(() => {
     if (expertIdParam && expertIdParam !== lastExpertIdRef.current) {
-      console.log(`[Strategic Sync] New destination detected: ${expertIdParam}. Resetting initiation lock...`);
+      console.log(`[Expert Sync] New destination detected: ${expertIdParam}. Resetting initiation lock...`);
       hasInitiatedRef.current = false;
       lastExpertIdRef.current = expertIdParam;
     } else if (!expertIdParam) {
@@ -439,12 +458,12 @@ const Messages = () => {
       });
 
       if (existing) {
-        console.log(`[Strategic Sync] Targeted channel found. Mobilizing ${existing.id}...`);
+        console.log(`[Expert Sync] Targeted channel found. Mobilizing ${existing.id}...`);
         setActiveChatId(existing.id);
         setSearchParams({}); // Clear param
         hasInitiatedRef.current = false;
       } else if (!isConnecting && !isMobilizing) {
-        console.log(`[Strategic Sync] No active channel found. Securing new initiation...`);
+        console.log(`[Expert Sync] No active channel found. Securing new initiation...`);
         hasInitiatedRef.current = true;
         initiateNewChat(expertIdParam);
       }
@@ -455,27 +474,36 @@ const Messages = () => {
 
   // --- HANDLE CHAT SELECTION ---
   useEffect(() => {
-    if (activeChatId) {
-      const fetchHistory = async () => {
-        try {
-          const response = await apiClient.get(`/api/chat/${activeChatId}/history`);
-          setMessages(response.data.data);
-          subscribeToChat(activeChatId);
-          
-          // Fetch Strategic Appointment status for this session
-          const apptRes = await apiClient.get(`/api/appointments/session/${activeChatId}`);
-          if (apptRes.status === 200) {
-            setActiveAppointment(apptRes.data);
-          } else {
-            setActiveAppointment(null);
-          }
-        } catch (err) {
-          console.error('Error fetching history:', err);
+    // Robust Guard: Ignore malformed or missing session contexts
+    if (!activeChatId || activeChatId === 'null' || activeChatId === 'undefined') return;
+    
+    const fetchHistory = async () => {
+      try {
+        const response = await apiClient.get(`/api/chat/${activeChatId}/history`);
+        setMessages(response.data.data);
+        subscribeToChat(activeChatId);
+        
+        // Fetch Expert Appointment status for this session
+        const apptRes = await apiClient.get(`/api/appointments/session/${activeChatId}`);
+        if (apptRes.status === 200) {
+          setActiveAppointment(apptRes.data);
+        } else {
           setActiveAppointment(null);
         }
-      };
-      fetchHistory();
-    }
+      } catch (err) {
+        console.error('Error fetching history:', err);
+        
+        // Handle 404: If session is missing from ledger, clear it from UI
+        if (err.response?.status === 404) {
+          console.warn(`[Expert Sync] Session ${activeChatId} missing from database. Evicting from state...`);
+          setChats(prev => prev.filter(c => c.id !== activeChatId));
+          setActiveChatId(null);
+        }
+        
+        setActiveAppointment(null);
+      }
+    };
+    fetchHistory();
   }, [activeChatId]);
 
   useEffect(() => {
@@ -485,7 +513,7 @@ const Messages = () => {
   }, [messages]);
 
   const handleSendMessage = (customPayload = null) => {
-    // Proactive Strategic Quota Check for Clients
+    // Proactive Expert Quota Check for Clients
     const isClient = user?.role?.toUpperCase().includes('CLIENT');
     const hasNoCredits = !user?.isUnlimited && user?.freeChatTokens === 0 && (user?.tokenBalance || 0) === 0;
     
@@ -518,11 +546,11 @@ const Messages = () => {
 
       socket.emit("send_message", messageRequest, (ack) => {
         if (!ack || !ack.success) {
-          console.error('❌ [STRATEGIC HANDSHAKE FAILED]:', ack?.error);
+          console.error('❌ [Institutional HANDSHAKE FAILED]:', ack?.error);
           if (!customPayload) {
             setMessageText(originalText); // RESTORE TEXT ON FAILURE
             
-            if (ack?.error === 'STRATEGIC_QUOTA_EXHAUSTED') {
+            if (ack?.error === 'INSTITUTIONAL_QUOTA_EXHAUSTED') {
               setShowRefillModal(true);
             } else {
               alert(ack?.error || "Institutional Handshake Failed. Connection unstable.");
@@ -564,12 +592,12 @@ const Messages = () => {
       });
       
       setShowRefillModal(false);
-      alert("💳 STRATEGIC REFILL SUCCESSFUL: 15 Premium Credits added to your consultation ledger.");
+      alert("💳 Expert REFILL SUCCESSFUL: 15 Premium Credits added to your consultation ledger.");
     } catch (err) {
       console.error('Purchase failed:', err);
       const errorMsg = err.response?.data?.message || err.message;
       if (errorMsg.toLowerCase().includes('insufficient')) {
-        if (window.confirm("INSUFFICIENT FUNDS: Your portfolio balance is too low for this refill. Would you like to navigate to the Strategic Wallet to add funds now?")) {
+        if (window.confirm("INSUFFICIENT FUNDS: Your portfolio balance is too low for this refill. Would you like to navigate to the Expert Wallet to add funds now?")) {
           navigate('/dashboard'); // Or dedicated wallet page
         }
       } else {
@@ -595,7 +623,7 @@ const Messages = () => {
       type: 'REFILL_REQUEST'
     });
     
-    alert("Strategic Refill Request transmitted to Client.");
+    alert("Expert Refill Request transmitted to Client.");
   };
 
   const handleProposeAppointment = () => {
@@ -623,12 +651,12 @@ const Messages = () => {
 
 
   const handleResolveChat = async (sessionId) => {
-    if (!window.confirm("Mark this consultation as RESOLVED? This will deactivate the strategic channel but preserve the history for your records.")) return;
+    if (!window.confirm("Mark this consultation as RESOLVED? This will deactivate the Expert channel but preserve the history for your records.")) return;
     
     try {
       await apiClient.put(`/api/chat/session/${sessionId}/resolve`);
       setChats(prev => prev.map(c => c.id === sessionId ? { ...c, status: 'RESOLVED' } : c));
-      alert("Consultation resolved successfully. Strategic archival completed.");
+      alert("Consultation resolved successfully. Expert archival completed.");
     } catch (err) {
       console.error('Failed to resolve session:', err);
       alert("Status update failed. Verify your network credentials.");
@@ -637,7 +665,7 @@ const Messages = () => {
 
   const handleDeleteChat = async (e, sessionId) => {
     e.stopPropagation();
-    if (!window.confirm("Are you sure you want to permanently delete this strategic conversation? This action cannot be undone.")) return;
+    if (!window.confirm("Are you sure you want to permanently delete this Expert conversation? This action cannot be undone.")) return;
     
     try {
       // 1. Permanent Erasure (Java Backend)
@@ -663,7 +691,7 @@ const Messages = () => {
 
 
   const handleExportChat = () => {
-    alert('Secure chat export initiated. Archiving channel transcription to strategic PDF...');
+    alert('Secure chat export initiated. Archiving channel transcription to Expert PDF...');
     // In a real implementation, this would trigger a download from the backend
   };
 
@@ -676,11 +704,11 @@ const Messages = () => {
     return true;
   });
 
-  // Strategic SWR Blocker: Only show full-screen loader if we have ZERO data (no cache)
+  // Expert SWR Blocker: Only show full-screen loader if we have ZERO data (no cache)
   if (loading && chats.length === 0) return (
     <div className="loading-screen" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       <div className="elite-sync-spinner"></div>
-      <span style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 600, color: 'var(--strategic-gold)', letterSpacing: '1px' }}>
+      <span style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 600, color: 'var(--elite-gold)', letterSpacing: '1px' }}>
         AUTHENTICATING SECURE CHANNEL...
       </span>
     </div>
@@ -721,7 +749,7 @@ const Messages = () => {
                 position: 'absolute',
                 left: '20px'
               }}
-              onMouseOver={(e) => { e.currentTarget.style.background = 'white'; e.currentTarget.style.borderColor = 'var(--strategic-gold)'; e.currentTarget.style.color = 'var(--strategic-gold)'; }}
+              onMouseOver={(e) => { e.currentTarget.style.background = 'white'; e.currentTarget.style.borderColor = 'var(--elite-gold)'; e.currentTarget.style.color = 'var(--elite-gold)'; }}
               onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.8)'; e.currentTarget.style.borderColor = 'rgba(0,0,0,0.15)'; e.currentTarget.style.color = 'var(--deep-charcoal)'; }}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
@@ -776,7 +804,7 @@ const Messages = () => {
                 height: '40px',
                 borderRadius: '50%',
                 border: 'none',
-                background: isDiscoveryMode ? 'var(--strategic-gold)' : 'var(--midnight-primary)',
+                background: isDiscoveryMode ? 'var(--elite-gold)' : 'var(--midnight-primary)',
                 color: 'white',
                 display: 'flex',
                 alignItems: 'center',
@@ -786,7 +814,7 @@ const Messages = () => {
                 boxShadow: '0 4px 10px rgba(0,0,0,0.15)',
                 transform: isDiscoveryMode ? 'rotate(45deg)' : 'rotate(0)'
               }}
-              title={isDiscoveryMode ? "Cance Discovery" : "Start New Strategic Consultation"}
+              title={isDiscoveryMode ? "Cance Discovery" : "Start New Expert Consultation"}
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
             </button>
@@ -811,14 +839,14 @@ const Messages = () => {
             
             {isDiscoveryMode ? (
               <div className="discovery-mode-results">
-                <div style={{ padding: '10px 20px', fontSize: '0.75rem', color: 'var(--strategic-gold)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px' }}>Available Professionals</div>
+                <div style={{ padding: '10px 20px', fontSize: '0.75rem', color: 'var(--elite-gold)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px' }}>Available Professionals</div>
                 {professionals.filter(exp => exp.name.toLowerCase().includes(profSearchQuery.toLowerCase())).map(expert => (
                   <div 
                     key={expert.id} 
                     className="chat-list-item discovery-item animate-reveal"
                     onClick={() => {
                       if (!expert.uid) {
-                        console.error("[Strategic Warning] Expert has no Public UID. Falling back... Verify database integrity.");
+                        console.error("[Expert Warning] Expert has no Public UID. Falling back... Verify database integrity.");
                       }
                       setIsDiscoveryMode(false);
                       initiateNewChat(expert.uid || expert.id);
@@ -835,7 +863,7 @@ const Messages = () => {
                       </div>
                       <p style={{ fontSize: '0.75rem' }}>{expert.title} • {expert.experience}</p>
                     </div>
-                    <div style={{ padding: '5px', color: 'var(--strategic-gold)' }}>
+                    <div style={{ padding: '5px', color: 'var(--elite-gold)' }}>
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
                     </div>
                   </div>
@@ -897,13 +925,13 @@ const Messages = () => {
                   justifyContent: 'center', 
                   margin: '0 auto 20px auto',
                   boxShadow: '0 10px 20px rgba(0,0,0,0.05)',
-                  color: 'var(--strategic-gold)'
+                  color: 'var(--elite-gold)'
                 }}>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
                 </div>
                 <h4 style={{ color: 'var(--midnight-primary)', marginBottom: '10px', fontSize: '1.1rem' }}>Inbox is Empty</h4>
                 <p style={{ fontSize: '0.85rem', lineHeight: '1.6', marginBottom: '25px' }}>
-                  Begin a secure strategic consultation with India's top legal professionals.
+                  Begin a secure Expert consultation with India's top legal professionals.
                 </p>
                 <button 
                   onClick={() => setIsDiscoveryMode(true)}
@@ -963,16 +991,8 @@ const Messages = () => {
         </aside>
 
         <main className="messages-main-view" style={{ position: 'relative' }}>
-          {/* LOCALIZED STRATEGIC SYNC LOADER (Non-blocking) */}
-          {(isConnecting || isMobilizing) && !activeChat && (
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(255,255,255,0.9)', zIndex: 1000, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }}>
-              <div className="elite-sync-spinner" style={{ marginBottom: '20px' }}></div>
-              <h3 style={{ fontFamily: 'Outfit, sans-serif', fontSize: '1.2rem', color: 'var(--midnight-primary)', margin: '0 0 10px 0' }}>Securing Strategic Channel</h3>
-              <p style={{ color: '#666', fontSize: '0.85rem', maxWidth: '280px', textAlign: 'center', lineHeight: '1.5' }}>
-                Establishing encrypted synchronization with <strong>{expertNameParam || 'Expert Counsel'}</strong>...
-              </p>
-            </div>
-          )}
+          {/* LOCALIZED Expert SYNC LOADER (Non-blocking) */}
+          {/* Expert SYNC: Overlay removed for Direct Open experience */}
           {activeChat ? (
             <>
               <header className="chat-header" style={{ position: 'relative', zIndex: 100 }}>
@@ -991,7 +1011,7 @@ const Messages = () => {
                       <span style={{ color: (activeChat.online || isConnecting) ? '#10b981' : '#888', textTransform: 'none', fontWeight: 500 }}>
                         {activeChat.online || isConnecting ? 'online' : 'offline'}
                       </span>
-                      {/* STRATEGIC CREDIT BADGE (Self) */}
+                      {/* Expert CREDIT BADGE (Self) */}
                       <span style={{
                         display: 'inline-flex',
                         alignItems: 'center',
@@ -1017,7 +1037,7 @@ const Messages = () => {
                                 : `${user?.tokenBalance || 0} C`)}
                       </span>
 
-                      {/* PEER CREDIT VISIBILITY (Strategic Awareness) */}
+                      {/* PEER CREDIT VISIBILITY (Expert Awareness) */}
                       {activeChat.peerTokenBalance !== undefined && (
                         <span style={{
                           display: 'inline-flex',
@@ -1041,7 +1061,7 @@ const Messages = () => {
 
                 <div className="chat-header-actions">
                   <div style={{ position: 'relative' }}>
-                    <button className="btn-appointment-call" title="Strategic Appointment Governance" onClick={() => setShowApptDropdown(!showApptDropdown)}>
+                    <button className="btn-appointment-call" title="Expert Appointment Governance" onClick={() => setShowApptDropdown(!showApptDropdown)}>
                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                        <span className="btn-text">Appointment</span>
                     </button>
@@ -1060,7 +1080,7 @@ const Messages = () => {
                           <li onClick={() => { 
                             setShowApptDropdown(false); 
                             navigate('/dashboard');
-                          }} style={{ color: 'var(--strategic-gold)', fontWeight: 700 }}>
+                          }} style={{ color: 'var(--elite-gold)', fontWeight: 700 }}>
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
                             Appointment Center
                           </li>
@@ -1123,7 +1143,7 @@ const Messages = () => {
                 )}
                 
                 <div className="secure-notice">
-                  🛡️ This connection is end-to-end encrypted. Strategic privilege applies.
+                  🛡️ This connection is end-to-end encrypted. Expert privilege applies.
                 </div>
 
                 {/* --- EXPERT QUOTA AWARENESS BANNER --- */}
@@ -1145,7 +1165,7 @@ const Messages = () => {
                   }}>
                     <div style={{ fontSize: '1.5rem' }}>⚠️</div>
                     <div style={{ flex: 1 }}>
-                      <strong>Strategic Notice:</strong> Client credits are exhausted. 
+                      <strong>Expert Notice:</strong> Client credits are exhausted. 
                       Advise a <strong>Credit Refill</strong> or suggest a formal <strong>Appointment</strong> to continue this deep-dive discovery.
                     </div>
                     <button 
@@ -1204,13 +1224,13 @@ const Messages = () => {
                      );
                    }
 
-                   // --- STRATEGIC REFILL REQUEST CARD ---
+                   // --- Expert REFILL REQUEST CARD ---
                    if (msg.type === 'REFILL_REQUEST') {
                      return (
                        <div key={msg.id || idx} style={{ width: '100%', display: 'flex', justifyContent: 'center', margin: '20px 0' }}>
                          <div className="refill-request-card animate-reveal" style={{
                            background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
-                           border: '2px solid var(--strategic-gold)',
+                           border: '2px solid var(--elite-gold)',
                            padding: '20px',
                            borderRadius: '16px',
                            color: 'white',
@@ -1226,7 +1246,7 @@ const Messages = () => {
                              style={{
                                width: '100%',
                                padding: '10px',
-                               background: 'var(--strategic-gold)',
+                               background: 'var(--elite-gold)',
                                color: 'var(--midnight-primary)',
                                border: 'none',
                                borderRadius: '8px',
@@ -1253,7 +1273,7 @@ const Messages = () => {
                           {isBlockedReply ? (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontStyle: 'italic', opacity: 0.8 }}>
                                <span style={{ fontSize: '1.2rem' }}>🔒</span>
-                               Message locked. Please refill credits to view this strategic reply.
+                               Message locked. Please refill credits to view this Expert reply.
                             </div>
                           ) : (
                             renderContentWithLinks(msg.content || msg.text || msg.lastMessage)
@@ -1311,9 +1331,9 @@ const Messages = () => {
 
               <div className="chat-input-area" style={{ flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
                 {replyingToMsg && (
-                  <div style={{ padding: '8px 15px', background: 'rgba(0,0,0,0.03)', borderLeft: '4px solid var(--strategic-gold)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '0 20px 10px 20px', borderRadius: '4px' }}>
+                  <div style={{ padding: '8px 15px', background: 'rgba(0,0,0,0.03)', borderLeft: '4px solid var(--elite-gold)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '0 20px 10px 20px', borderRadius: '4px' }}>
                     <div style={{ overflow: 'hidden' }}>
-                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--strategic-gold)', display: 'block', marginBottom: '4px' }}>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--elite-gold)', display: 'block', marginBottom: '4px' }}>
                         Replying to {replyingToMsg.sender === 'me' ? 'Yourself' : activeChat.name}
                       </span>
                       <p style={{ fontSize: '0.9rem', color: '#555', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{replyingToMsg.text}</p>
@@ -1325,7 +1345,7 @@ const Messages = () => {
                   🔒 For your protection, sharing phone numbers or external meeting links is strictly prohibited.
                 </div>
 
-                {/* --- STRATEGIC MOBILIZATION HUB: EXPERT UI WHEN CLIENT IS OUT OF TOKENS --- */}
+                {/* --- Expert MOBILIZATION HUB: EXPERT UI WHEN CLIENT IS OUT OF TOKENS --- */}
                 {['LAWYER', 'CA', 'CFA', 'PROFESSIONAL'].some(role => user?.role?.toUpperCase().includes(role)) && activeChat?.peerTokenBalance === 0 ? (
                   <div className="expert-mobilization-hub animate-reveal" style={{
                     margin: '0 20px 20px 20px',
@@ -1341,7 +1361,7 @@ const Messages = () => {
                     backdropFilter: 'blur(10px)'
                   }}>
                     <div style={{ textAlign: 'center' }}>
-                      <h4 style={{ margin: '0 0 5px 0', color: 'var(--strategic-gold)', fontFamily: 'Outfit, sans-serif' }}>⚠️ Client Tokens Exhausted</h4>
+                      <h4 style={{ margin: '0 0 5px 0', color: 'var(--elite-gold)', fontFamily: 'Outfit, sans-serif' }}>⚠️ Client Tokens Exhausted</h4>
                       <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.7)', margin: 0 }}>Select a professional action to recover consultation momentum.</p>
                     </div>
                     <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
@@ -1373,7 +1393,7 @@ const Messages = () => {
                         style={{
                           flex: 1,
                           padding: '12px',
-                          background: 'var(--strategic-gold)',
+                          background: 'var(--elite-gold)',
                           border: 'none',
                           borderRadius: '10px',
                           color: 'var(--midnight-primary)',
@@ -1405,7 +1425,7 @@ const Messages = () => {
                     </button>
                     <input 
                       type="text" 
-                      placeholder="Draft your strategic inquiry..." 
+                      placeholder="Draft your Expert inquiry..." 
                       value={messageText}
                       onChange={(e) => setMessageText(e.target.value)}
                       onKeyDown={(e) => {
@@ -1466,7 +1486,7 @@ const Messages = () => {
                 }}>
                   <div className="expert-video-placeholder" style={{
                     width: '160px', height: '160px', borderRadius: '50%', overflow: 'hidden', marginBottom: '25px',
-                    border: '4px solid var(--strategic-gold)', boxShadow: '0 0 30px rgba(184, 153, 94, 0.4)'
+                    border: '4px solid var(--elite-gold)', boxShadow: '0 0 30px rgba(184, 153, 94, 0.4)'
                   }}>
                     <img src={activeChat.avatar} alt="Expert" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   </div>
@@ -1523,8 +1543,8 @@ const Messages = () => {
                             fontWeight: 800, 
                             letterSpacing: '1px', 
                             cursor: 'pointer',
-                            color: activeMediaTab === tab ? 'var(--strategic-gold)' : '#888',
-                            borderBottom: activeMediaTab === tab ? '2px solid var(--strategic-gold)' : 'none',
+                            color: activeMediaTab === tab ? 'var(--elite-gold)' : '#888',
+                            borderBottom: activeMediaTab === tab ? '2px solid var(--elite-gold)' : 'none',
                             transition: 'all 0.2s'
                           }}
                         >
@@ -1533,7 +1553,7 @@ const Messages = () => {
                       ))}
                     </div>
                     <div style={{ padding: '30px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '300px', color: '#666' }}>
-                      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--strategic-gold)" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: '15px', opacity: 0.8 }}><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--elite-gold)" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: '15px', opacity: 0.8 }}><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
                       <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.9rem' }}>No {activeMediaTab.toLowerCase()} shared in this conversation yet.</p>
                       <span style={{ fontSize: '0.75rem', opacity: 0.6, marginTop: '8px' }}>Multimedia sent over this channel will appear here for archival.</span>
                     </div>
@@ -1600,19 +1620,19 @@ const Messages = () => {
                 </div>
               )}
 
-              {/* Strategic Appointment Modals replaced by streamlined Discovery Ping system */}
+              {/* Professional Appointment Modals replaced by streamlined Discovery Ping system */}
 
             </>
           ) : (
             <div className="no-chat-selected">
               <div className="empty-state-icon" style={{ opacity: 0.8, marginBottom: '20px' }}>
-                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--strategic-gold)" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--elite-gold)" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
               </div>
               <h3 style={{ fontFamily: 'Outfit, sans-serif', fontSize: '1.4rem' }}>{ (isConnecting || isMobilizing) ? 'Preparing Channel...' : 'Select who to talk to'}</h3>
               <p style={{ maxWidth: '300px', textAlign: 'center', lineHeight: '1.5' }}>
                 { (isConnecting || isMobilizing) 
-                  ? 'Your strategic consultation is being initialized. This will only take a moment.' 
-                  : 'Choose an ongoing strategic consultation from the left pane to view your messages.'}
+                  ? 'Your Expert consultation is being initialized. This will only take a moment.' 
+                  : 'Choose an ongoing Expert consultation from the left pane to view your messages.'}
               </p>
             </div>
           )}
@@ -1620,19 +1640,19 @@ const Messages = () => {
 
       </div>
 
-      {/* STRATEGIC REFILL MODAL */}
+      {/* Expert REFILL MODAL */}
       {showRefillModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(5, 10, 20, 0.75)', backdropFilter: 'blur(12px)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)' }}>
           <div style={{ background: 'white', width: '90%', maxWidth: '440px', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 30px 60px rgba(0,0,0,0.4)', position: 'relative', border: '1px solid rgba(184, 153, 94, 0.2)' }} className="animate-reveal">
             
             <div style={{ height: '140px', background: 'linear-gradient(135deg, #1a1c2c 0%, #0d0e14 100%)', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '100px', height: '100px', background: 'var(--strategic-gold)', opacity: 0.1, borderRadius: '50%', filter: 'blur(40px)' }}></div>
+              <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '100px', height: '100px', background: 'var(--elite-gold)', opacity: 0.1, borderRadius: '50%', filter: 'blur(40px)' }}></div>
               <div style={{ position: 'absolute', bottom: '-10px', left: '-10px', width: '80px', height: '80px', background: '#4f46e5', opacity: 0.15, borderRadius: '50%', filter: 'blur(30px)' }}></div>
               <div style={{ zIndex: 2, textAlign: 'center' }}>
                 <div style={{ width: '64px', height: '64px', background: 'rgba(255,255,255,0.05)', borderRadius: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px auto', border: '1px solid rgba(255,255,255,0.1)' }}>
-                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--strategic-gold)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--elite-gold)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                 </div>
-                <h3 style={{ color: 'white', margin: 0, fontFamily: 'Outfit, sans-serif', fontSize: '1.4rem', letterSpacing: '0.5px' }}>Strategic Quota Refill</h3>
+                <h3 style={{ color: 'white', margin: 0, fontFamily: 'Outfit, sans-serif', fontSize: '1.4rem', letterSpacing: '0.5px' }}>Expert Quota Refill</h3>
               </div>
               <button 
                 onClick={() => setShowRefillModal(false)}
@@ -1644,11 +1664,11 @@ const Messages = () => {
 
             <div style={{ padding: '30px', textAlign: 'center' }}>
               <p style={{ color: '#666', fontSize: '0.95rem', lineHeight: '1.6', margin: '0 0 25px 0' }}>
-                Your initial consultation quota has been utilized. Mobilize your consultation with <strong>15 Premium Strategic Credits</strong> to continue deep-dive legal discovery.
+                Your initial consultation quota has been utilized. Mobilize your consultation with <strong>15 Premium Expert Credits</strong> to continue deep-dive legal discovery.
               </p>
               
               <div style={{ background: 'var(--parchment-cream)', padding: '20px', borderRadius: '16px', border: '1px solid rgba(184, 153, 94, 0.15)', marginBottom: '30px' }}>
-                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--strategic-gold)', letterSpacing: '1px', marginBottom: '5px', textTransform: 'uppercase' }}>Consolidated Offer</div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--elite-gold)', letterSpacing: '1px', marginBottom: '5px', textTransform: 'uppercase' }}>Consolidated Offer</div>
                 <div style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--midnight-primary)', fontFamily: 'Outfit, sans-serif' }}>₹100 <span style={{ fontSize: '1rem', fontWeight: 500, opacity: 0.6 }}>/ 15 Credits</span></div>
               </div>
 

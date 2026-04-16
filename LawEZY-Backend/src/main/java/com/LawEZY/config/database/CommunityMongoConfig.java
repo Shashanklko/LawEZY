@@ -24,7 +24,9 @@ public class CommunityMongoConfig {
 
     @Bean
     public MongoDatabaseFactory communityMongoDatabaseFactory() {
-        return new SimpleMongoClientDatabaseFactory(communityMongoProperties().getUri());
+        String uri = communityMongoProperties().getUri();
+        if (uri == null) throw new IllegalStateException("Community MongoDB URI must not be null");
+        return new SimpleMongoClientDatabaseFactory(uri);
     }
 
     @Bean(name = "communityMongoTemplate")

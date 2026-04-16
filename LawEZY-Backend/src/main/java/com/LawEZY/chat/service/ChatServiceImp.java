@@ -35,7 +35,6 @@ import com.LawEZY.user.repository.WalletRepository;
 import com.LawEZY.user.entity.Wallet;
 import com.LawEZY.user.entity.User;
 import com.LawEZY.user.entity.ProfessionalProfile;
-import com.LawEZY.user.entity.ClientProfile;
 
 import com.LawEZY.common.exception.ResourceNotFoundException;
 
@@ -76,14 +75,14 @@ public class ChatServiceImp implements ChatService {
                                
         if (!isParticipant) {
             log.error("[SECURITY] Unauthorized access attempt by user {} on session {}", currentId, session.getId());
-            throw new AccessDeniedException("Strategic access restricted. You are not a participant in this consultation.");
+            throw new AccessDeniedException("Identity access restricted. You are not a participant in this consultation.");
         }
     }
 
     private String getCurrentAuthenticatedId() {
         var auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated()) {
-            throw new AccessDeniedException("Strategic authentication failure.");
+            throw new AccessDeniedException("Identity authentication failure.");
         }
         Object principal = auth.getPrincipal();
         if (principal instanceof com.LawEZY.auth.dto.CustomUserDetails) {
@@ -98,15 +97,31 @@ public class ChatServiceImp implements ChatService {
     @Override
     @NonNull
     public ChatSessionResponse startSession(@NonNull StartChatRequest request) {
-        log.info("[STRATEGIC START] Initializing session. User: {} | Prof: {}", request.getUserId(), request.getProfessionalId());
+        log.info("[INSTITUTIONAL START] Initializing session. User: {} | Prof: {}", request.getUserId(), request.getProfessionalId());
         
         String resolvedUser = resolveInternalId(request.getUserId());
         String resolvedProf = resolveInternalId(request.getProfessionalId());
 
         if (resolvedUser == null || resolvedProf == null) {
-            log.error("[STRATEGIC ERROR] Handshake Failed. Identity resolution returned NULL. User: {} -> {} | Prof: {} -> {}", 
+            log.error("[INSTITUTIONAL ERROR] Handshake Failed. Identity resolution returned NULL. User: {} -> {} | Prof: {} -> {}", 
                       request.getUserId(), resolvedUser, request.getProfessionalId(), resolvedProf);
-            throw new IllegalArgumentException("Could not resolve strategic identities. Handshake aborted.");
+            throw new IllegalArgumentException("Could not resolve institutional identities. Handshake aborted.");
+        }
+
+        // --- DUPLICATE PREVENTION LOGIC ---
+        // Check for existing active or awaiting reply sessions
+        List<ChatSession> existingSessions = chatSessionRepository.findByUserIdAndProfessionalIdAndStatus(resolvedUser, resolvedProf, ChatStatus.ACTIVE);
+        if (existingSessions.isEmpty()) {
+            existingSessions = chatSessionRepository.findByUserIdAndProfessionalIdAndStatus(resolvedUser, resolvedProf, ChatStatus.AWAITING_REPLY);
+        }
+        if (existingSessions.isEmpty()) {
+            existingSessions = chatSessionRepository.findByUserIdAndProUidAndStatus(resolvedUser, resolvedProf, ChatStatus.ACTIVE);
+        }
+        
+        if (!existingSessions.isEmpty()) {
+            ChatSession existing = existingSessions.get(0);
+            log.info("[INSTITUTIONAL REUSE] Found existing active session {}. Returning for continuity.", existing.getId());
+            return mapToSessionResponse(existing, false, null, null);
         }
 
         ChatSession session = new ChatSession();
@@ -132,7 +147,7 @@ public class ChatServiceImp implements ChatService {
         session.setLastUpdateAt(LocalDateTime.now());
 
         ChatSession savedSession = chatSessionRepository.save(session);
-        log.info("[STRATEGIC SYNC] Secure Channel Established. Session ID: {} | User: {} | Prof: {} | Public UID: {}", 
+        log.info("[INSTITUTIONAL SYNC] Secure Channel Established. Session ID: {} | User: {} | Prof: {} | Public UID: {}", 
                  savedSession.getId(), savedSession.getUserId(), savedSession.getProfessionalId(), savedSession.getProUid());
         
         // Return mapped response for instant frontend latching
@@ -145,7 +160,7 @@ public class ChatServiceImp implements ChatService {
         
         identities.add(identifier);
 
-        // 🕸️ STRATEGIC IDENTITY WEB RESOLUTION 🕸️
+        // 🕸️ INSTITUTIONAL IDENTITY WEB RESOLUTION 🕸️
         // We resolve in waves to catch all linked keys: ID <-> Email <-> Phone <-> UID
 
         // WAVE 1: Primary User Resolution
@@ -162,7 +177,7 @@ public class ChatServiceImp implements ChatService {
             
             // Re-attempt User resolution if ID was found in profiles
             for (String id : new ArrayList<>(identities)) {
-                if (user == null) user = userRepository.findById(id).orElse(null);
+                if (user == null && id != null) user = userRepository.findById(id).orElse(null);
             }
         }
 
@@ -172,7 +187,7 @@ public class ChatServiceImp implements ChatService {
             identities.add(uid);
             if (user.getEmail() != null) identities.add(user.getEmail());
             
-            // 🛡️ STRATEGIC FIX: Always use findByUserId to bridge User -> Profile
+            // 🛡️ INSTITUTIONAL FIX: Always use findByUserId to bridge User -> Profile
             professionalProfileRepository.findByUserId(uid).ifPresent(p -> {
                 if (p.getUid() != null) {
                     identities.add(p.getUid());
@@ -189,18 +204,20 @@ public class ChatServiceImp implements ChatService {
                 }
                 if (p.getPhoneNumber() != null) identities.add(p.getPhoneNumber());
             });
-            lawyerProfileRepository.findById(uid).ifPresent(p -> {
-                // LawyerProfile usually uses UserID as ID, but we check UID specifically
-                if (p.getUid() != null) {
-                    identities.add(p.getUid());
-                    identities.add(p.getUid().toUpperCase());
-                    identities.add(p.getUid().toLowerCase());
-                }
-                if (p.getPhoneNumber() != null) identities.add(p.getPhoneNumber());
-            });
+            if (uid != null) {
+                lawyerProfileRepository.findById(uid).ifPresent(p -> {
+                    // LawyerProfile usually uses UserID as ID, but we check UID specifically
+                    if (p.getUid() != null) {
+                        identities.add(p.getUid());
+                        identities.add(p.getUid().toUpperCase());
+                        identities.add(p.getUid().toLowerCase());
+                    }
+                    if (p.getPhoneNumber() != null) identities.add(p.getPhoneNumber());
+                });
+            }
         }
 
-        log.info("[STRATEGIC SYNC] Final Resolved Identities for {}: {}", identifier, identities);
+        log.info("[INSTITUTIONAL SYNC] Final Resolved Identities for {}: {}", identifier, identities);
         return identities;
     }
 
@@ -254,7 +271,7 @@ public class ChatServiceImp implements ChatService {
 
         String content = request.getContent();
         
-        // Resolve Strategic Identities for ledger operations
+        // Resolve Institutional Identities for ledger operations
         String senderId = resolveInternalId(request.getSenderId());
         String receiverId = resolveInternalId(request.getReceiverId());
 
@@ -291,10 +308,10 @@ public class ChatServiceImp implements ChatService {
             message.setAppointmentPrice(request.getAppointmentPrice());
             message.setAppointmentStatus(request.getAppointmentStatus() != null ? request.getAppointmentStatus() : "requested");
             
-            // Strategic Unlock: If status is 'paid', mark session as appointment-paid to bypass AI safety guards
+            // Institutional Unlock: If status is 'paid', mark session as appointment-paid to bypass AI safety guards
             if ("paid".equalsIgnoreCase(request.getAppointmentStatus())) {
                 session.setIsAppointmentPaid(true);
-                log.info("[STRATEGIC UNLOCK] Session {} marked as PAID. AI safety bypassed for verified professional consultation.", sId);
+                log.info("[INSTITUTIONAL UNLOCK] Session {} marked as PAID. AI safety bypassed for verified professional consultation.", sId);
             }
         }
 
@@ -341,11 +358,13 @@ public class ChatServiceImp implements ChatService {
         
         verifySessionAccess(session);
         
-        return chatMessageRepository.findByChatSessionIdOrderByTimestampAsc(chatSessionId)
-
+        List<ChatMessageResponse> history = chatMessageRepository.findByChatSessionIdOrderByTimestampAsc(chatSessionId)
                 .stream()
+                .filter(java.util.Objects::nonNull)
                 .map(msg -> mapToResponse(msg, session.getStatus()))
+                .filter(java.util.Objects::nonNull)
                 .collect(Collectors.toList());
+        return history != null ? history : Collections.emptyList();
     }
 
     @Override
@@ -405,7 +424,7 @@ public class ChatServiceImp implements ChatService {
                 ProfessionalProfile prof = professionalProfileRepository.findById(professionalId)
                         .orElseGet(() -> professionalProfileRepository.findByUidIgnoreCase(professionalId).orElse(null));
                 
-                if (prof != null) {
+                if (prof != null && prof.getId() != null) {
                     String internalId = prof.getId();
                     Wallet wallet = walletRepository.findById(internalId).orElse(null);
                     
@@ -417,8 +436,12 @@ public class ChatServiceImp implements ChatService {
                         walletRepository.save(wallet);
     
                         // 📊 Record Real Transaction for Expert
-                        String clientUid = clientProfileRepository.findById(session.getUserId())
-                                .map(p -> p.getUid()).orElse("UNKNOWN-CLIENT");
+                        String userId = session.getUserId();
+                        String clientUid = "UNKNOWN-CLIENT";
+                        if (userId != null) {
+                            clientUid = clientProfileRepository.findById(userId)
+                                    .map(p -> p.getUid()).orElse("UNKNOWN-CLIENT");
+                        }
                         financialService.recordTransaction(internalId, "Expert Consultation - Client: " + clientUid, earnings, "COMPLETED", "CREDIT");
                         
                         log.info("Professional ID: {} credited with earnings: {} for Session ID: {}", internalId, earnings, sessionId);
@@ -436,16 +459,19 @@ public class ChatServiceImp implements ChatService {
     public List<ChatSessionResponse> getUserSessions(@NonNull String userId) {
         try {
             Set<String> identities = getUniversalIdentities(userId);
-            log.info("[STRATEGIC SYNC] Fetching user sessions for identity set: {}", identities);
+            log.info("[INSTITUTIONAL SYNC] Fetching user sessions for identity set: {}", identities);
             
-            List<ChatSession> sessions = chatSessionRepository.findByUserIdIn(new ArrayList<>(identities));
+            List<ChatSession> sessions = chatSessionRepository.findByUserIdIn(new java.util.ArrayList<>(identities));
             Map<String, com.LawEZY.user.dto.ProfessionalProfileDTO> proCache = new HashMap<>();
 
-            return sessions.stream()
+            List<ChatSessionResponse> resList = sessions.stream()
+                    .filter(java.util.Objects::nonNull)
                     .map(s -> mapToSessionResponse(s, false, proCache, null))
+                    .filter(java.util.Objects::nonNull)
                     .collect(Collectors.toList());
+            return resList != null ? resList : Collections.emptyList();
         } catch (Exception e) {
-            log.error("[STRATEGIC RESILIENCE] Failed to fetch user sessions: {}", e.getMessage());
+            log.error("[INSTITUTIONAL RESILIENCE] Failed to fetch user sessions: {}", e.getMessage());
             return Collections.emptyList();
         }
     }
@@ -455,16 +481,19 @@ public class ChatServiceImp implements ChatService {
     public List<ChatSessionResponse> getProfessionalSessions(@NonNull String professionalId) {
         try {
             Set<String> identities = getUniversalIdentities(professionalId);
-            log.info("[STRATEGIC SYNC] Fetching professional sessions for identity set: {}", identities);
+            log.info("[INSTITUTIONAL SYNC] Fetching professional sessions for identity set: {}", identities);
             
             List<ChatSession> sessions = chatSessionRepository.findByProfessionalIdIn(new ArrayList<>(identities));
             Map<String, com.LawEZY.user.dto.UserResponse> userCache = new HashMap<>();
 
-            return sessions.stream()
+            List<ChatSessionResponse> resList = sessions.stream()
+                    .filter(java.util.Objects::nonNull)
                     .map(s -> mapToSessionResponse(s, true, null, userCache))
+                    .filter(java.util.Objects::nonNull)
                     .collect(Collectors.toList());
+            return resList != null ? resList : Collections.emptyList();
         } catch (Exception e) {
-            log.error("[STRATEGIC RESILIENCE] Failed to fetch professional sessions: {}", e.getMessage());
+            log.error("[INSTITUTIONAL RESILIENCE] Failed to fetch professional sessions: {}", e.getMessage());
             return Collections.emptyList();
         }
     }
@@ -504,7 +533,7 @@ public class ChatServiceImp implements ChatService {
                     res.setOtherPartyAvatar("https://ui-avatars.com/api/?name=" + name.charAt(0) + "&background=0D1B2A&color=E0C389&bold=true");
                 }
             } catch (Exception e) {
-                res.setOtherPartyName("Strategic Client " + (session.getUserId() != null ? session.getUserId() : ""));
+                res.setOtherPartyName("Institutional Client " + (session.getUserId() != null ? session.getUserId() : ""));
             }
         } else {
             // Client View -> Get Expert Name (Cached)
@@ -535,7 +564,7 @@ public class ChatServiceImp implements ChatService {
                 res.setOtherPartyAvatar(profDTO.getAvatar());
                 res.setProUid(profDTO.getUid());
             } catch (Exception e) {
-                log.error("[STRATEGIC ERROR] Name resolution failed for Target: {}. Defaulting to Expert Counsel.", 
+                log.error("[INSTITUTIONAL ERROR] Name resolution failed for Target: {}. Defaulting to Expert Counsel.", 
                            session.getProUid() != null ? session.getProUid() : session.getProfessionalId());
                 res.setOtherPartyName("Expert Counsel"); 
                 res.setOtherPartyAvatar("https://ui-avatars.com/api/?name=Expert&background=0D1B2A&color=E0C389&bold=true");
@@ -548,7 +577,7 @@ public class ChatServiceImp implements ChatService {
             res.setLastMessageTime("Active");
         });
 
-        // --- STRATEGIC LIQUIDITY SYNC ---
+        // --- INSTITUTIONAL LIQUIDITY SYNC ---
         // Fetch peer's token balance for transparency
         try {
             String peerId = isProView ? session.getUserId() : session.getProfessionalId();
@@ -556,7 +585,7 @@ public class ChatServiceImp implements ChatService {
                 walletRepository.findById(peerId).ifPresent(w -> res.setPeerTokenBalance(w.getTokenBalance()));
             }
         } catch (Exception e) {
-            log.warn("[STRATEGIC SYNC] Could not resolve peer liquidity for session {}", session.getId());
+            log.warn("[INSTITUTIONAL SYNC] Could not resolve peer liquidity for session {}", session.getId());
         }
 
         res.setUnreadCount(0);
@@ -588,10 +617,10 @@ public class ChatServiceImp implements ChatService {
                 .orElseThrow(() -> new ResourceNotFoundException("Session not found"));
         
         verifySessionAccess(session);
-        log.warn("[STRATEGIC AUDIT] Permanent session deletion requested: {}", sessionId);
+        log.warn("[INSTITUTIONAL AUDIT] Permanent session deletion requested: {}", sessionId);
         chatMessageRepository.deleteAllByChatSessionId(sessionId);
         chatSessionRepository.deleteById(sessionId);
-        log.info("[STRATEGIC AUDIT] Session {} and associated history successfully expunged.", sessionId);
+        log.info("[INSTITUTIONAL AUDIT] Session {} and associated history successfully expunged.", sessionId);
     }
 
 
@@ -601,10 +630,10 @@ public class ChatServiceImp implements ChatService {
                 .orElseThrow(() -> new ResourceNotFoundException("Session not found"));
         
         verifySessionAccess(session);
-        log.info("[STRATEGIC AUDIT] Strategic consultation resolution requested for: {}", sessionId);
+        log.info("[INSTITUTIONAL AUDIT] Institutional consultation resolution requested for: {}", sessionId);
         session.setStatus(ChatStatus.RESOLVED);
         chatSessionRepository.save(session);
-        log.info("[STRATEGIC AUDIT] Session {} successfully marked as RESOLVED.", sessionId);
+        log.info("[INSTITUTIONAL AUDIT] Session {} successfully marked as RESOLVED.", sessionId);
     }
 
 }

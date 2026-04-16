@@ -6,7 +6,7 @@ import org.springframework.security.core.userdetails.User;
 import java.util.Collection;
 
 /**
- * Strategic Security Wrapper
+ * Institutional Security Wrapper
  * Extends default Spring User to carry the internal Hex ID into the JWT pipeline.
  */
 public class CustomUserDetails extends User {

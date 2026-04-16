@@ -1,6 +1,5 @@
 package com.LawEZY.user.dto;
 
-import com.LawEZY.user.enums.Role;
 import lombok.Data;
 import java.util.List;
 

@@ -24,7 +24,9 @@ public class ResourceMongoConfig {
 
     @Bean
     public MongoDatabaseFactory resourceMongoDatabaseFactory() {
-        return new SimpleMongoClientDatabaseFactory(resourceMongoProperties().getUri());
+        String uri = resourceMongoProperties().getUri();
+        if (uri == null) throw new IllegalStateException("Resource MongoDB URI must not be null");
+        return new SimpleMongoClientDatabaseFactory(uri);
     }
 
     @Bean(name = "resourceMongoTemplate")

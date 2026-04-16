@@ -68,7 +68,7 @@ public class WalletService {
         wallet.setEarnedBalance(wallet.getEarnedBalance() - amount);
         walletRepository.save(wallet);
 
-        FinancialTransaction txn = createTxn(wallet.getUser(), "Withdrawal Request (Strategic Payout)", -amount, "PENDING");
+        FinancialTransaction txn = createTxn(wallet.getUser(), "Withdrawal Request (Expert Payout)", -amount, "PENDING");
         return transactionRepository.save(txn);
     }
 

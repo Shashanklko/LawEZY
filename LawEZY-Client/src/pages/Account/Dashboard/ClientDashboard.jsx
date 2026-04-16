@@ -104,7 +104,7 @@ const ClientDashboard = ({ onToggleView }) => {
                     <button className="nav-link-item" onClick={() => navigate('/experts')}>
                         <div className="nav-label-group">
                             <span className="nav-text">🔍 DISCOVERY NETWORK</span>
-                            <span className="nav-sub">Strategic expert selection</span>
+                            <span className="nav-sub">Institutional expert selection</span>
                         </div>
                     </button>
                     
@@ -120,7 +120,7 @@ const ClientDashboard = ({ onToggleView }) => {
                             <div style={{ margin: '20px 0', borderTop: '1px solid rgba(212, 175, 55, 0.1)' }}></div>
                             <button className="nav-link-item expert-bridge-btn" onClick={onToggleView} style={{ background: 'rgba(212, 175, 55, 0.05)', marginTop: 'auto' }}>
                                 <div className="nav-label-group">
-                                    <span className="nav-text" style={{ color: 'var(--strategic-gold)', fontWeight: 800 }}>🏛️ EXPERT PRACTICE</span>
+                                    <span className="nav-text" style={{ color: 'var(--elite-gold)', fontWeight: 800 }}>🏛️ EXPERT PRACTICE</span>
                                     <span className="nav-sub">Back to your professional dashboard</span>
                                 </div>
                             </button>
@@ -130,9 +130,14 @@ const ClientDashboard = ({ onToggleView }) => {
 
                 <div className="sidebar-footer-stat">
                     <div className="institutional-footer">
-                        <button className="btn-logout-minimal" onClick={() => { useAuthStore.getState().logout(); navigate('/login'); }}>
-                            REVOKE ACCESS
-                        </button>
+                        <div className="footer-actions-dual">
+                            <button className="btn-exit-dash" onClick={() => navigate('/')}>
+                                EXIT DASHBOARD
+                            </button>
+                            <button className="btn-logout-minimal" onClick={() => { useAuthStore.getState().logout(); navigate('/login'); }}>
+                                LOG OUT
+                            </button>
+                        </div>
                         <span>v2.4.0-CL</span>
                     </div>
                 </div>
@@ -158,16 +163,16 @@ const ClientDashboard = ({ onToggleView }) => {
                         ) : (
                             <>
                                 <div className="header-metric-item">
-                                    <span style={{ display: 'block', fontSize: '0.65rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>Strategic Investment</span>
+                                    <span style={{ display: 'block', fontSize: '0.65rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>Institutional Investment</span>
                                     <span style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--midnight-primary)' }}>₹{sessions.reduce((acc, s) => acc + (s.fee || 0), 0).toLocaleString()}</span>
                                 </div>
                                 <div className="header-metric-item" style={{ paddingLeft: '30px', borderLeft: '1px solid #f1f5f9' }}>
                                     <span style={{ display: 'block', fontSize: '0.65rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>Escrow Integrity</span>
-                                    <span style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--strategic-gold)' }}>₹{wallet?.balance?.toLocaleString() || '0'}</span>
+                                    <span style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--elite-gold)' }}>₹{wallet?.balance?.toLocaleString() || '0'}</span>
                                 </div>
                             </>
                         )}
-                        <button className="header-btn" onClick={() => refreshMetadata()} style={{ marginLeft: '20px', padding: '10px 18px', borderRadius: '10px', background: 'rgba(212, 175, 55, 0.1)', color: 'var(--strategic-gold)', border: 'none', fontWeight: 800, fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <button className="header-btn" onClick={() => refreshMetadata()} style={{ marginLeft: '20px', padding: '10px 18px', borderRadius: '10px', background: 'rgba(212, 175, 55, 0.1)', color: 'var(--elite-gold)', border: 'none', fontWeight: 800, fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <span style={{ transform: 'scale(1.2)' }}>↻</span> SYNC LEDGER
                         </button>
                     </div>

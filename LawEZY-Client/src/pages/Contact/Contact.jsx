@@ -12,7 +12,7 @@ const Contact = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    alert('Strategic message sent. Our support council will respond within 4 hours.');
+    alert('Institutional message sent. Our support council will respond within 4 hours.');
   };
 
   const handleChange = (e) => {
@@ -22,7 +22,7 @@ const Contact = () => {
   return (
     <div className="contact-page">
       <div className="contact-header">
-        <span className="section-tag">24/7 Strategic Continuity</span>
+        <span className="section-tag">24/7 Institutional Continuity</span>
         <h1>Contact <span>LawEZY Support</span>.</h1>
         <p>Our global support council is available to assist both seekers and professionals with any navigational or technical queries within the LawEZY ecosystem.</p>
       </div>
@@ -47,7 +47,7 @@ const Contact = () => {
               </select>
             </div>
             <div className="form-group">
-              <label>Strategic Message</label>
+              <label>Institutional Message</label>
               <textarea name="message" rows="5" placeholder="Please describe your query in detail..." required onChange={handleChange}></textarea>
             </div>
             <button type="submit" className="btn-contact-submit">DISPATCH MESSAGE</button>

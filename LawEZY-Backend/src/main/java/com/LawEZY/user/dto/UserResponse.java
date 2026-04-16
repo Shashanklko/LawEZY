@@ -20,7 +20,7 @@ public class UserResponse{
     private Role role;
     private String uid;
 
-    // Strategic Token Reserves
+    // Institutional Token Reserves
     private Integer freeAiTokens;
     private Integer freeChatTokens;
     private Integer tokenBalance;

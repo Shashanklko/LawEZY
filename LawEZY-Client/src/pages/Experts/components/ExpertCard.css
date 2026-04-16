@@ -19,7 +19,7 @@
 
 .expert-card-v2:hover {
   transform: translateY(-8px);
-  border-color: var(--strategic-gold);
+  border-color: var(--elite-gold);
   box-shadow: 0 15px 40px rgba(142, 107, 71, 0.1);
   background: rgba(255, 255, 255, 0.6);
 }
@@ -51,7 +51,7 @@
   left: -8px;
   width: 22px;
   height: 22px;
-  background: var(--strategic-gold);
+  background: var(--elite-gold);
   color: white;
   border-radius: 50%;
   display: flex;
@@ -85,16 +85,16 @@
     letter-spacing: -0.01em;
 }
 
-.card-strat-badges {
+.card-institutional-badges {
     display: flex;
     gap: 8px;
     align-items: center;
     margin-top: 2px;
 }
 
-.strat-uid-badge {
+.institutional-uid-badge {
     font-size: 0.55rem;
-    color: var(--strategic-gold);
+    color: var(--elite-gold);
     font-weight: 850;
     letter-spacing: 0.8px;
     background: rgba(142, 107, 71, 0.08);
@@ -118,7 +118,7 @@
 .expert-experience-tag {
   font-size: 0.55rem;
   font-weight: 850;
-  color: var(--strategic-gold);
+  color: var(--elite-gold);
   background: var(--glass-gold);
   padding: 1px 6px;
   border-radius: 4px;
@@ -137,7 +137,7 @@
 
 .expert-title {
   font-size: 0.65rem;
-  color: var(--strategic-gold);
+  color: var(--elite-gold);
   font-weight: 850;
   text-transform: uppercase;
   letter-spacing: 1.2px;
@@ -204,7 +204,7 @@
 
 .domain-chip.plus {
   border-color: transparent;
-  color: var(--strategic-gold);
+  color: var(--elite-gold);
   opacity: 1;
   font-weight: 800;
   padding: 3px 0;
@@ -235,7 +235,7 @@
 .price-label {
   font-size: 0.55rem; /* Smaller labels */
   text-transform: uppercase;
-  color: var(--strategic-gold);
+  color: var(--elite-gold);
   letter-spacing: 2px;
   font-weight: 800;
   opacity: 0.5;
@@ -254,13 +254,13 @@
   font-weight: 400;
 }
 
-.price-info .btn-book-strategic {
+.price-info .btn-book-institutional {
     margin-top: 12px;
 }
 
 .btn-connect-expert-small {
-  background: var(--strategic-gold);
-  border: 1px solid var(--strategic-gold);
+  background: var(--elite-gold);
+  border: 1px solid var(--elite-gold);
   color: var(--heritage-parchment);
   padding: 8px 12px; 
   border-radius: 4px;
@@ -278,8 +278,8 @@
 
 .btn-send-message-small {
   background: transparent;
-  border: 1px solid var(--strategic-gold);
-  color: var(--strategic-gold);
+  border: 1px solid var(--elite-gold);
+  color: var(--elite-gold);
   padding: 8px 12px;
   border-radius: 4px;
   font-size: 0.6rem;
@@ -296,14 +296,14 @@
 .btn-connect-expert-small:hover:not(:disabled),
 .btn-send-message-small:hover:not(:disabled) {
   transform: translateY(-2px);
-  background: var(--strategic-gold);
+  background: var(--elite-gold);
   color: var(--heritage-parchment);
   box-shadow: 0 6px 15px rgba(142, 107, 71, 0.2);
 }
 
 .btn-connect-expert-small:disabled,
 .btn-send-message-small:disabled,
-.btn-book-strategic:disabled {
+.btn-book-institutional:disabled {
     opacity: 0.5;
     cursor: not-allowed;
     background: #cbd5e1;
@@ -311,10 +311,10 @@
     color: #94a3b8;
 }
 
-.btn-book-strategic {
+.btn-book-institutional {
     background: var(--midnight-primary);
     border: 1px solid var(--midnight-primary);
-    color: var(--strategic-gold);
+    color: var(--elite-gold);
     padding: 10px 20px;
     border-radius: 6px;
     font-size: 0.7rem;
@@ -329,7 +329,7 @@
     white-space: nowrap;
 }
 
-.btn-book-strategic:hover:not(:disabled) {
+.btn-book-institutional:hover:not(:disabled) {
     transform: translateY(-2px);
     box-shadow: 0 8px 20px rgba(13, 27, 42, 0.25);
     background: #1a3a5a; /* Slightly lighter than midnight for hover state */

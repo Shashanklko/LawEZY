@@ -29,6 +29,30 @@ class UserServiceTest {
     private ProfessionalProfileRepository professionalProfileRepository;
 
     @Mock
+    private com.LawEZY.user.repository.ClientProfileRepository clientProfileRepository;
+
+    @Mock
+    private com.LawEZY.user.repository.WalletRepository walletRepository;
+
+    @Mock
+    private com.LawEZY.user.repository.LawyerProfileRepository lawyerProfileRepository;
+
+    @Mock
+    private com.LawEZY.user.repository.CAProfileRepository caProfileRepository;
+
+    @Mock
+    private com.LawEZY.user.repository.CFAProfileRepository cfaProfileRepository;
+
+    @Mock
+    private com.LawEZY.user.repository.ReviewRepository reviewRepository;
+
+    @Mock
+    private com.LawEZY.chat.repository.ChatSessionRepository chatSessionRepository;
+
+    @Mock
+    private com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+
+    @Mock
     private PasswordEncoder passwordEncoder;
 
     @InjectMocks
@@ -44,9 +68,12 @@ class UserServiceTest {
         UserRequest request = new UserRequest();
         request.setEmail("client@test.com");
         request.setPassword("password123");
+        request.setFirstName("Test");
+        request.setLastName("Client");
         request.setRole(Role.CLIENT);
 
         User user = new User();
+        user.setId("11TC01CL");
         user.setEmail(request.getEmail());
         user.setRole(Role.CLIENT);
 
@@ -64,6 +91,8 @@ class UserServiceTest {
         UserRequest request = new UserRequest();
         request.setEmail("lawyer@test.com");
         request.setPassword("password123");
+        request.setFirstName("Test");
+        request.setLastName("Lawyer");
         request.setRole(Role.LAWYER);
 
         User user = new User();

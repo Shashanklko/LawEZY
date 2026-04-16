@@ -7,7 +7,7 @@ import Modal from '../../components/common/Modal';
 import apiClient from '../../services/apiClient';
 import './ExpertListing.css';
 
-// Institutional Strategic Listing Component
+// Institutional Elite Listing Component
 const ExpertListing = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -64,9 +64,9 @@ const ExpertListing = () => {
       setIsSubmitting(true);
       const scheduledAt = `${bookingData.date}T${bookingData.time}`;
       const payload = {
-        clientUid: user.uid,
-        expertUid: bookingExpert.uid,
-        initiatorUid: user.uid,
+        clientUid: user.uid || user.id,
+        expertUid: bookingExpert.uid || bookingExpert.id,
+        initiatorUid: user.uid || user.id,
         baseFee: bookingExpert.consultationFee || bookingExpert.price || 499.0,
         scheduledAt: scheduledAt,
         reason: bookingData.reason,
@@ -74,7 +74,7 @@ const ExpertListing = () => {
       };
 
       await apiClient.post('/api/appointments/propose', payload);
-      alert(`Strategic Proposal Dispatched to ${bookingExpert.name}.`);
+      alert(`Institutional Proposal Dispatched to ${bookingExpert.name}.`);
       setIsBookingOpen(false);
       navigate('/dashboard');
     } catch (err) {
@@ -100,6 +100,25 @@ const ExpertListing = () => {
 
   const currentDomains = category === 'legal' ? allLegalDomains : category === 'financial' ? allFinancialDomains : [...allLegalDomains, ...allFinancialDomains];
 
+  // --- INSTITUTIONAL HYDRATION: Load from Cache first ---
+  useEffect(() => {
+    const cachedExperts = localStorage.getItem('lawezy_experts_cache');
+    if (cachedExperts) {
+      try {
+        const parsed = JSON.parse(cachedExperts);
+        // Only hydrate if cache is not ancient (e.g., < 24h)
+        if (Date.now() - parsed.timestamp < 24 * 60 * 60 * 1000) {
+          setExperts(parsed.data);
+          setFilteredExperts(parsed.data);
+          setLoading(false); // Stop loading immediately if cache exists
+        }
+      } catch (e) {
+        console.warn('Expert cache corrupt. Resetting.');
+        localStorage.removeItem('lawezy_experts_cache');
+      }
+    }
+  }, []);
+
   useEffect(() => {
     const fetchExperts = async () => {
       try {
@@ -108,8 +127,19 @@ const ExpertListing = () => {
           ...ex,
           category: ex.category === 'LAWYER' ? 'legal' : 'financial'
         }));
+        
         setExperts(mappedExperts);
-        setFilteredExperts(mappedExperts);
+        // Only update filtered list if not searching/filtering yet
+        if (!search && category === 'all' && selectedDomains.length === 0) {
+           setFilteredExperts(mappedExperts);
+        }
+
+        // Update Cache
+        localStorage.setItem('lawezy_experts_cache', JSON.stringify({
+          data: mappedExperts,
+          timestamp: Date.now()
+        }));
+
       } catch (err) {
         console.error('Error fetching professionals:', err);
       } finally {
@@ -168,7 +198,7 @@ const ExpertListing = () => {
       });
     }
 
-    // 6. Tactical Sorting
+    // 6. Institutional Sorting
     if (sortBy === 'Rating') {
       result.sort((a, b) => b.rating - a.rating);
     } else if (sortBy === 'Experience') {
@@ -243,7 +273,7 @@ const ExpertListing = () => {
           </div>
 
           <div className="filter-group">
-            <h4 className="filter-title">Strategic Domains</h4>
+            <h4 className="filter-title">Institutional Domains</h4>
             <div className="domain-chips-filter">
               {currentDomains.map(domain => (
                 <button 
@@ -262,14 +292,14 @@ const ExpertListing = () => {
         <main className="listing-main">
           <div className="listing-header-institutional">
             <div className="header-left">
-              <h1>{category === 'all' ? 'Professional Network' : category === 'legal' ? 'Legal Advocates' : 'Financial Strategists'}</h1>
+              <h1>{category === 'all' ? 'Professional Network' : category === 'legal' ? 'Legal Advocates' : 'Financial Institutionalists'}</h1>
               <div className="listing-stats">
                 <span className="count-pill">{filteredExperts.length} Specialists Online</span>
                 <span className="verified-pill">Verified Elite Only</span>
               </div>
             </div>
             
-            <div className="header-right-tactical">
+            <div className="header-right-elite">
               <div className="search-dock">
                 <svg className="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                 <input 
@@ -331,7 +361,7 @@ const ExpertListing = () => {
         <div className="modal-overlay-premium" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }} onClick={() => setIsBookingOpen(false)}>
           <div className="booking-modal-card animate-reveal-up" style={{ background: 'var(--heritage-parchment)', width: '100%', maxWidth: '450px', borderRadius: '24px', padding: '35px', boxShadow: '0 30px 60px -12px rgba(0,0,0,0.4)', border: '1px solid var(--glass-border)' }} onClick={e => e.stopPropagation()}>
             <div style={{ textAlign: 'center', marginBottom: '25px' }}>
-              <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'var(--midnight-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px', color: 'var(--strategic-gold)', fontSize: '1.5rem', boxShadow: '0 8px 20px rgba(13, 27, 42, 0.2)' }}>⚖️</div>
+              <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'var(--midnight-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px', color: 'var(--elite-gold)', fontSize: '1.5rem', boxShadow: '0 8px 20px rgba(13, 27, 42, 0.2)' }}>⚖️</div>
               <h2 style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 900, color: 'var(--midnight-primary)', margin: 0 }}>Direct Booking</h2>
               <p style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '5px' }}>Initiating institutional consultation with {bookingExpert.name}</p>
             </div>
@@ -363,7 +393,7 @@ const ExpertListing = () => {
 
               <div style={{ display: 'flex', gap: '12px', marginTop: '10px' }}>
                 <button type="button" onClick={() => setIsBookingOpen(false)} style={{ flex: 1, padding: '14px', borderRadius: '12px', border: 'none', background: '#e2e8f0', color: '#475569', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer' }}>Abstain</button>
-                <button type="submit" disabled={isSubmitting} style={{ flex: 2, padding: '14px', borderRadius: '12px', border: 'none', background: 'var(--midnight-primary)', color: 'var(--strategic-gold)', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer', boxShadow: '0 8px 15px rgba(13, 27, 42, 0.2)' }}>
+                <button type="submit" disabled={isSubmitting} style={{ flex: 2, padding: '14px', borderRadius: '12px', border: 'none', background: 'var(--midnight-primary)', color: 'var(--elite-gold)', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer', boxShadow: '0 8px 15px rgba(13, 27, 42, 0.2)' }}>
                   {isSubmitting ? 'Dispatching...' : 'Submit Request →'}
                 </button>
               </div>

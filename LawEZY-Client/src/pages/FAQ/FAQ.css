@@ -1,6 +1,6 @@
 :root {
   --heritage-bg: #fdfaf3;
-  --strategic-gold: #b8995e;
+  --elite-gold: #b8995e;
   --deep-burgundy: #7f1d1d;
   --text-dark: #1a1a1a;
   --glass-white: rgba(255, 255, 255, 0.95);
@@ -45,7 +45,7 @@
   font-family: 'Spectral', serif;
   font-size: 1.75rem;
   color: var(--deep-burgundy);
-  border-bottom: 2px solid var(--strategic-gold);
+  border-bottom: 2px solid var(--elite-gold);
   padding-bottom: 15px;
   margin-bottom: 25px;
 }
@@ -82,12 +82,12 @@
 }
 
 .faq-item.active {
-  border-color: var(--strategic-gold);
+  border-color: var(--elite-gold);
   box-shadow: 0 10px 30px rgba(184,153,94,0.1);
 }
 
 .accordion-arrow {
-  color: var(--strategic-gold);
+  color: var(--elite-gold);
   transition: transform 0.3s;
 }
 
