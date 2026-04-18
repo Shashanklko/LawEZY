@@ -40,6 +40,12 @@ public class WalletController {
         return ResponseEntity.ok(walletService.withdraw(getCurrentUserId(), amount));
     }
 
+    @PostMapping("/purchase-tokens-direct")
+    public ResponseEntity<FinancialTransaction> purchaseTokensDirect(@RequestBody Map<String, String> payload) {
+        String packageType = payload.get("packageType");
+        return ResponseEntity.ok(walletService.purchaseTokensDirectly(getCurrentUserId(), packageType));
+    }
+
     private String getCurrentUserId() {
         var auth = SecurityContextHolder.getContext().getAuthentication();
         return auth.getName();

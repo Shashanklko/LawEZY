@@ -559,6 +559,64 @@ async def copilot_interaction(request: CopilotRequest):
 
     raise HTTPException(status_code=500, detail=f"Institutional grid offline: {last_error}")
 
+@app.post("/api/ai/analyze-document")
+async def analyze_document(request: CopilotRequest):
+    # sid = request.sessionId or str(uuid.uuid4())
+    # We don't necessarily need a session for one-off document analysis, but can use it for history.
+    
+    prepared_media = []
+    if request.images: # Reusing images field for document parts (base64)
+        for doc_b64 in request.images:
+            try:
+                if "," in doc_b64:
+                    doc_b64 = doc_b64.split(",")[1]
+                
+                doc_data = base64.b64decode(doc_b64)
+                # Note: We assume application/pdf if it's a doc, but Gemini also accepts images.
+                # For simplicity, we'll try to detect or default to PDF if requested.
+                prepared_media.append({
+                    "mime_type": "application/pdf", # Default to PDF for this endpoint
+                    "data": doc_data
+                })
+            except Exception as e:
+                logger.error(f"Document decode failure: {str(e)}")
+
+    if not prepared_media:
+        raise HTTPException(status_code=400, detail="No document provided for analysis.")
+
+    # High-Resolution Analysis Prompt
+    analysis_prompt = """
+    Please perform a deep institutional analysis of the attached document. 
+    Focus on:
+    1. Professional Summary (Executive level)
+    2. Critical Clauses & Obligations
+    3. Potential Legal/Financial Risks
+    4. Actionable Recommendations
+    
+    Keep the tone professional and expert.
+    """
+
+    try:
+        model = genai.GenerativeModel(
+            model_name="gemini-1.5-flash",
+            generation_config=GENERATION_CONFIG,
+            safety_settings=SAFETY_SETTINGS,
+            system_instruction="You are an expert Legal and Financial Document Auditor."
+        )
+        
+        response = model.generate_content([analysis_prompt] + prepared_media)
+        
+        if not response or not response.text:
+            raise Exception("Institutional analysis pulse failed.")
+            
+        return {
+            "analysis": response.text,
+            "model_used": "gemini-1.5-flash"
+        }
+    except Exception as e:
+        logger.error(f"Document Analysis Grid Failure: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/api/ai/guard")
 async def safety_guard(request: CopilotRequest):
     try:

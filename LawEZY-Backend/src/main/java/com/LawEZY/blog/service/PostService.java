@@ -13,15 +13,18 @@ import com.LawEZY.blog.repository.LikeRepository;
 import com.LawEZY.blog.repository.PostRepository;
 import com.LawEZY.user.entity.User;
 import com.LawEZY.user.repository.UserRepository;
+import com.LawEZY.notification.service.NotificationService;
 import com.LawEZY.common.exception.ResourceNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 
 @Service
+@Slf4j
 public class PostService {
 
     @Autowired
@@ -35,6 +38,9 @@ public class PostService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private NotificationService notificationService;
 
     public Post createPost(@NonNull PostRequest request) {
         String identifier = request.getAuthorId();
@@ -83,6 +89,21 @@ public class PostService {
             like.setUserId(userId);
             likeRepository.save(like);
             updateLikeCount(postId, 1);
+
+            // 🔔 Social Notification: notify post author about the like
+            try {
+                Post likedPost = postRepository.findById(postId).orElse(null);
+                if (likedPost != null && likedPost.getAuthorId() != null && !likedPost.getAuthorId().equals(userId)) {
+                    String likerName = userRepository.findById(userId)
+                        .map(u -> (u.getFirstName() != null ? u.getFirstName() : "Someone"))
+                        .orElse("Someone");
+                    notificationService.sendNotification(
+                        likedPost.getAuthorId(),
+                        "❤️ New Like",
+                        likerName + " liked your post: \"" + (likedPost.getTitle() != null && likedPost.getTitle().length() > 40 ? likedPost.getTitle().substring(0, 37) + "..." : likedPost.getTitle()) + "\"",
+                        "SOCIAL", "SOCIAL", "/community");
+                }
+            } catch (Exception e) { log.warn("Social notification (like) failed: {}", e.getMessage()); }
         }
     }
 
@@ -105,7 +126,18 @@ public class PostService {
         Integer currentCount = post.getCommentCount();
         post.setCommentCount(currentCount != null ? currentCount + 1 : 1);
         postRepository.save(post);
-        
+
+        // 🔔 Social Notification: notify post author about the comment
+        try {
+            if (post.getAuthorId() != null && !post.getAuthorId().equals(authorId)) {
+                notificationService.sendNotification(
+                    post.getAuthorId(),
+                    "💬 New Comment",
+                    getDisplayName(author) + " commented on your post: \"" + (post.getTitle() != null && post.getTitle().length() > 40 ? post.getTitle().substring(0, 37) + "..." : post.getTitle()) + "\"",
+                    "SOCIAL", "SOCIAL", "/community");
+            }
+        } catch (Exception e) { log.warn("Social notification (comment) failed: {}", e.getMessage()); }
+
         return savedComment;
     }
 

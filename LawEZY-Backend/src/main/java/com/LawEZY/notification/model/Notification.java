@@ -20,7 +20,8 @@ public class Notification {
     private String userId;
     private String title;
     private String message;
-    private String type; // APPOINTMENT, MESSAGE, PAYMENT, SYSTEM
+    private String type; // APPOINTMENT, MESSAGE, PAYMENT, SYSTEM, SOCIAL, ENGAGEMENT
+    private String category; // FINANCIAL, SOCIAL, ENGAGEMENT, SYSTEM
     @Builder.Default
     private boolean read = false;
     @Builder.Default

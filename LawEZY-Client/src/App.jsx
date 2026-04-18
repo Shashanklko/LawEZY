@@ -21,6 +21,8 @@ const Contact = lazy(() => import('./pages/Contact/Contact'));
 const Wallet = lazy(() => import('./pages/Wallet/Wallet'));
 const ExpertDashboard = lazy(() => import('./pages/Account/Dashboard/ExpertDashboard'));
 const ClientDashboard = lazy(() => import('./pages/Account/Dashboard/ClientDashboard'));
+const DocumentAnalyzer = lazy(() => import('./pages/LawinoAI/DocumentAnalyzer'));
+const Notifications = lazy(() => import('./pages/Notifications/Notifications'));
 
 const DashboardSwitcher = () => {
   const { user } = useAuthStore();
@@ -101,10 +103,25 @@ const App = () => {
           />
           <Route path="faq" element={<FAQ />} />
           <Route path="contact" element={<Contact />} />
-          
+          <Route 
+            path="lawino-ai/analyzer" 
+            element={
+              <ProtectedRoute>
+                <DocumentAnalyzer />
+              </ProtectedRoute>
+            } 
+          />
           {/* Legacy Institutional Bridges */}
           <Route path="account/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
           <Route path="account/wallet" element={<ProtectedRoute><Wallet /></ProtectedRoute>} />
+          <Route
+            path="notifications"
+            element={
+              <ProtectedRoute>
+                <Notifications />
+              </ProtectedRoute>
+            }
+          />
         </Route>
       </Routes>
     </Suspense>

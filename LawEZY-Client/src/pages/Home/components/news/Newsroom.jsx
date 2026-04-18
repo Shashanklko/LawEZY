@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import './Newsroom.css';
 
-const Newsroom = () => {
+const Newsroom = ({ layout = 'horizontal' }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [newsItems, setNewsItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -112,7 +112,11 @@ const Newsroom = () => {
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        setIsVisible(entry.isIntersecting);
+        if (layout === 'vertical') {
+          setIsVisible(true);
+        } else {
+          setIsVisible(entry.isIntersecting);
+        }
       },
       { threshold: 0.1 }
     );
@@ -123,7 +127,7 @@ const Newsroom = () => {
       clearInterval(refreshInterval);
       if (sectionRef.current) observer.unobserve(sectionRef.current);
     };
-  }, [fetchNews]);
+  }, [fetchNews, layout]);
 
   const NewsSkeleton = () => (
     <div className="news-card skeleton">
@@ -141,7 +145,7 @@ const Newsroom = () => {
   return (
     <section 
       ref={sectionRef} 
-      className={`newsroom-professional ${isVisible ? 'reveal-active' : 'reveal-hidden'}`}
+      className={`newsroom-professional ${isVisible ? 'reveal-active' : 'reveal-hidden'} ${layout === 'vertical' ? 'vertical-layout' : ''}`}
       id="newsroom"
     >
       <div className="section-header">
@@ -161,7 +165,7 @@ const Newsroom = () => {
         </div>
       </div>
 
-      <div className="news-horizontal-grid">
+      <div className={layout === 'vertical' ? 'news-vertical-grid' : 'news-horizontal-grid'}>
         {loading ? (
           Array(4).fill(0).map((_, i) => <NewsSkeleton key={i} />)
         ) : (
@@ -175,7 +179,11 @@ const Newsroom = () => {
               <a href={item.link} target="_blank" rel="noopener noreferrer" className="news-title-link">
                 <h3 className="news-title">{item.title}</h3>
               </a>
-              <p className="news-summary">{item.summary}</p>
+              <p className="news-summary">
+                {layout === 'vertical' && item.summary.length > 80 
+                  ? `${item.summary.substring(0, 80)}...` 
+                  : item.summary}
+              </p>
               <div className="card-bottom">
                 <a href={item.link} target="_blank" rel="noopener noreferrer" className="read-more-link">
                   View <span>→</span>

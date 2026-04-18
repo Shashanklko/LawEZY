@@ -25,6 +25,7 @@ public class AiController {
     private final AiChatSessionService sessionService;
     private final com.LawEZY.common.service.AuditLogService auditLogService;
     private final com.LawEZY.user.repository.WalletRepository walletRepository;
+    private final com.LawEZY.notification.service.NotificationService notificationService;
 
     @PostMapping("/copilot")
     public ResponseEntity<ApiResponse<Map<String, Object>>> copilot(
@@ -57,6 +58,16 @@ public class AiController {
                     wallet.setFreeAiTokens(wallet.getFreeAiTokens() - 1);
                     walletRepository.save(wallet);
                     log.info("📡 [GOVERNANCE] Deducted 1 AI Token from user: {}. Remaining: {}", userId, wallet.getFreeAiTokens());
+
+                    // 🔔 Credit exhaustion alert
+                    if (wallet.getFreeAiTokens() <= 0) {
+                        try {
+                            notificationService.sendNotification(userId,
+                                "⚠️ AI Credits Exhausted",
+                                "Your LawinoAI quota has been fully consumed. Purchase a refill pack to continue using AI features.",
+                                "SYSTEM", "FINANCIAL", "/wallet");
+                        } catch (Exception ignored) {}
+                    }
                 } else {
                     log.info("💎 [GOVERANCE] Unlimited AI access granted to user: {}", userId);
                 }

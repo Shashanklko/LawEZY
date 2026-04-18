@@ -23,18 +23,19 @@ public class NotificationService {
     @Value("${app.messenger.url}")
     private String messengerUrl;
 
-    public Notification sendNotification(String userId, String title, String message, String type, String actionLink) {
+    public Notification sendNotification(String userId, String title, String message, String type, String category, String actionLink) {
         // 1. Persist to MongoDB
         Notification notification = Notification.builder()
                 .userId(userId)
                 .title(title)
                 .message(message)
                 .type(type)
+                .category(category != null ? category : inferCategory(type))
                 .actionLink(actionLink)
                 .build();
         
         Notification saved = notificationRepository.save(notification);
-        log.info("🔔 [NOTIFICATION] Saved alert for user {}: {}", userId, title);
+        log.info("🔔 [NOTIFICATION] Saved alert for user {}: {} [{}]", userId, title, category);
 
         // 2. Trigger Real-Time Relay via Messenger Bridge
         try {
@@ -45,14 +46,33 @@ public class NotificationService {
             restTemplate.postForObject(messengerUrl + "/api/internal/emit-notification", payload, String.class);
             log.info("🛰️ [RELAY] Real-time pulse sent to Messenger for user {}", userId);
         } catch (Exception e) {
-            log.error("❌ [RELAY ERROR] Failed to push real-time alert to Messenger: {}", e.getMessage());
+            log.warn("🛰️ [RELAY SILENT] Messenger bridge skipped or inactive. Local persistence confirmed.");
         }
 
         return saved;
     }
 
+    private String inferCategory(String type) {
+        if (type == null) return "SYSTEM";
+        return switch (type.toUpperCase()) {
+            case "PAYMENT" -> "FINANCIAL";
+            case "SOCIAL" -> "SOCIAL";
+            case "APPOINTMENT", "ENGAGEMENT", "MESSAGE" -> "ENGAGEMENT";
+            default -> "SYSTEM";
+        };
+    }
+
+    /** Backward-compat overload — infers category from type */
+    public Notification sendNotification(String userId, String title, String message, String type, String actionLink) {
+        return sendNotification(userId, title, message, type, null, actionLink);
+    }
+
     public List<Notification> getUserNotifications(String userId) {
         return notificationRepository.findByUserIdOrderByTimestampDesc(userId);
+    }
+
+    public List<Notification> getByCategory(String userId, String category) {
+        return notificationRepository.findByUserIdAndCategoryOrderByTimestampDesc(userId, category.toUpperCase());
     }
 
     public void markAsRead(String notificationId) {
@@ -60,6 +80,13 @@ public class NotificationService {
             n.setRead(true);
             notificationRepository.save(n);
         });
+    }
+
+    public void markAllAsRead(String userId) {
+        List<Notification> unread = notificationRepository.findUnreadByUserId(userId);
+        unread.forEach(n -> n.setRead(true));
+        notificationRepository.saveAll(unread);
+        log.info("✅ [NOTIFICATION] Marked {} alerts as read for user {}", unread.size(), userId);
     }
 
     public long getUnreadCount(String userId) {

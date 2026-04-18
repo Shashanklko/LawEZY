@@ -65,6 +65,9 @@ public class ChatServiceImp implements ChatService {
     @Autowired
     private com.LawEZY.user.service.UserService userService;
 
+    @Autowired
+    private com.LawEZY.notification.service.NotificationService notificationService;
+
     private void verifySessionAccess(ChatSession session) {
         String currentId = getCurrentAuthenticatedId();
         Set<String> myIdentities = getUniversalIdentities(currentId);
@@ -322,13 +325,24 @@ public class ChatServiceImp implements ChatService {
             
             Integer balance = wallet.getTokenBalance();
             if (balance == null || balance <= 0) {
-                throw new RuntimeException("Insufficient tokens. Please unlock this reply to continue.");
+                log.warn("[QUOTA] User {} exhausted expert chat units. Blocking outbound message.", senderId);
+                throw new org.springframework.security.access.AccessDeniedException("QUOTA_EXHAUSTED: Expert chat units depleted.");
             }
             
             wallet.setTokenBalance(balance - 1);
             Integer consumedCount = session.getTokensConsumed();
             session.setTokensConsumed(consumedCount != null ? consumedCount + 1 : 1);
             walletRepository.save(wallet);
+            
+            // 🔔 Credit exhaustion alert for chat tokens
+            if (wallet.getTokenBalance() <= 0) {
+                try {
+                    notificationService.sendNotification(senderId,
+                        "⚠️ Chat Credits Exhausted",
+                        "Your expert chat tokens are depleted. Refill now to continue consultations.",
+                        "SYSTEM", "FINANCIAL", "/wallet");
+                } catch (Exception ignored) {}
+            }
             
             // 📊 Record Real Transaction
             financialService.recordTransaction(senderId, "AI Credit Consumption: Msg Session " + session.getId().substring(0, 4), -1.0, "COMPLETED", "DEBIT");

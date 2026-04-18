@@ -118,7 +118,7 @@ const ExpertProfile = ({ expertId, isModal }) => {
                 </span>
               </div>
               <div className="expert-stats-row-header">
-                <span className="rating-v">★ {expert.rating}</span>
+                <span className="rating-v">★ {Number(expert.rating || 0).toFixed(1)}</span>
                 <span className="rating-l">INSTITUTIONAL RATING</span>
               </div>
             </div>

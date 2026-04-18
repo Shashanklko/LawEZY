@@ -2,6 +2,26 @@ import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useNavigate } from 'react-router-dom';
+import { 
+  Plus, 
+  FileSearch, 
+  History, 
+  LayoutDashboard, 
+  LogOut, 
+  User, 
+  Send, 
+  Mic, 
+  MoreVertical,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+  Sparkles,
+  ShieldCheck,
+  Zap,
+  Paperclip,
+  Heart,
+  Shield
+} from 'lucide-react';
 import apiClient from '../../services/apiClient';
 import useAuthStore from '../../store/useAuthStore';
 import './LawinoAI.css';
@@ -11,9 +31,11 @@ const LawinoAI = () => {
   const [input, setInput] = useState('');
   const [sessionId, setSessionId] = useState(localStorage.getItem('lawino_session_id') || null);
   const [history, setHistory] = useState([]);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [showQuotaModal, setShowQuotaModal] = useState(false);
+  const [quotaType, setQuotaType] = useState('AI_REFILL');
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => localStorage.getItem('lawino_sidebar_collapsed') === 'true');
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const [theme, setTheme] = useState('light');
+  const [theme, setTheme] = useState(localStorage.getItem('lawino_theme') || 'dark');
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 1200);
   const [isLoading, setIsLoading] = useState(false);
   
@@ -278,10 +300,15 @@ const LawinoAI = () => {
       refreshWallet();
     } catch (err) {
       console.error('AI Error:', err);
-      setMessages(prev => [...prev, { 
-        role: 'ai', 
-        content: 'Connection to LawinoAI tactical link lost. Please check your network and re-engage.' 
-      }]);
+      if (err.response?.status === 403) {
+        setQuotaType('AI_REFILL');
+        setShowQuotaModal(true);
+      } else {
+        setMessages(prev => [...prev, { 
+          role: 'ai', 
+          content: 'Connection to LawinoAI tactical link lost. Please check your network and re-engage.' 
+        }]);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -330,10 +357,15 @@ const LawinoAI = () => {
       refreshWallet();
     } catch (err) {
       console.error('AI Edit Error:', err);
-      setMessages(prev => [...prev, { 
-        role: 'ai', 
-        content: 'Engagement interrupted during edit processing. Please retry.' 
-      }]);
+      if (err.response?.status === 403) {
+        setQuotaType('AI_REFILL');
+        setShowQuotaModal(true);
+      } else {
+        setMessages(prev => [...prev, { 
+          role: 'ai', 
+          content: 'Engagement interrupted during edit processing. Please retry.' 
+        }]);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -366,23 +398,38 @@ const LawinoAI = () => {
       <aside className={`ai-sidebar ${isSidebarCollapsed ? 'collapsed' : ''} ${isMobile && isMobileSidebarOpen ? 'mobile-open' : ''}`}>
         <button 
           className="sidebar-toggle" 
-          onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+          onClick={() => {
+            const newState = !isSidebarCollapsed;
+            setIsSidebarCollapsed(newState);
+            localStorage.setItem('lawino_sidebar_collapsed', newState);
+          }}
+          title={isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
         >
-          {isSidebarCollapsed ? '→' : '←'}
+          {isSidebarCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
         </button>
 
         {(!isSidebarCollapsed || isMobile) && (
-          <>
+          <div className="sidebar-content">
             <div className="sidebar-header">
-              <button className="new-chat-btn" onClick={handleNewChat}>
-                <span className="btn-icon">+</span>
-                <span className="btn-text">NEW CHAT</span>
+              <button className="primary-action-btn" onClick={handleNewChat}>
+                <Plus size={18} />
+                <span>New Chat</span>
+              </button>
+              <button 
+                className="secondary-action-btn" 
+                onClick={() => navigate('/lawino-ai/analyzer')}
+              >
+                <FileSearch size={18} />
+                <span>Doc Auditor</span>
               </button>
             </div>
             
-            <div className="sidebar-middle">
-              <div className="sidebar-group">
-                <div className="sidebar-label">HISTORY</div>
+            <div className="sidebar-scrollable">
+              <div className="sidebar-section">
+                <div className="section-label">
+                  <History size={12} />
+                  <span>Recent Activity</span>
+                </div>
                 <div className="history-flow">
                   {history.map(session => (
                     <div 
@@ -391,15 +438,14 @@ const LawinoAI = () => {
                       onClick={() => loadSession(session.id)}
                     >
                       <div className="entry-main">
-                        <span className="entry-icon">◈</span>
+                        <Sparkles size={14} className="entry-icon" />
                         <span className="entry-title">{session.title}</span>
                       </div>
                       <button 
                         className="btn-delete-session" 
                         onClick={(e) => handleDeleteSession(e, session.id)}
-                        title="Delete Session"
                       >
-                        ✕
+                        <Trash2 size={12} />
                       </button>
                     </div>
                   ))}
@@ -407,32 +453,22 @@ const LawinoAI = () => {
                 </div>
               </div>
             </div>
-          </>
-        )}
-        
-        {!isSidebarCollapsed && (
-          <div className="sidebar-bottom">
-            {/* TIERED QUOTA TRACKER */}
-            <div className={`quota-status-card ${user?.isUnlimited ? 'unlimited' : ''}`}>
-              <div className="quota-label">AI SESSIONS LEFT</div>
-              <div className="quota-value">
-                {user?.isUnlimited ? '∞ UNLIMITED' : `${user?.freeAiTokens ?? 0} / 5`}
-              </div>
-              {!user?.isUnlimited && (
-                <div className="quota-progress-bar">
-                  <div 
-                    className="progress-fill" 
-                    style={{ width: `${((user?.freeAiTokens ?? 0) / 5) * 100}%` }}
-                  ></div>
-                </div>
-              )}
-            </div>
 
-            <div className="user-profile-card">
-              <div className="profile-avatar">{userName.substring(0, 2).toUpperCase()}</div>
-              <div className="profile-meta">
-                <span className="profile-name">{userName}</span>
-                <span className="profile-badge">{userRole}</span>
+            <div className="sidebar-footer">
+              <div className="user-card">
+                <div className="user-avatar">
+                  {userName.substring(0, 2).toUpperCase()}
+                </div>
+                <div className="user-info">
+                  <div className="user-name">{userName}</div>
+                  <div className="user-status-row">
+                    <span className="user-role">{userRole}</span>
+                    <div className="user-quota-badge">
+                      <Zap size={10} />
+                      <span>{user?.isUnlimited ? '∞' : `${user?.freeAiTokens ?? 0}/5`}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -445,7 +481,11 @@ const LawinoAI = () => {
         <div className="workspace-header-actions">
           <button 
             className="theme-toggle-fab" 
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            onClick={() => {
+              const newTheme = theme === 'dark' ? 'light' : 'dark';
+              setTheme(newTheme);
+              localStorage.setItem('lawino_theme', newTheme);
+            }}
             title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
           >
             {theme === 'dark' ? '☀' : '☾'}
@@ -466,25 +506,38 @@ const LawinoAI = () => {
           {messages.length === 0 ? (
             <div className="workspace-hero">
               <div className="hero-centerpiece">
-                <div className="hero-icon-wrapper">
-                  <svg className="intelligence-core mini" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <circle className="core-orbit" cx="50" cy="50" r="45" stroke="currentColor" strokeWidth="0.5" />
-                    <path className="core-star" d="M50 15L55 45L85 50L55 55L50 85L45 55L15 50L45 45L50 15Z" fill="currentColor" />
-                  </svg>
+                <div className="intelligence-core mini">
+                  <Sparkles size={56} />
                 </div>
-                <h1 className="hero-greeting">Search with <span className="brand-highlight">Lawino AI</span> intelligence.</h1>
+                <h1 className="hero-greeting">
+                  Search with <span className="brand-highlight">Lawino AI</span> intelligence.
+                </h1>
               </div>
 
               <div className="hero-suggestions">
-                <button className="suggestion-box" onClick={() => setInput('Explain Indian Companies Act compliance...')}>
-                  <div className="suggest-header">🔍 <strong>Legal Compliance</strong></div>
-                  <p>Check regulatory standards for startups.</p>
-                </button>
-                <button className="suggestion-box" onClick={() => setInput('How to optimize tax for a private limited?')}>
-                  <div className="suggest-header">💰 <strong>Tax Strategy</strong></div>
-                  <p>Ask about ROI and tax efficiency.</p>
-                </button>
+                <div className="suggestion-box" onClick={() => setInput("Check regulatory standards for startups")}>
+                  <div className="suggest-header">
+                    <ShieldCheck size={18} />
+                    <span>Legal Compliance</span>
+                  </div>
+                  <p>Verify institutional standards and licensing for emerging ventures.</p>
+                </div>
+                <div className="suggestion-box" onClick={() => setInput("Ask about ROI and tax efficiency")}>
+                  <div className="suggest-header">
+                    <Zap size={18} />
+                    <span>Tax Strategy</span>
+                  </div>
+                  <p>Optimize financial performance with AI-driven tax intelligence.</p>
+                </div>
+                <div className="suggestion-box" onClick={() => setInput("How to protect family assets and inheritance?")}>
+                  <div className="suggest-header">
+                    <Heart size={18} />
+                    <span>Family Governance</span>
+                  </div>
+                  <p>Secure your legacy with institutional matrimonial and estate insights.</p>
+                </div>
               </div>
+
             </div>
           ) : (
             <div className="chat-stream">
@@ -546,25 +599,30 @@ const LawinoAI = () => {
             </div>
           )}
 
-          {/* Floating Command Dock */}
-          <div className="chat-input-area">
-            <div className="chat-input-wrapper">
+          {/* Modern Command Dock */}
+          <div className="modern-command-dock">
+            <div className="command-dock-container">
               {attachedFiles.length > 0 && (
-                <div className="file-preview-belt">
+                <div className="modern-file-belt">
                   {attachedFiles.map((file, idx) => (
-                    <div key={idx} className="file-chip">
+                    <div key={idx} className="modern-file-chip">
                       {file.type.startsWith('image/') && <img src={file.base64} alt="preview" />}
-                      <span>{file.name}</span>
-                      <span className="chip-remove" onClick={() => removeFile(idx)}>✕</span>
+                      <span className="file-name">{file.name}</span>
+                      <button className="remove-file" onClick={() => removeFile(idx)}>
+                        <Trash2 size={12} />
+                      </button>
                     </div>
                   ))}
                 </div>
               )}
               
-              <div className="chat-input-main">
-                {/* Media Button: Anchored Left */}
-                <button className="tool-btn left-action" onClick={() => fileInputRef.current.click()} title="Upload Media">
-                  <span>+</span>
+              <div className="command-input-group">
+                <button 
+                  className="dock-tool-btn" 
+                  onClick={() => fileInputRef.current.click()} 
+                  title="Upload Media"
+                >
+                  <Plus size={20} />
                 </button>
                 <input 
                   type="file" 
@@ -577,7 +635,7 @@ const LawinoAI = () => {
 
                 <textarea 
                   ref={textareaRef}
-                  placeholder="Message LawinoAI..."
+                  placeholder="Ask Lawino AI anything..."
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => {
@@ -589,32 +647,71 @@ const LawinoAI = () => {
                   rows={1}
                 />
 
-                {/* Adaptive Action Toggle: Anchored Right */}
-                <div className="right-action-group">
+                <div className="dock-actions">
                   {input.trim() || attachedFiles.length > 0 ? (
                     <button 
-                      className="btn-send active" 
+                      className="dock-send-btn active" 
                       onClick={handleSend}
                       disabled={isLoading}
                     >
-                      <span>↑</span>
+                      <Send size={18} />
                     </button>
                   ) : (
                     <button 
-                      className={`tool-btn right-action ${isRecording ? 'recording' : ''}`} 
+                      className={`dock-tool-btn ${isRecording ? 'recording' : ''}`} 
                       onClick={toggleMic}
-                      title="Voice Command"
                     >
-                      <span>{isRecording ? '⏺' : '🎤'}</span>
+                      {isRecording ? <Sparkles className="pulse" size={18} /> : <Mic size={18} />}
                     </button>
                   )}
                 </div>
               </div>
             </div>
-            <p className="command-disclaimer">Expert guidance for orientation only. Verify with LawEZY Experts.</p>
+            <div className="subtle-disclaimer centered">
+              <ShieldCheck size={14} />
+              <span>Expert guidance for orientation only. <span className="cta-link" onClick={() => navigate('/experts')}>Verify with LawEZY Experts.</span></span>
+            </div>
           </div>
         </div>
       </main>
+
+      {/* Institutional Quota Modal */}
+      {showQuotaModal && (
+        <div className="quota-modal-overlay">
+          <div className="quota-modal-card">
+            <div className="modal-header">
+              <Zap className="header-icon" size={24} />
+              <h3>Institutional Quota Exhausted</h3>
+            </div>
+            <div className="modal-body">
+              <p>Your current tactical AI units have been fully utilized. To continue with high-fidelity legal intelligence, please refill your quota.</p>
+              
+              <div className="package-option active">
+                <div className="option-details">
+                  <span className="option-name">Standard Refill</span>
+                  <span className="option-description">10 Institutional AI Tokens</span>
+                </div>
+                <div className="option-price">₹100</div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-cancel" onClick={() => setShowQuotaModal(false)}>Cancel</button>
+              <button className="btn-refill" onClick={async () => {
+                try {
+                  await apiClient.post('/api/wallet/purchase-tokens-direct', { packageType: quotaType });
+                  setShowQuotaModal(false);
+                  refreshWallet();
+                } catch (err) {
+                  console.error('Purchase Failure:', err);
+                  alert('Institutional purchase failed. Please check your network.');
+                }
+              }}>
+                Pay & Refill Now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

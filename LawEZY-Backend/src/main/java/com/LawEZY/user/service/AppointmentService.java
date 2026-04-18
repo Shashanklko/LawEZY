@@ -24,6 +24,7 @@ public class AppointmentService {
     private final com.LawEZY.user.repository.LawyerProfileRepository lawyerProfileRepository;
     private final com.LawEZY.user.repository.CAProfileRepository caProfileRepository;
     private final com.LawEZY.user.repository.CFAProfileRepository cfaProfileRepository;
+    private final com.LawEZY.user.service.WalletService walletService;
     private final NotificationService notificationService;
 
     @Transactional(readOnly = true)
@@ -45,8 +46,14 @@ public class AppointmentService {
 
     @Transactional
     public Appointment createProposal(Appointment proposal) {
+        log.info("Initiating institutional proposal: Client={} Expert={} Initiator={}", 
+            proposal.getClientUid(), proposal.getExpertUid(), proposal.getInitiatorUid());
+
+        if (proposal.getExpertUid() == null || proposal.getClientUid() == null) {
+            throw new IllegalArgumentException("Expert UID and Client UID are mandatory for institutional records.");
+        }
+
         proposal.setPlatformFee(100.0);
-        // Inject Wallet Institutional Data
         // Initial fee calculation based on baseFee from expert profile
         Double baseFee = proposal.getBaseFee() != null ? proposal.getBaseFee() : 499.0;
         proposal.setBaseFee(baseFee);
@@ -55,25 +62,42 @@ public class AppointmentService {
         proposal.setExpiresAt(LocalDateTime.now().plusHours(24));
         
         // Institutional Auto-Bridge: Link to existing Chat Session if not provided
-        if (proposal.getChatSessionId() == null || proposal.getChatSessionId().isEmpty()) {
-            List<com.LawEZY.chat.model.ChatSession> sessions = chatSessionRepository.findByProfessionalId(proposal.getExpertUid());
-            sessions.stream()
-                .filter(s -> s.getUserId().equals(proposal.getClientUid()))
-                .findFirst()
-                .ifPresent(s -> proposal.setChatSessionId(s.getId()));
+        try {
+            if (proposal.getChatSessionId() == null || proposal.getChatSessionId().isEmpty()) {
+                List<com.LawEZY.chat.model.ChatSession> sessions = chatSessionRepository.findByProfessionalId(proposal.getExpertUid());
+                if (sessions != null) {
+                    sessions.stream()
+                        .filter(s -> s.getUserId() != null && s.getUserId().equals(proposal.getClientUid()))
+                        .findFirst()
+                        .ifPresent(s -> proposal.setChatSessionId(s.getId()));
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Institutional Auto-Bridge failed: {}", e.getMessage());
+            // We continue even if bridge fails; it's not a critical failure
         }
         
         Appointment saved = appointmentRepository.save(proposal);
         
         // NOTIFICATION: Determine target based on initiator
-        String targetUid = proposal.getInitiatorUid().equals(proposal.getExpertUid()) ? proposal.getClientUid() : proposal.getExpertUid();
-        notificationService.sendNotification(
-            targetUid, 
-            "New Appointment Proposal", 
-            "You have received a new consultation request.", 
-            "APPOINTMENT", 
-            "/dashboard"
-        );
+        String expertUid = proposal.getExpertUid();
+        String clientUid = proposal.getClientUid();
+        String initiatorUid = proposal.getInitiatorUid();
+
+        // Safety check for initiatorUid
+        String targetUid = (initiatorUid != null && initiatorUid.equals(expertUid)) ? clientUid : expertUid;
+        
+        try {
+            notificationService.sendNotification(
+                targetUid, 
+                "New Appointment Proposal", 
+                "You have received a new consultation request.", 
+                "APPOINTMENT", 
+                "/dashboard"
+            );
+        } catch (Exception e) {
+            log.error("Failed to dispatch appointment notification: {}", e.getMessage());
+        }
         
         return saved;
     }
@@ -205,10 +229,14 @@ public class AppointmentService {
         appointment.setStatus(status.toUpperCase());
         appointment.setUpdatedAt(LocalDateTime.now());
         
-        // Institutional Auto-Bridge: If status becomes PAID, ensure a Room ID exists for the consultation
-        if ("PAID".equalsIgnoreCase(status) && (appointment.getRoomId() == null || appointment.getRoomId().isEmpty())) {
-            String secureId = UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-            appointment.setRoomId("lzy-room-" + secureId);
+        // Institutional Auto-Bridge: If status becomes PAID, ensure a Room ID exists and log to ledger
+        if ("PAID".equalsIgnoreCase(status)) {
+            if (appointment.getRoomId() == null || appointment.getRoomId().isEmpty()) {
+                String secureId = UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+                appointment.setRoomId("lzy-room-" + secureId);
+            }
+            // Record in institutional ledger
+            walletService.logAppointmentTransaction(appointment);
         }
         
         return appointmentRepository.save(appointment);

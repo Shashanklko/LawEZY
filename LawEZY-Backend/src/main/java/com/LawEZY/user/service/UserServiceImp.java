@@ -107,6 +107,7 @@ public class UserServiceImp implements UserService {
         wallet.setUser(savedAuth);
         wallet.setFreeAiTokens(5); // Tiered Free AI Quota
         wallet.setFreeChatTokens(5); // Tiered Free Chat Quota
+        wallet.setFreeDocTokens(2); // 2 Free Institutional Document Analysis Units
         
         // Institutional Unlimited Flag for Testing Accounts
         if (institutionalId.equals("11SS01CL")) {
@@ -572,6 +573,7 @@ public class UserServiceImp implements UserService {
         walletRepository.findById(user.getId()).ifPresent(wallet -> {
             response.setFreeAiTokens(wallet.getFreeAiTokens());
             response.setFreeChatTokens(wallet.getFreeChatTokens());
+            response.setFreeDocTokens(wallet.getFreeDocTokens());
             response.setTokenBalance(wallet.getTokenBalance());
             response.setIsUnlimited(wallet.getIsUnlimited());
         });

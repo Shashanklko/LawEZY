@@ -70,6 +70,9 @@ public class SecurityConfig {
             )
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS) // We don't want Spring to remember sessions; JWT handles that
+            )
+            .exceptionHandling(exceptions -> exceptions
+                .authenticationEntryPoint(new org.springframework.security.web.authentication.HttpStatusEntryPoint(org.springframework.http.HttpStatus.UNAUTHORIZED))
             );
 
         // Put our Bouncer (JwtRequestFilter) right in front of the door (the default UsernamePasswordAuthenticationFilter)

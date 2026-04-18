@@ -6,22 +6,27 @@ import com.LawEZY.user.entity.User;
 import com.LawEZY.user.repository.FinancialTransactionRepository;
 import com.LawEZY.user.repository.WalletRepository;
 import com.LawEZY.user.repository.UserRepository;
+import com.LawEZY.notification.service.NotificationService;
 import com.LawEZY.common.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.LawEZY.user.entity.Appointment;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class WalletService {
 
     private final WalletRepository walletRepository;
     private final FinancialTransactionRepository transactionRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     @Transactional(readOnly = true)
     public Wallet getWalletByUserId(String identifier) {
@@ -54,7 +59,77 @@ public class WalletService {
         walletRepository.save(wallet);
 
         FinancialTransaction txn = createTxn(wallet.getUser(), "Wallet Deposit (Top-up)", amount, "COMPLETED");
-        return transactionRepository.save(txn);
+        FinancialTransaction saved = transactionRepository.save(txn);
+
+        // 🔔 Financial Notification
+        try {
+            notificationService.sendNotification(uid,
+                "💰 Deposit Received",
+                String.format("₹%.0f has been credited to your wallet. New balance: ₹%.0f", amount, wallet.getEarnedBalance()),
+                "PAYMENT", "FINANCIAL", "/wallet");
+        } catch (Exception e) { log.warn("Notification dispatch failed for deposit: {}", e.getMessage()); }
+
+        return saved;
+    }
+
+    @Transactional
+    public FinancialTransaction purchaseTokensDirectly(String identifier, String packageType) {
+        String uid = resolveUid(identifier);
+        Wallet wallet = getWalletByUserId(uid);
+        
+        int tokensToAdd = 0;
+        double cost = 0.0;
+        String description = "";
+
+        if ("AI_REFILL".equalsIgnoreCase(packageType)) {
+            tokensToAdd = 10;
+            cost = 100.0;
+            description = "LawinoAI Token Refill (Direct Acquisition)";
+            wallet.setFreeAiTokens(wallet.getFreeAiTokens() + tokensToAdd);
+        } else if ("CHAT_REFILL".equalsIgnoreCase(packageType)) {
+            tokensToAdd = 10;
+            cost = 100.0;
+            description = "Expert Chat Token Refill (Direct Acquisition)";
+            wallet.setTokenBalance(wallet.getTokenBalance() + tokensToAdd);
+        } else if ("DOC_REFILL".equalsIgnoreCase(packageType)) {
+            tokensToAdd = 5;
+            cost = 250.0;
+            description = "Document Auditor Refill (Direct Acquisition)";
+            wallet.setFreeDocTokens(wallet.getFreeDocTokens() + tokensToAdd);
+        } else {
+            throw new IllegalArgumentException("Invalid institutional package: " + packageType);
+        }
+
+        walletRepository.save(wallet);
+
+        // Record the transaction in the ledger
+        FinancialTransaction txn = createTxn(wallet.getUser(), description, cost, "COMPLETED");
+        FinancialTransaction saved = transactionRepository.save(txn);
+
+        // 🔔 Token Purchase Notification
+        try {
+            notificationService.sendNotification(uid,
+                "🎫 Tokens Acquired",
+                String.format("%d tokens added via %s. Ready to use.", tokensToAdd, description),
+                "PAYMENT", "FINANCIAL", "/wallet");
+        } catch (Exception e) { log.warn("Notification dispatch failed for token purchase: {}", e.getMessage()); }
+
+        return saved;
+    }
+
+    @Transactional
+    public void logAppointmentTransaction(Appointment appt) {
+        if (appt == null || appt.getClientUid() == null) return;
+        
+        User user = userRepository.findById(appt.getClientUid())
+                .or(() -> userRepository.findByEmail(appt.getClientUid()))
+                .orElse(null);
+                
+        if (user == null) return;
+
+        String desc = String.format("Consultation Fee (Ref: %d) - Expert: %s", appt.getId(), appt.getExpertUid());
+        FinancialTransaction txn = createTxn(user, desc, appt.getFee(), "COMPLETED");
+        transactionRepository.save(txn);
     }
 
     @Transactional
@@ -69,7 +144,17 @@ public class WalletService {
         walletRepository.save(wallet);
 
         FinancialTransaction txn = createTxn(wallet.getUser(), "Withdrawal Request (Expert Payout)", -amount, "PENDING");
-        return transactionRepository.save(txn);
+        FinancialTransaction saved = transactionRepository.save(txn);
+
+        // 🔔 Withdrawal Notification
+        try {
+            notificationService.sendNotification(uid,
+                "💸 Withdrawal Initiated",
+                String.format("₹%.0f payout requested. Processing within 3-5 business days.", amount),
+                "PAYMENT", "FINANCIAL", "/wallet");
+        } catch (Exception e) { log.warn("Notification dispatch failed for withdrawal: {}", e.getMessage()); }
+
+        return saved;
     }
 
     private Wallet createDefaultWallet(String userId) {

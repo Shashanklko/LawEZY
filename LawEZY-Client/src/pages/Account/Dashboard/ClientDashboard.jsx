@@ -18,6 +18,7 @@ const ClientDashboard = ({ onToggleView }) => {
     const [transactions, setTransactions] = useState([]);
     const [sessions, setSessions] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [isCollapsed, setIsCollapsed] = useState(false);
 
     useEffect(() => {
         const fetchDashboardData = async () => {
@@ -56,9 +57,14 @@ const ClientDashboard = ({ onToggleView }) => {
 
     return (
         <div className="expert-dashboard-container">
-            <aside className="dashboard-sidebar">
+            <aside className={`dashboard-sidebar ${isCollapsed ? 'collapsed' : ''}`}>
                 <div className="sidebar-brand">
-                    <div className="brand-label">LAWEZY CLIENT HUB</div>
+                    <div className="brand-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span className="brand-text">LAWEZY CLIENT HUB</span>
+                        <button className="collapse-toggle-btn" onClick={() => setIsCollapsed(!isCollapsed)} title="Toggle Sidebar">
+                            {isCollapsed ? '❯' : '❮'}
+                        </button>
+                    </div>
                     <div className="expert-identity-card">
                         <div className="avatar-wrapper-elite">
                             <img src={profile?.avatar || user?.avatar || 'https://ui-avatars.com/api/?name=CL&background=0D1B2A&color=E0C389'} alt="User" />
@@ -74,9 +80,11 @@ const ClientDashboard = ({ onToggleView }) => {
                     <button 
                         className={`nav-link-item ${activeTab === 'appointments' ? 'active' : ''}`} 
                         onClick={() => setActiveTab('appointments')}
+                        title="ENGAGEMENT LEDGER"
                     >
+                        <span className="nav-icon">📋</span>
                         <div className="nav-label-group">
-                            <span className="nav-text">📋 ENGAGEMENT LEDGER</span>
+                            <span className="nav-text">ENGAGEMENT LEDGER</span>
                             <span className="nav-sub">Active legal portfolio</span>
                         </div>
                     </button>
@@ -84,9 +92,11 @@ const ClientDashboard = ({ onToggleView }) => {
                     <button 
                         className={`nav-link-item ${activeTab === 'profile' ? 'active' : ''}`} 
                         onClick={() => setActiveTab('profile')}
+                        title="IDENTITY VAULT"
                     >
+                        <span className="nav-icon">🛡️</span>
                         <div className="nav-label-group">
-                            <span className="nav-text">🛡️ IDENTITY VAULT</span>
+                            <span className="nav-text">IDENTITY VAULT</span>
                             <span className="nav-sub">KYC & personal dossier</span>
                         </div>
                     </button>
@@ -94,23 +104,27 @@ const ClientDashboard = ({ onToggleView }) => {
                     <button 
                         className={`nav-link-item ${activeTab === 'wallet' ? 'active' : ''}`} 
                         onClick={() => setActiveTab('wallet')}
+                        title="FINANCIAL ESCROW"
                     >
+                        <span className="nav-icon">💳</span>
                         <div className="nav-label-group">
-                            <span className="nav-text">💳 FINANCIAL ESCROW</span>
+                            <span className="nav-text">FINANCIAL ESCROW</span>
                             <span className="nav-sub">Secure balance & deposits</span>
                         </div>
                     </button>
 
-                    <button className="nav-link-item" onClick={() => navigate('/experts')}>
+                    <button className="nav-link-item" onClick={() => navigate('/experts')} title="DISCOVERY NETWORK">
+                        <span className="nav-icon">🔍</span>
                         <div className="nav-label-group">
-                            <span className="nav-text">🔍 DISCOVERY NETWORK</span>
+                            <span className="nav-text">DISCOVERY NETWORK</span>
                             <span className="nav-sub">Institutional expert selection</span>
                         </div>
                     </button>
                     
-                    <button className="nav-link-item" onClick={() => navigate('/messages')}>
+                    <button className="nav-link-item" onClick={() => navigate('/messages')} title="MESSAGING UNIT">
+                        <span className="nav-icon">💬</span>
                         <div className="nav-label-group">
-                            <span className="nav-text">💬 MESSAGING UNIT</span>
+                            <span className="nav-text">MESSAGING UNIT</span>
                             <span className="nav-sub">Secure consultations</span>
                         </div>
                     </button>
@@ -118,9 +132,10 @@ const ClientDashboard = ({ onToggleView }) => {
                     {user?.role !== 'CLIENT' && (
                         <>
                             <div style={{ margin: '20px 0', borderTop: '1px solid rgba(212, 175, 55, 0.1)' }}></div>
-                            <button className="nav-link-item expert-bridge-btn" onClick={onToggleView} style={{ background: 'rgba(212, 175, 55, 0.05)', marginTop: 'auto' }}>
+                            <button className="nav-link-item expert-bridge-btn" onClick={onToggleView} style={{ background: 'rgba(212, 175, 55, 0.05)', marginTop: 'auto' }} title="EXPERT PRACTICE">
+                                <span className="nav-icon">🏛️</span>
                                 <div className="nav-label-group">
-                                    <span className="nav-text" style={{ color: 'var(--elite-gold)', fontWeight: 800 }}>🏛️ EXPERT PRACTICE</span>
+                                    <span className="nav-text" style={{ color: 'var(--elite-gold)', fontWeight: 800 }}>EXPERT PRACTICE</span>
                                     <span className="nav-sub">Back to your professional dashboard</span>
                                 </div>
                             </button>
@@ -131,14 +146,16 @@ const ClientDashboard = ({ onToggleView }) => {
                 <div className="sidebar-footer-stat">
                     <div className="institutional-footer">
                         <div className="footer-actions-dual">
-                            <button className="btn-exit-dash" onClick={() => navigate('/')}>
-                                EXIT DASHBOARD
+                            <button className="btn-exit-dash" onClick={() => navigate('/')} title="EXIT DASHBOARD">
+                                <span className="nav-icon">🚪</span>
+                                <span className="btn-text">EXIT DASHBOARD</span>
                             </button>
-                            <button className="btn-logout-minimal" onClick={() => { useAuthStore.getState().logout(); navigate('/login'); }}>
-                                LOG OUT
+                            <button className="btn-logout-minimal" onClick={() => { useAuthStore.getState().logout(); navigate('/login'); }} title="LOG OUT">
+                                <span className="nav-icon">🔐</span>
+                                <span className="btn-text">LOG OUT</span>
                             </button>
                         </div>
-                        <span>v2.4.0-CL</span>
+                        <span className="version-text">v2.4.0-CL</span>
                     </div>
                 </div>
             </aside>

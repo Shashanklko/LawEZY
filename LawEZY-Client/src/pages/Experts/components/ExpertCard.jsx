@@ -41,7 +41,7 @@ const ExpertCard = ({ expert, onViewProfile, onBookAppointment }) => {
         </div>
         <div className="expert-rating-dock">
           <span className="star">★</span>
-          <span className="rating-num">{expert.rating}</span>
+          <span className="rating-num">{Number(expert.rating || 0).toFixed(1)}</span>
         </div>
       </div>
       

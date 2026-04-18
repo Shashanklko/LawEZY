@@ -302,3 +302,61 @@
   .news-heading { font-size: 1.8rem; }
   .news-card { min-height: auto; padding: 20px; }
 }
+
+/* VERTICAL GRID (For Sidebars) */
+.news-vertical-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  width: 100%;
+}
+
+.newsroom-professional.vertical-layout {
+  padding: 0;
+  background: transparent;
+}
+
+.newsroom-professional.vertical-layout .section-header {
+  margin-bottom: 20px;
+}
+
+.newsroom-professional.vertical-layout .news-heading {
+  font-size: 1.2rem;
+}
+
+.newsroom-professional.vertical-layout .news-subtitle {
+  display: none;
+}
+
+.newsroom-professional.vertical-layout .live-status {
+  font-size: 0.55rem;
+}
+
+.news-vertical-grid .news-card {
+  min-height: auto;
+  padding: 15px;
+}
+
+.news-vertical-grid .news-title {
+  font-size: 0.95rem;
+  line-height: 1.4;
+  -webkit-line-clamp: 2;
+  margin-bottom: 8px;
+}
+
+.news-vertical-grid .news-summary {
+  font-size: 0.75rem;
+  margin-bottom: 12px;
+  -webkit-line-clamp: 3;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.newsroom-professional.vertical-layout .card-top {
+  margin-bottom: 10px;
+}
+
+
+.newsroom-professional.vertical-layout { padding: 0 !important; background: transparent !important; min-height: auto !important; }
+.newsroom-professional.vertical-layout .section-header { padding-top: 0; margin-bottom: 20px; }
+

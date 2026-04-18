@@ -578,21 +578,20 @@ const Messages = () => {
   const handlePurchaseTokens = async () => {
     setIsPurchasing(true);
     try {
-      const response = await apiClient.post('/api/account/purchase-tokens', {
-        tokens: 15,
-        cost: 100.0
+      await apiClient.post('/api/wallet/purchase-tokens-direct', {
+        packageType: 'CHAT_REFILL'
       });
       
-      // SUCCESS: Sync whole wallet state back to AuthStore
-      const updatedWallet = response.data;
+      // SUCCESS: Refresh whole wallet state from backend
+      const walletRes = await apiClient.get('/api/wallet/balance');
       updateUser({ 
-        tokenBalance: updatedWallet.tokenBalance,
-        cashBalance: updatedWallet.cashBalance,
-        earnedBalance: updatedWallet.earnedBalance
+        tokenBalance: walletRes.data.tokenBalance,
+        freeChatTokens: walletRes.data.freeChatTokens,
+        freeAiTokens: walletRes.data.freeAiTokens
       });
       
       setShowRefillModal(false);
-      alert("💳 Expert REFILL SUCCESSFUL: 15 Premium Credits added to your consultation ledger.");
+      alert("💳 Expert REFILL SUCCESSFUL: 10 Premium Credits added to your consultation ledger.");
     } catch (err) {
       console.error('Purchase failed:', err);
       const errorMsg = err.response?.data?.message || err.message;
@@ -996,7 +995,41 @@ const Messages = () => {
           {activeChat ? (
             <>
               <header className="chat-header" style={{ position: 'relative', zIndex: 100 }}>
-                <div className="chat-header-info">
+                {messages.some(m => m.isSelected) ? (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: '10px 20px', zIndex: 100 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                      <button className="btn-icon" onClick={() => setMessages(prev => prev.map(m => ({...m, isSelected: false})))}>
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                      </button>
+                      <span style={{ fontSize: '1.2rem', fontWeight: '500' }}>{messages.filter(m => m.isSelected).length}</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '15px' }}>
+                      <button className="btn-icon" title="Star Selected" onClick={() => {
+                        const isAllStarred = messages.filter(m => m.isSelected).every(m => m.isStarred);
+                        setMessages(prev => prev.map(m => m.isSelected ? { ...m, isStarred: !isAllStarred, isSelected: false } : m));
+                      }}>
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                      </button>
+                      <button className="btn-icon" title="Delete Selected" onClick={() => {
+                        const selectedCount = messages.filter(m => m.isSelected).length;
+                        if (window.confirm(`Delete ${selectedCount} message${selectedCount > 1 ? 's' : ''}?`)) {
+                          setMessages(prev => prev.filter(m => !m.isSelected));
+                        }
+                      }}>
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                      </button>
+                      <button className="btn-icon" title="Copy Selected" onClick={() => {
+                        const textToCopy = messages.filter(m => m.isSelected).map(m => m.content).join('\n\n');
+                        navigator.clipboard.writeText(textToCopy);
+                        setMessages(prev => prev.map(m => ({...m, isSelected: false})));
+                      }}>
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="chat-header-info">
                   <button 
                     className="mobile-back-to-list" 
                     onClick={() => setActiveChatId(null)}
@@ -1059,22 +1092,64 @@ const Messages = () => {
                   </div>
                 </div>
 
-                <div className="chat-header-actions">
-                  <div style={{ position: 'relative' }}>
-                    <button className="btn-appointment-call" title="Expert Appointment Governance" onClick={() => setShowApptDropdown(!showApptDropdown)}>
-                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                       <span className="btn-text">Appointment</span>
+                <div className="chat-header-actions flex-row-center">
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                    
+                    {activeAppointment && activeAppointment.status === 'PAID' && activeAppointment.roomId && (
+                      <button 
+                        className="btn-join-consultation animate-reveal" 
+                        onClick={() => {
+                          const baseJoinUrl = `https://meet.jit.si/${activeAppointment.roomId}`;
+                          const isPro = ['LAWYER', 'CA', 'CFA', 'PROFESSIONAL'].some(role => user?.role?.toUpperCase().includes(role));
+                          const rolespec = isPro 
+                              ? `#config.prejoinPageEnabled=false&config.enableLobby=true&config.startWithAudioMuted=false` 
+                              : `#config.prejoinPageEnabled=true&config.enableLobby=true`;
+                          window.open(baseJoinUrl + rolespec, '_blank');
+                        }}
+                        style={{
+                          background: '#10b981',
+                          color: 'white',
+                          border: 'none',
+                          padding: '8px 16px',
+                          borderRadius: '20px',
+                          fontSize: '0.75rem',
+                          fontWeight: 800,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          marginRight: '12px',
+                          cursor: 'pointer',
+                          boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)',
+                          fontFamily: 'Outfit, sans-serif'
+                        }}
+                      >
+                        <span style={{ fontSize: '1rem' }}>🎥</span> JOIN SECURE CONSULTATION
+                      </button>
+                    )}
+
+                    <button className="btn-icon" aria-label="Appointments" onClick={() => setShowApptDropdown(!showApptDropdown)}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                      {activeAppointment && <div style={{ position: 'absolute', top: '0', right: '0', width: '10px', height: '10px', background: activeAppointment.status === 'PAID' ? '#10b981' : '#f59e0b', borderRadius: '50%', border: '2px solid white' }}></div>}
                     </button>
                     
                     {showApptDropdown && (
-                      <div className="wa-context-menu" style={{ position: 'absolute', top: '100%', right: '0', marginTop: '10px', zIndex: 200, width: '240px' }} onClick={(e) => e.stopPropagation()}>
+                      <div className="wa-context-menu" style={{ position: 'absolute', top: '100%', right: '0', marginTop: '10px', zIndex: 200, width: '260px', padding: '5px' }} onClick={(e) => e.stopPropagation()}>
+                        <div style={{ padding: '12px 15px', background: 'rgba(0,0,0,0.02)', borderBottom: '1px solid rgba(0,0,0,0.05)', marginBottom: '5px' }}>
+                          <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>Current Mission Status</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '5px' }}>
+                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: activeAppointment ? (activeAppointment.status === 'PAID' ? '#10b981' : '#f59e0b') : '#94a3b8' }}></div>
+                            <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#ffffff' }}>
+                              {activeAppointment ? activeAppointment.status.replace('_', ' ') : 'NO ACTIVE SESSION'}
+                            </span>
+                          </div>
+                        </div>
                         <ul className="wa-menu-list">
                           <li onClick={() => {
                             setShowApptDropdown(false);
                             handleProposeAppointment();
                           }}>
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                            Request Appointment
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                            {activeAppointment ? 'Modify Proposal' : 'Initiate Proposal'}
                           </li>
                           <li className="menu-divider"></li>
                           <li onClick={() => { 
@@ -1082,13 +1157,14 @@ const Messages = () => {
                             navigate('/dashboard');
                           }} style={{ color: 'var(--elite-gold)', fontWeight: 700 }}>
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
-                            Appointment Center
+                            Institutional Dashboard
                           </li>
                         </ul>
                       </div>
                     )}
 
                   </div>
+
                   <button className="btn-icon" aria-label="Search" onClick={() => setShowChatSearch(!showChatSearch)}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                   </button>
@@ -1124,7 +1200,9 @@ const Messages = () => {
                       </div>
                     )}
                   </div>
-                </div>
+                  </div>
+                  </>
+                )}
               </header>
 
               <div className="chat-history-scroll" style={{ paddingBottom: '20px', position: 'relative' }} onClick={() => { setShowOptionsDropdown(false); setActiveMessageMenu(null); }}>
@@ -1266,7 +1344,7 @@ const Messages = () => {
                    const isAppointmentMsg = msg.type === 'APPOINTMENT' || msg.content?.startsWith('📅') || msg.content?.includes('Appointment Center');
                    const isBlockedReply = isClientExhausted && msg.senderId !== user.id && msg.type !== 'SYSTEM_NOTICE' && msg.type !== 'REFILL_REQUEST' && !isAppointmentMsg;
                    return (
-                    <div key={msg.id || idx} className={`message-bubble-wrapper ${msg.senderId === user.id ? 'sent' : 'received'}`} style={{ position: 'relative' }}>
+                    <div key={msg.id || idx} className={`message-bubble-wrapper ${msg.senderId === user.id ? 'sent' : 'received'}`} style={{ position: 'relative', background: msg.isSelected ? 'rgba(184, 153, 94, 0.15)' : 'transparent', padding: msg.isSelected ? '8px' : '0', margin: msg.isSelected ? '-8px' : '0', borderRadius: msg.isSelected ? '12px' : '0' }}>
                     {msg.senderId !== user.id && <img src={activeChat.avatar} className="msg-avatar" alt="Expert" />}
                     <div className="message-content">
                         <div className="message-bubble">
@@ -1280,6 +1358,8 @@ const Messages = () => {
                           )}
                         </div>
                       <div className="message-time">
+                        {msg.isStarred && <span style={{ marginRight: '4px', fontSize: '0.65rem' }}>⭐</span>}
+                        {msg.isPinned && <span style={{ marginRight: '4px', fontSize: '0.65rem' }}>📌</span>}
                         {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (msg.time || msg.time_sent)}
                         {msg.senderId === user.id && (
                           <span className="msg-status-tick delivered">✓</span>
@@ -1292,30 +1372,30 @@ const Messages = () => {
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
                       </button>
                       {activeMessageMenu === msg.id && (
-                       <div className={`wa-menu-wrapper animate-reveal ${msg.sender === 'me' ? 'sent' : 'received'}`} onClick={(e) => e.stopPropagation()}>
+                       <div className={`wa-menu-wrapper animate-reveal ${msg.senderId === user.id ? 'sent' : 'received'}`} onClick={(e) => e.stopPropagation()}>
                           <div className="wa-context-menu">
                              <ul className="wa-menu-list">
                                 <li onClick={() => { setReplyingToMsg(msg); setActiveMessageMenu(null); }}>
                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg> Reply
                                 </li>
-                                <li onClick={() => { navigator.clipboard.writeText(msg.text); setActiveMessageMenu(null); }}>
+                                <li onClick={() => { navigator.clipboard.writeText(msg.content); setActiveMessageMenu(null); }}>
                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy
                                 </li>
-                                <li onClick={() => setActiveMessageMenu(null)}>
-                                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.68V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3v4.68a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/></svg> Pin
+                                <li onClick={() => { setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, isPinned: !m.isPinned } : m)); setActiveMessageMenu(null); }}>
+                                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.68V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3v4.68a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/></svg> {msg.isPinned ? 'Unpin' : 'Pin'}
                                 </li>
-                                <li onClick={() => setActiveMessageMenu(null)}>
-                                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Star
-                                </li>
-                                <li className="menu-divider"></li>
-                                <li onClick={() => setActiveMessageMenu(null)}>
-                                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> Select
+                                <li onClick={() => { setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, isStarred: !m.isStarred } : m)); setActiveMessageMenu(null); }}>
+                                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> {msg.isStarred ? 'Unstar' : 'Star'}
                                 </li>
                                 <li className="menu-divider"></li>
-                                <li onClick={() => setActiveMessageMenu(null)}>
+                                <li onClick={() => { setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, isSelected: !m.isSelected } : m)); setActiveMessageMenu(null); }}>
+                                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> {msg.isSelected ? 'Deselect' : 'Select'}
+                                </li>
+                                <li className="menu-divider"></li>
+                                <li onClick={() => { setShowReportModal(true); setActiveMessageMenu(null); }}>
                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg> Report
                                 </li>
-                                <li onClick={() => { setActiveMessageMenu(null); if(window.confirm('Delete this message?')){ setChats(prev => prev.map(c => c.id === activeChatId ? { ...c, history: (c.history || []).filter(m => m.id !== msg.id) } : c)); } }}>
+                                <li onClick={() => { setActiveMessageMenu(null); if(window.confirm('Delete this message?')){ setMessages(prev => prev.filter(m => m.id !== msg.id)); } }}>
                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Delete
                                 </li>
                              </ul>
@@ -1334,9 +1414,9 @@ const Messages = () => {
                   <div style={{ padding: '8px 15px', background: 'rgba(0,0,0,0.03)', borderLeft: '4px solid var(--elite-gold)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '0 20px 10px 20px', borderRadius: '4px' }}>
                     <div style={{ overflow: 'hidden' }}>
                       <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--elite-gold)', display: 'block', marginBottom: '4px' }}>
-                        Replying to {replyingToMsg.sender === 'me' ? 'Yourself' : activeChat.name}
+                        Replying to {replyingToMsg.senderId === user.id ? 'Yourself' : activeChat.name}
                       </span>
-                      <p style={{ fontSize: '0.9rem', color: '#555', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{replyingToMsg.text}</p>
+                      <p style={{ fontSize: '0.9rem', color: '#555', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{replyingToMsg.content}</p>
                     </div>
                     <button onClick={() => setReplyingToMsg(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#888', padding: '5px', marginLeft: '10px' }}>✖</button>
                   </div>
@@ -1471,7 +1551,7 @@ const Messages = () => {
                         )}
                       </button>
                     ) : (
-                      <button className="btn-send-wa send-btn" aria-label="Send Message" onClick={handleSendMessage}>
+                      <button className="btn-send-wa send-btn" aria-label="Send Message" onClick={() => handleSendMessage()}>
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '-2px' }}><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
                       </button>
                     )}

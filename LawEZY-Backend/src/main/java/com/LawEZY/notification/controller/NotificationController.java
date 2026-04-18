@@ -16,13 +16,21 @@ public class NotificationController {
 
     private final NotificationService notificationService;
 
+    /** All notifications for a user, latest first */
     @GetMapping
     public ResponseEntity<ApiResponse<List<Notification>>> getNotifications(@RequestParam String userId) {
         List<Notification> notifications = notificationService.getUserNotifications(userId);
-        if (notifications == null) {
-            notifications = java.util.Collections.emptyList();
-        }
+        if (notifications == null) notifications = java.util.Collections.emptyList();
         return ResponseEntity.ok(ApiResponse.success(notifications, "Notifications retrieved"));
+    }
+
+    /** Filter by category: FINANCIAL | SOCIAL | ENGAGEMENT | SYSTEM */
+    @GetMapping("/category/{category}")
+    public ResponseEntity<ApiResponse<List<Notification>>> getByCategory(
+            @RequestParam String userId,
+            @PathVariable String category) {
+        List<Notification> notifications = notificationService.getByCategory(userId, category);
+        return ResponseEntity.ok(ApiResponse.success(notifications, "Category feed retrieved"));
     }
 
     @GetMapping("/unread-count")
@@ -35,5 +43,12 @@ public class NotificationController {
     public ResponseEntity<ApiResponse<Void>> markAsRead(@PathVariable String id) {
         notificationService.markAsRead(id);
         return ResponseEntity.ok(ApiResponse.success(null, "Notification marked as read"));
+    }
+
+    /** Mark every unread notification as read in one shot */
+    @PutMapping("/mark-all-read")
+    public ResponseEntity<ApiResponse<Void>> markAllAsRead(@RequestParam String userId) {
+        notificationService.markAllAsRead(userId);
+        return ResponseEntity.ok(ApiResponse.success(null, "All notifications marked as read"));
     }
 }

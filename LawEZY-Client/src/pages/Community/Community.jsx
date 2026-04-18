@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import apiClient from '../../services/apiClient';
 import useAuthStore from '../../store/useAuthStore';
 import './Community.css';
-
+import Newsroom from '../Home/components/news/Newsroom';
 
 
 
@@ -229,10 +229,15 @@ const Community = () => {
               </div>
               <div className="contributors-list">
                 {contributors.map(author => (
-                  <div key={author.authorId} className="contributor-card">
+                  <div 
+                    key={author.authorId} 
+                    className="contributor-card clickable"
+                    onClick={() => navigate(`/experts?expertId=${author.authorId}`)}
+                  >
                     <div className="avatar-placeholder">{author.authorName?.charAt(0)}</div>
                     <div className="contributor-info">
                       <strong>{author.authorName}</strong>
+                      <span className="contributor-rank">Top Contributor • {Math.floor(Math.random() * 500) + 500} pts</span>
                     </div>
                   </div>
                 ))}
@@ -247,6 +252,13 @@ const Community = () => {
             <div className="discussions-list">
               {loading ? (
                 <div className="loading-state">Accessing Institutional Archives...</div>
+              ) : filteredDiscussions.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-icon">⚖️</div>
+                  <p>No active discussions in the institutional hub.</p>
+                  <p className="empty-subtext">Be the first to share knowledge or ask a legal question.</p>
+                  <button className="btn-primary" onClick={handleStartDiscussionClick}>START CONVERSATION</button>
+                </div>
               ) : (
                 filteredDiscussions.map(post => (
                   <div
@@ -336,14 +348,17 @@ const Community = () => {
                   </div>
                 ))
               )}
-              {!loading && filteredDiscussions.length === 0 && (
-                <div className="empty-state">
-                  <p>No active discussions in the institutional hub.</p>
-                  <button onClick={() => { setSearch(''); setActiveTab('All Discussions'); }}>Clear Filters</button>
-                </div>
-              )}
             </div>
         </main>
+
+        {/* RIGHT SIDEBAR: NEWSROOM */}
+        {activeTab === 'All Discussions' && (
+          <aside className="community-sidebar right-sidebar" style={{ maxHeight: 'calc(100vh - 120px)', overflowY: 'auto' }}>
+            <div className="sidebar-section" style={{ padding: '0', background: 'transparent', border: 'none', boxShadow: 'none' }}>
+              <Newsroom layout="vertical" />
+            </div>
+          </aside>
+        )}
       </div>
 
       {/* VIEW DISCUSSION MODAL */}

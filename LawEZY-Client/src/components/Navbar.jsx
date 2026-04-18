@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 
 import useAuthStore from '../store/useAuthStore'
 import apiClient from '../services/apiClient'
@@ -12,6 +12,7 @@ const Navbar = () => {
   
   // Real Auth State from Zustand Store
   const { user, token, isAuthenticated, logout } = useAuthStore();
+  const navigate = useNavigate();
   const location = useLocation();
   const isLoggedIn = isAuthenticated;
   
@@ -179,92 +180,131 @@ const Navbar = () => {
                   </Link>
                 </>
               ) : (
-                <div className="logged-in-actions">
-                  {/* 🔔 Notifications (Universal for logged in) */}
-                  <div className="nav-notifications-container" ref={notifyRef}>
-                    <button 
-                      className={`btn-icon-nav ${isNotificationsOpen ? 'active' : ''} ${unreadCount > 0 ? 'alert-pulse' : ''}`}
-                      onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
-                    >
-                      <span className="notify-bell">🔔</span>
-                      {unreadCount > 0 && <span className="notify-badge">{unreadCount}</span>}
-                    </button>
-                    {isNotificationsOpen && (
-                      <div className="notifications-dropdown glass">
-                        <div className="notify-header">NOTIFICATIONS</div>
-                        <div className="notify-list">
-                          {notifications.length > 0 ? (
-                            notifications.map(n => (
-                              <div 
-                                key={n.id} 
-                                className={`notify-item ${n.read ? 'read' : 'unread'}`}
-                                onClick={() => handleMarkAsRead(n.id)}
-                              >
-                                <div className="notify-status-dot"></div>
-                                <div className="notify-content">
-                                  <span className="notify-title">{n.title}</span>
-                                  <span className="notify-text">{n.message}</span>
-                                  <span className="notify-time">
-                                    {(() => {
-                                      if (!n.timestamp) return 'Just Now';
-                                      try {
-                                        if (Array.isArray(n.timestamp)) {
-                                          const [y, m, d, h, min, s] = n.timestamp;
-                                          return new Date(y, m - 1, d, h, min, s || 0).toLocaleString([], { hour: '2-digit', minute: '2-digit' });
-                                        }
-                                        const d = new Date(n.timestamp);
-                                        return isNaN(d.getTime()) ? 'Just Now' : d.toLocaleString([], { hour: '2-digit', minute: '2-digit' });
-                                      } catch (e) { return 'Just Now'; }
-                                    })()}
-                                  </span>
-                                </div>
-                              </div>
-                            ))
-                          ) : (
-                            <div className="notify-empty">No unread alerts for this cycle.</div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
+                <div className="logged-in-actions mobile-only">
                   {/* 📊 Quick Dashboard Link */}
-                  <Link to="/dashboard" className="btn-secondary dashboard-quick-btn" onClick={closeMenu} style={{ padding: '6px 14px', fontSize: '0.65rem', border: '1.5px solid rgba(139, 90, 43, 0.3)', color: '#8B5A2B' }}>
+                  <Link to="/dashboard" className="btn-secondary dashboard-quick-btn" onClick={closeMenu} style={{ padding: '12px 14px', fontSize: '0.85rem', width: '100%' }}>
                     Dashboard
                   </Link>
 
-                  {/* 👤 Profile Circular Avatar & Dropdown */}
-                  <div className="nav-profile-container" ref={profileRef}>
-                    <button 
-                      className={`btn-avatar ${isProfileOpen ? 'active' : ''}`}
-                      onClick={() => setIsProfileOpen(!isProfileOpen)}
-                    >
-                      {user?.profilePic ? (
-                        <img src={user.profilePic} alt="Profile" className="user-avatar-img" />
-                      ) : (
-                        <div className="user-avatar-initials">
-                          {user?.firstName ? user.firstName.charAt(0).toUpperCase() : 'U'}
-                          {user?.lastName ? user.lastName.charAt(0).toUpperCase() : 'S'}
-                        </div>
-                      )}
-                    </button>
-                    {isProfileOpen && (
-                      <div className="profile-dropdown glass">
-                        <div className="profile-dropdown-header">
-                          <span className="user-name">{user?.firstName} {user?.lastName}</span>
-                          <span className="user-role-badge">{userRoleLabel}</span>
-                        </div>
-                        <div className="dropdown-divider"></div>
-                        <button className="dropdown-item logout-item" onClick={() => { logout(); closeMenu(); }}>
-                           Sign out
-                        </button>
-                      </div>
-                    )}
+                  {/* 👤 Mobile User Info (Simple Text) */}
+                  <div className="mobile-user-info">
+                    <span className="user-name-text">{user?.firstName} {user?.lastName}</span>
+                    <span className="user-role-text">{userRoleLabel}</span>
                   </div>
+
+                  {/* 🚪 Sign out Button */}
+                  <button 
+                    className="nav-link logout-link-mobile" 
+                    onClick={() => { logout(); closeMenu(); }}
+                    style={{ border: 'none', background: 'transparent', color: '#ef4444', fontWeight: '700', cursor: 'pointer', padding: '10px 0' }}
+                  >
+                     Sign out
+                  </button>
                 </div>
               )}
             </div>
           </div>
+
+          {/* PERSISTENT ACTIONS (Notifications & Desktop Profile) */}
+          {isLoggedIn && (
+            <div className="persistent-header-actions">
+              {/* 📊 Desktop Dashboard Link */}
+              <Link to="/dashboard" className="btn-secondary dashboard-desktop-link desktop-only" style={{ marginRight: '10px' }}>
+                Dashboard
+              </Link>
+
+              {/* 🔔 Notifications */}
+              <div className="nav-notifications-container" ref={notifyRef}>
+                <button 
+                  className={`btn-icon-nav ${isNotificationsOpen ? 'active' : ''} ${unreadCount > 0 ? 'alert-pulse' : ''}`}
+                  onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+                >
+                  <span className="notify-bell">🔔</span>
+                  {unreadCount > 0 && <span className="notify-badge">{unreadCount}</span>}
+                </button>
+                {isNotificationsOpen && (
+                  <div className="notifications-dropdown glass">
+                    <div className="notify-header">NOTIFICATIONS</div>
+                    <div className="notify-list">
+                      {notifications.length > 0 ? (
+                        notifications.map(n => (
+                          <div 
+                            key={n.id} 
+                            className={`notify-item ${n.read ? 'read' : 'unread'}`}
+                            onClick={() => handleMarkAsRead(n.id)}
+                          >
+                            <div className="notify-status-dot"></div>
+                            <div className="notify-content">
+                              <span className="notify-title">{n.title}</span>
+                              <span className="notify-text">{n.message}</span>
+                              <span className="notify-time">
+                                {(() => {
+                                  if (!n.timestamp) return 'Just Now';
+                                  try {
+                                    if (Array.isArray(n.timestamp)) {
+                                      const [y, m, d, h, min, s] = n.timestamp;
+                                      return new Date(y, m - 1, d, h, min, s || 0).toLocaleString([], { hour: '2-digit', minute: '2-digit' });
+                                    }
+                                    const d = new Date(n.timestamp);
+                                    return isNaN(d.getTime()) ? 'Just Now' : d.toLocaleString([], { hour: '2-digit', minute: '2-digit' });
+                                  } catch (e) { return 'Just Now'; }
+                                })()}
+                              </span>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="notify-empty">No unread alerts for this cycle.</div>
+                      )}
+                    </div>
+                    <div className="notify-footer">
+                      {unreadCount > 0 && (
+                        <button className="notify-mark-all" onClick={async (e) => {
+                          e.stopPropagation();
+                          try {
+                            const id = user?.uid || user?.id;
+                            await apiClient.put(`/api/notifications/mark-all-read?userId=${id}`);
+                            setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+                            setUnreadCount(0);
+                          } catch {}
+                        }}>Mark all read</button>
+                      )}
+                      <button className="notify-view-all" onClick={() => { setIsNotificationsOpen(false); navigate('/notifications'); }}>View all →</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* 👤 Desktop Profile (Hidden on Mobile) */}
+              <div className="nav-profile-container desktop-profile-item" ref={profileRef}>
+                <button 
+                  className={`btn-avatar ${isProfileOpen ? 'active' : ''}`}
+                  onClick={() => setIsProfileOpen(!isProfileOpen)}
+                >
+                  {user?.profilePic ? (
+                    <img src={user.profilePic} alt="Profile" className="user-avatar-img" />
+                  ) : (
+                    <div className="user-avatar-initials">
+                      {user?.firstName ? user.firstName.charAt(0).toUpperCase() : 'U'}
+                      {user?.lastName ? user.lastName.charAt(0).toUpperCase() : 'S'}
+                    </div>
+                  )}
+                </button>
+                {isProfileOpen && (
+                  <div className="profile-dropdown glass">
+                    <div className="profile-dropdown-header">
+                      <span className="user-name">{user?.firstName} {user?.lastName}</span>
+                      <span className="user-role-badge">{userRoleLabel}</span>
+                    </div>
+                    <div className="dropdown-divider"></div>
+                    <button className="dropdown-item logout-item" onClick={() => { logout(); closeMenu(); }}>
+                       Sign out
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
       <style jsx="true">{`
@@ -316,10 +356,10 @@ const Navbar = () => {
           color: var(--accent-burgundy);
           letter-spacing: -0.05em;
         }
-        .brand-divider { width: 1px; height: 30px; background: rgba(127, 29, 29, 0.15); }
+        .brand-divider { width: 1px; height: 30px; background: rgba(212, 175, 55, 0.15); }
         .ai-brand { display: flex; flex-direction: column; }
         .ai-name { font-family: 'Outfit', sans-serif; font-weight: 900; font-size: 1.1rem; color: var(--accent-burgundy); }
-        .ai-tagline { font-family: 'Outfit', sans-serif; font-size: 0.55rem; font-weight: 800; color: #8B5A2B; letter-spacing: 0.5px; margin-top: -2px; }
+        .ai-tagline { font-family: 'Outfit', sans-serif; font-size: 0.55rem; font-weight: 800; color: #D4AF37; letter-spacing: 0.5px; margin-top: -2px; }
 
         .nav-menu-wrapper {
           display: flex;
@@ -362,6 +402,57 @@ const Navbar = () => {
           align-items: center; 
           gap: 18px; 
         }
+        .persistent-header-actions {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-left: 15px;
+          position: relative;
+          z-index: 2100; /* Higher than mobile-menu-wrapper (2050) */
+        }
+        .mobile-only { display: none !important; }
+        .desktop-only { display: flex !important; }
+
+        @media (max-width: 1200px) {
+          .mobile-only { display: flex !important; }
+          .desktop-only { display: none !important; }
+          
+          .brand-section { order: 1; }
+          .persistent-header-actions {
+            margin-left: auto;
+            order: 2;
+          }
+          .mobile-toggle { 
+            order: 3;
+            display: flex !important;
+            margin-left: 15px !important;
+          }
+          
+          .desktop-profile-item { display: none !important; }
+          .mobile-profile-item { 
+            display: block !important; 
+            margin-bottom: 20px;
+            width: fit-content;
+          }
+        }
+        
+        .desktop-profile-item { display: block; }
+        .mobile-profile-item { display: none; }
+        
+        .notifications-dropdown, .profile-dropdown {
+          z-index: 2200;
+        }
+
+        @media (max-width: 1200px) {
+          .profile-dropdown {
+            position: static !important;
+            width: 100% !important;
+            margin-top: 10px;
+            box-shadow: none !important;
+            transform: none !important;
+          }
+        }
+
         .btn-icon-nav {
           background: transparent;
           border: 1.5px solid rgba(127, 29, 29, 0.1);
@@ -477,6 +568,34 @@ const Navbar = () => {
           font-size: 0.85rem;
           color: #bbb;
         }
+        .notify-footer {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 10px 20px;
+          border-top: 1px solid rgba(0,0,0,0.05);
+          background: #fbfbfb;
+          gap: 8px;
+        }
+        .notify-mark-all, .notify-view-all {
+          border: none;
+          background: transparent;
+          cursor: pointer;
+          font-family: 'Outfit', sans-serif;
+          font-size: 0.65rem;
+          font-weight: 700;
+          padding: 4px 0;
+          transition: color 0.2s;
+        }
+        .notify-mark-all {
+          color: #64748b;
+        }
+        .notify-mark-all:hover { color: #059669; }
+        .notify-view-all {
+          color: var(--accent-burgundy);
+          margin-left: auto;
+        }
+        .notify-view-all:hover { text-decoration: underline; }
 
         .nav-profile-container { position: relative; }
         .btn-avatar {
@@ -537,7 +656,7 @@ const Navbar = () => {
         .user-role-badge { 
           font-size: 0.55rem; 
           font-weight: 800; 
-          color: #8B5A2B; 
+          color: #D4AF37; 
           letter-spacing: 1px;
         }
         .dropdown-divider { height: 1px; background: rgba(0,0,0,0.06); margin: 4px 0; }
@@ -650,6 +769,36 @@ const Navbar = () => {
             border-top: 2px solid rgba(127, 29, 29, 0.1);
           }
           .nav-actions > *, .nav-actions button { width: 100% !important; text-align: center; }
+          .logged-in-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            width: 100%;
+            align-items: center;
+          }
+          .mobile-user-info {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            margin-top: 10px;
+          }
+          .user-name-text {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #1a1a1a;
+          }
+          .user-role-text {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--accent-burgundy);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+          }
+          .logout-link-mobile {
+            font-size: 1rem !important;
+            margin-top: 5px;
+          }
           .btn-secondary, .btn-premium { font-size: 0.95rem; padding: 14px; }
           .help-icon-wrapper { padding: 12px; border-width: 2px; }
           .help-text { font-size: 0.9rem; }
@@ -659,6 +808,14 @@ const Navbar = () => {
           .brand-divider, .ai-brand-link { display: none; }
           .brand-name { font-size: 1.15rem; }
           .nav-menu-wrapper { width: 100%; max-width: none; }
+          .notifications-dropdown {
+            min-width: 280px;
+            width: calc(100vw - 30px);
+            position: fixed;
+            left: 15px;
+            right: 15px;
+            top: 70px;
+          }
         }
       `}</style>
     </nav>

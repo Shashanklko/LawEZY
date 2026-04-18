@@ -5,7 +5,7 @@ import lombok.Data;
 import com.LawEZY.user.enums.Role;
 
 @Data
-public class UserResponse{
+public class UserResponse {
     private String id;
     private String email;
     
@@ -23,6 +23,7 @@ public class UserResponse{
     // Institutional Token Reserves
     private Integer freeAiTokens;
     private Integer freeChatTokens;
+    private Integer freeDocTokens;
     private Integer tokenBalance;
     private Boolean isUnlimited;
 }

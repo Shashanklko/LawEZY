@@ -28,6 +28,7 @@ public class Wallet {
     private Integer tokenBalance = 5; // Paid Institutional Balance
     private Integer freeAiTokens = 5; // Tiered Free AI Quota
     private Integer freeChatTokens = 5; // Tiered Free Chat Quota
+    private Integer freeDocTokens = 1; // 1 Free Institutional Document Analysis Quota
     private Boolean isUnlimited = false; // "God Mode" Toggle
     private Double earnedBalance = 0.0; // Professional Revenue
     private Double cashBalance = 0.0; // Institutional Deposits for Clients

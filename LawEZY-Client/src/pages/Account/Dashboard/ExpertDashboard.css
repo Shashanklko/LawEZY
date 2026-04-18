@@ -16,6 +16,67 @@
     padding: 25px 0;
     box-shadow: 4px 0 25px rgba(0, 0, 0, 0.1);
     z-index: 100;
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* COLLAPSED STATE */
+.dashboard-sidebar.collapsed {
+    width: 80px;
+}
+
+.dashboard-sidebar.collapsed .brand-text,
+.dashboard-sidebar.collapsed .id-text,
+.dashboard-sidebar.collapsed .nav-label-group,
+.dashboard-sidebar.collapsed .version-text,
+.dashboard-sidebar.collapsed .btn-text,
+.dashboard-sidebar.collapsed .stat-label,
+.dashboard-sidebar.collapsed .status-label,
+.dashboard-sidebar.collapsed .toggle-track {
+    display: none;
+}
+
+.dashboard-sidebar.collapsed .sidebar-brand {
+    padding: 0 10px 20px;
+}
+
+.dashboard-sidebar.collapsed .brand-label {
+    justify-content: center !important;
+    margin-bottom: 15px;
+}
+
+.dashboard-sidebar.collapsed .collapse-toggle-btn {
+    width: 100%;
+    margin: 0;
+}
+
+.dashboard-sidebar.collapsed .expert-identity-card {
+    justify-content: center;
+}
+
+.dashboard-sidebar.collapsed .nav-link-item {
+    padding: 12px;
+    justify-content: center;
+}
+
+.dashboard-sidebar.collapsed .nav-icon {
+    margin: 0;
+    font-size: 1.2rem;
+}
+
+.dashboard-sidebar.collapsed .btn-exit-dash,
+.dashboard-sidebar.collapsed .btn-logout-minimal {
+    padding: 12px;
+    justify-content: center;
+    display: flex;
+}
+
+.dashboard-sidebar.collapsed .btn-exit-dash .nav-icon,
+.dashboard-sidebar.collapsed .btn-logout-minimal .nav-icon {
+    margin: 0;
+}
+
+.dashboard-sidebar.collapsed .institutional-footer {
+    align-items: center;
 }
 
 .sidebar-brand {
@@ -30,6 +91,25 @@
     letter-spacing: 2px;
     margin-bottom: 20px;
     opacity: 1; /* Maximum visibility */
+}
+
+.collapse-toggle-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--elite-gold);
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    transition: all 0.2s ease;
+}
+
+.collapse-toggle-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
 }
 
 .expert-identity-card {
@@ -100,6 +180,13 @@
     text-align: left;
     width: 100%;
     margin-bottom: 5px;
+}
+
+.nav-icon {
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .nav-link-item:hover {
@@ -419,6 +506,9 @@
     text-align: left;
     width: 100%;
     letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .btn-logout-minimal:hover {
