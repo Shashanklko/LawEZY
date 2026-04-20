@@ -1,6 +1,6 @@
 # ⚖️ LawEZY: Institutional Legal Intelligence Platform
 
-Welcome to the **LawEZY** Monorepo. This repository centralizes our high-fidelity legal tech ecosystem, integrating real-time professional consultation, AI-driven legal research, and secure financial governance.
+Welcome to the **LawEZY** Monorepo. This repository centralizes our high-fidelity legal tech ecosystem, integrating real-time professional consultation, AI-driven legal research, and secure financial governance with experts
 
 ---
 
