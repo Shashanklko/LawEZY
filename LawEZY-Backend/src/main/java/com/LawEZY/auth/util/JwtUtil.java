@@ -15,7 +15,7 @@ import java.util.Map;
 @Component // Tells Spring to create one instance of this utility we can use anywhere
 public class JwtUtil {
 
-    @org.springframework.beans.factory.annotation.Value("${jwt.secret}")
+    @org.springframework.beans.factory.annotation.Value("${jwt.secret:lawezy-institutional-secret-key-2025-grid-secure}")
     private String secretKeyString;
     
     @org.springframework.beans.factory.annotation.Value("${jwt.expirationMs:86400000}")
