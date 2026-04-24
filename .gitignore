@@ -9,8 +9,11 @@ tokens/
 **/tokens/
 brain/
 **/brain/
+application.yml
+**/application.yml
 *.pem
 *.key
+
 
 
 
