@@ -285,6 +285,8 @@ const Signup = () => {
                     </div>
                   </div>
                 </div>
+              </div>
+
               <div className="form-row stagger-reveal delay-3">
                 <div className="form-group" style={{ flex: 1 }}>
                   <label className="signup-label">Verification Code</label>
@@ -327,6 +329,7 @@ const Signup = () => {
                   </button>
                 </div>
               </div>
+
 
               <div className="signup-row stagger-reveal delay-3">
                 {role === 'pro' && (

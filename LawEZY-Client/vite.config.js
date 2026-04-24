@@ -11,9 +11,12 @@ export default defineConfig({
     reportCompressedSize: false,
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vendor': ['react', 'react-dom', 'react-router-dom', 'axios', 'zustand'],
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            return 'vendor';
+          }
         }
+
       }
     }
   }
