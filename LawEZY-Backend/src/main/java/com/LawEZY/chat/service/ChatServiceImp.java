@@ -579,7 +579,8 @@ public class ChatServiceImp implements ChatService {
         financialService.recordTransaction(professionalId, "Chat Extension (" + requestedMinutes + "m) - Client: " + clientId, earnings, "COMPLETED", "CREDIT");
         
         // 🛡️ Institutional Audit: Explicit Platform Commission Log (Attributed to Master Admin)
-        financialService.recordTransaction("lawezy76", "Message Service Platform Fee (Ref: " + sessionId + ")", platformCut, "COMPLETED", "CREDIT");
+        String masterAdminId = userRepository.findByRole(com.LawEZY.user.enums.Role.MASTER_ADMIN).stream().findFirst().map(com.LawEZY.user.entity.User::getId).orElse("lawezy76");
+        financialService.recordTransaction(masterAdminId, "Message Service Platform Fee (Ref: " + sessionId + ")", platformCut, "COMPLETED", "CREDIT");
 
         // 5. Inject Automated Extension Message
         ChatMessage extMsg = new ChatMessage();

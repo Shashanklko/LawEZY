@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Eye, EyeOff } from 'lucide-react';
 import apiClient from '../../../services/apiClient';
 import './Signup.css';
 
@@ -25,6 +26,8 @@ const Signup = () => {
   const [showOtpField, setShowOtpField] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
   const [otpLoading, setOtpLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showAdminPassword, setShowAdminPassword] = useState(false);
 
   const navigate = useNavigate();
 
@@ -185,9 +188,25 @@ const Signup = () => {
                    <input name="adminId" type="text" placeholder="e.g. lawezy95" className="login-input" required disabled={loading} />
                  </div>
                  <div className="login-group">
-                   <label className="login-label">Admin Key</label>
-                   <input name="adminKey" type="password" placeholder="••••••••••••" className="login-input" required disabled={loading} />
-                 </div>
+                    <label className="login-label">Admin Key</label>
+                    <div className="input-with-icon">
+                      <input 
+                        name="adminKey" 
+                        type={showAdminPassword ? "text" : "password"} 
+                        placeholder="••••••••••••" 
+                        className="login-input" 
+                        required 
+                        disabled={loading} 
+                      />
+                      <button 
+                        type="button" 
+                        className="password-toggle"
+                        onClick={() => setShowAdminPassword(!showAdminPassword)}
+                      >
+                        {showAdminPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
+                  </div>
                  <button type="submit" className="btn-login-primary admin-btn" disabled={loading}>
                    <span>{loading ? 'INITIALIZING...' : 'INITIALIZE ACCESS'}</span>
                  </button>
@@ -273,7 +292,7 @@ const Signup = () => {
                   <label className="signup-label">Password</label>
                   <div className="input-with-icon">
                     <input 
-                      type="password" 
+                      type={showPassword ? "text" : "password"} 
                       className="signup-input" 
                       placeholder="••••••••" 
                       value={password}
@@ -283,6 +302,13 @@ const Signup = () => {
                     <div className="input-icon">
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
                     </div>
+                    <button 
+                      type="button" 
+                      className="password-toggle"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
                   </div>
                 </div>
               </div>

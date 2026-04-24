@@ -55,6 +55,11 @@ app:
     url: ${MESSENGER_URL:https://lawezy-messenger.onrender.com}
   cors:
     allowed-origins: ${ALLOWED_ORIGINS:http://localhost:5173,https://lawezy.onrender.com,https://lawezy-sigma.vercel.app}
+  seed:
+    enabled: ${SEED_DATA:true}
+    admin-password: ${ADMIN_SEED_PASS:$Shashank2003}
+    expert-password: ${EXPERT_SEED_PASS:shashi123}
+    client-password: ${CLIENT_SEED_PASS:shekhar123}
 
 # Institutional Razorpay Config
 razorpay:

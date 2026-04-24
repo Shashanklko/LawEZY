@@ -102,7 +102,7 @@ public class AiController {
                             transactionRepository.save(txn);
 
                             // Credit the Platform (Master Admin)
-                            userRepository.findById("lawezy76").ifPresent(master -> {
+                            userRepository.findByRole(com.LawEZY.user.enums.Role.MASTER_ADMIN).stream().findFirst().ifPresent(master -> {
                                 com.LawEZY.user.entity.FinancialTransaction platformTxn = new com.LawEZY.user.entity.FinancialTransaction();
                                 platformTxn.setId("TXN-" + (1000 + (int)(Math.random() * 9000)));
                                 platformTxn.setTransactionId("LZY-" + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase());

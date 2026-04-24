@@ -97,6 +97,9 @@ public class UserServiceImp implements UserService {
         if (normalizedEmail.equals("shekhar@test.com")) {
             institutionalId = "11SS01CL";
             log.warn("[INSTITUTIONAL OVERRIDE] Reserved testing identity detected for {}. Mapping to 11SS01CL.", normalizedEmail);
+        } else if (normalizedEmail.equals("lawezy2025@gmail.com")) {
+            institutionalId = "lawezy76";
+            log.warn("[INSTITUTIONAL OVERRIDE] Master Identity detected for {}. Mapping to lawezy76.", normalizedEmail);
         } else {
             institutionalId = generateInstitutionalId(userRequest.getFirstName(), userRequest.getLastName(), userRequest.getRole());
         }
@@ -175,6 +178,8 @@ public class UserServiceImp implements UserService {
         if (role == Role.LAWYER) roleCode = "LA";
         else if (role == Role.CA) roleCode = "CA";
         else if (role == Role.CFA) roleCode = "CF";
+        else if (role == Role.ADMIN) roleCode = "AD";
+        else if (role == Role.MASTER_ADMIN) roleCode = "MA";
         
         return prefix + serial + roleCode;
     }

@@ -468,7 +468,7 @@ const AdminPortal = () => {
   const handleDeleteProfile = async (id, name) => {
     if (window.confirm(`⚠️ CRITICAL GOVERNANCE ALERT: You are about to PERMANENTLY DELETE the profile for ${name}. This will also purge their wallet and transaction logs. This action is irreversible. Proceed?`)) {
       try {
-        await apiClient.delete(`/api/admin/users/${id}?adminId=${currentUser.id}`);
+        await apiClient.delete(`/api/admin/users/${id}`);
         alert(`Institutional Purge Complete: ${name} and all associated data have been removed.`);
         fetchAdminData();
       } catch (err) {
@@ -480,7 +480,7 @@ const AdminPortal = () => {
 
   const handleRequestMasterOtp = async () => {
     try {
-      await apiClient.post(`/api/admin/master/otp?masterId=${currentUser?.username || currentUser?.id || 'lawezy76'}`);
+      await apiClient.post(`/api/admin/master/otp`);
       setOtpSent(true);
       setAlertMessage("Institutional Security Code dispatched to secure terminal (lawezy2025@gmail.com).");
       setAlertLevel("SUCCESS");
@@ -492,7 +492,7 @@ const AdminPortal = () => {
 
   const handleCreateAdmin = async () => {
     try {
-      await apiClient.post(`/api/admin/master/create-admin?masterId=${currentUser?.username || currentUser?.id || 'lawezy76'}&otp=${masterOtp}`, newAdminData);
+      await apiClient.post(`/api/admin/master/create-admin?otp=${masterOtp}`, newAdminData);
       setAlertMessage("Institutional Admin account provisioned successfully.");
       setAlertLevel("SUCCESS");
       setOtpSent(false);
@@ -507,7 +507,7 @@ const AdminPortal = () => {
 
   const handleUpdateAdminPermissions = async (adminId, permissions) => {
     try {
-      await apiClient.put(`/api/admin/administrators/${adminId}/permissions?masterId=${currentUser?.username || currentUser?.id || 'lawezy76'}`, { permissions });
+      await apiClient.put(`/api/admin/administrators/${adminId}/permissions`, { permissions });
       setAlertMessage("Administrative permissions updated successfully.");
       setAlertLevel("SUCCESS");
       fetchAdminData();
@@ -520,7 +520,7 @@ const AdminPortal = () => {
   const handleDeleteAdmin = async (adminId) => {
     if (!window.confirm("CRITICAL ACTION: Permanently revoke administrative access and purge this identity?")) return;
     try {
-      await apiClient.delete(`/api/admin/administrators/${adminId}?masterId=${currentUser?.username || currentUser?.id || 'lawezy76'}`);
+      await apiClient.delete(`/api/admin/administrators/${adminId}?otp=${masterOtp}`); // Added OTP to delete for safety if needed, or just remove if not needed. Wait, my backend change added OTP.
       setAlertMessage("Administrative identity revoked and purged.");
       setAlertLevel("SUCCESS");
       fetchAdminData();

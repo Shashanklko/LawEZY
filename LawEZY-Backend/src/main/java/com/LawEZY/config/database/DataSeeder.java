@@ -5,9 +5,13 @@ import com.LawEZY.user.enums.Role;
 import com.LawEZY.user.service.UserService;
 import com.LawEZY.user.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
+
 @Component
+@ConditionalOnProperty(name = "app.seed.enabled", havingValue = "true", matchIfMissing = true)
 public class DataSeeder implements CommandLineRunner {
 
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(DataSeeder.class);
@@ -18,12 +22,22 @@ public class DataSeeder implements CommandLineRunner {
     @Autowired
     private UserRepository userRepository;
 
+    @Value("${app.seed.admin-password}")
+    private String adminPass;
+
+    @Value("${app.seed.expert-password}")
+    private String expertPass;
+
+    @Value("${app.seed.client-password}")
+    private String clientPass;
+
     @Override
     public void run(String... args) throws Exception {
         log.info("🏛️ Starting Institutional Data Seeding...");
 
-        seedUser("shekhar Singh", "shekhar@test.com", "shekhar123", Role.CLIENT);
-        seedUser("shashi shekhar", "shashi@gmail.com", "shashi123", Role.LAWYER);
+        seedUser("shekhar Singh", "shekhar@test.com", clientPass, Role.CLIENT);
+        seedUser("shashi shekhar", "teach2005shashank@gmail.com", expertPass, Role.LAWYER);
+        seedUser("Master Admin", "lawezy2025", adminPass, Role.MASTER_ADMIN);
         log.info("✅ Institutional Data Seeding Complete.");
     }
 

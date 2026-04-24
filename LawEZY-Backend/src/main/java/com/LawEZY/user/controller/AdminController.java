@@ -117,7 +117,7 @@ public class AdminController {
         User user = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("Institutional Identity missing"));
         
         // Master Admin has absolute authority
-        if (user.getRole() == Role.MASTER_ADMIN || "lawezy76".equals(user.getId()) || "21LZ76AD".equals(user.getId())) {
+        if (user.getRole() == Role.MASTER_ADMIN) {
             return;
         }
 
@@ -864,7 +864,7 @@ public class AdminController {
         String requesterEmail = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
         User requester = userRepository.findByEmail(requesterEmail).orElse(null);
         
-        if (requester == null || (requester.getRole() != Role.MASTER_ADMIN && !"lawezy76".equals(requester.getId()))) {
+        if (requester == null || requester.getRole() != Role.MASTER_ADMIN) {
             return ResponseEntity.status(403).body(Map.of("error", "Access Denied: Master Identity required for user purge"));
         }
 
@@ -904,8 +904,11 @@ public class AdminController {
     }
 
     @PostMapping("/master/otp")
-    public ResponseEntity<Map<String, String>> sendMasterOtp(@RequestParam String masterId) {
-        if (!"lawezy76".equals(masterId)) {
+    public ResponseEntity<Map<String, String>> sendMasterOtp() {
+        String requesterEmail = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+        User requester = userRepository.findByEmail(requesterEmail).orElse(null);
+        
+        if (requester == null || requester.getRole() != Role.MASTER_ADMIN) {
             return ResponseEntity.status(403).body(Map.of("error", "Access Denied: Master Identity mismatch"));
         }
 
@@ -916,11 +919,13 @@ public class AdminController {
 
     @PostMapping("/master/create-admin")
     public ResponseEntity<Map<String, String>> createAdmin(
-            @RequestParam String masterId,
             @RequestParam String otp,
             @RequestBody Map<String, String> payload) {
         
-        if (!"lawezy76".equals(masterId)) {
+        String requesterEmail = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+        User requester = userRepository.findByEmail(requesterEmail).orElse(null);
+        
+        if (requester == null || requester.getRole() != Role.MASTER_ADMIN) {
             return ResponseEntity.status(403).body(Map.of("error", "Access Denied: Master Identity mismatch"));
         }
 
@@ -968,7 +973,7 @@ public class AdminController {
         log.setUserRole("MASTER_ADMIN");
         log.setEventType("CREATE_ADMIN");
         log.setSummary("Master Admin created new admin account: " + email + " with permissions: " + payload.getOrDefault("permissions", "VIEW_ONLY"));
-        log.setUserId("lawezy76");
+        log.setUserId(requester.getId());
         auditLogRepository.save(log);
 
         return ResponseEntity.ok(Map.of("message", "Institutional Admin account provisioned successfully", "adminId", newAdmin.getId()));
@@ -976,9 +981,16 @@ public class AdminController {
 
     @DeleteMapping("/administrators/{id}")
     @Transactional
-    public ResponseEntity<?> deleteAdministrator(@PathVariable String id, @RequestParam String masterId) {
-        if (!"lawezy76".equals(masterId) && !"21LZ76AD".equals(masterId)) {
+    public ResponseEntity<?> deleteAdministrator(@PathVariable String id, @RequestParam String otp) {
+        String requesterEmail = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+        User requester = userRepository.findByEmail(requesterEmail).orElse(null);
+        
+        if (requester == null || requester.getRole() != Role.MASTER_ADMIN) {
             return ResponseEntity.status(403).body(Map.of("error", "Access Denied: Master Identity mismatch"));
+        }
+        
+        if (!otpService.validateOtp(requester.getEmail(), otp, "MASTER_ADMIN_ACTION")) {
+             return ResponseEntity.status(401).body(Map.of("error", "Invalid Security Code"));
         }
 
         User admin = userRepository.findById(id).orElse(null);
@@ -986,7 +998,7 @@ public class AdminController {
             return ResponseEntity.badRequest().body(Map.of("error", "Invalid administrative identity"));
         }
 
-        if ("lawezy76".equals(id) || "21LZ76AD".equals(id)) {
+        if (admin.getRole() == Role.MASTER_ADMIN) {
             return ResponseEntity.badRequest().body(Map.of("error", "Cannot revoke Master Admin identity"));
         }
 
@@ -1012,7 +1024,7 @@ public class AdminController {
         log.setUserRole("MASTER_ADMIN");
         log.setEventType("REVOKE_ADMIN");
         log.setSummary("Master Admin permanently revoked administrative access for: " + admin.getEmail());
-        log.setUserId(masterId);
+        log.setUserId(requester.getId());
         auditLogRepository.save(log);
 
         return ResponseEntity.ok(Map.of("message", "Administrative identity revoked and purged successfully"));
@@ -1023,7 +1035,7 @@ public class AdminController {
         List<User> admins = userRepository.findByRoleIn(Arrays.asList(Role.ADMIN, Role.MASTER_ADMIN));
         // Decorate Master Admin with absolute authority in response
         admins.forEach(u -> {
-            if ("21LZ76AD".equals(u.getId()) || "lawezy76".equals(u.getId())) {
+            if (u.getRole() == Role.MASTER_ADMIN) {
                 u.setPermissions("FULL ACCESS");
             }
         });
@@ -1033,10 +1045,12 @@ public class AdminController {
     @PutMapping("/administrators/{id}/permissions")
     public ResponseEntity<Map<String, String>> updateAdminPermissions(
             @PathVariable String id,
-            @RequestParam String masterId,
             @RequestBody Map<String, String> payload) {
         
-        if (!"lawezy76".equals(masterId)) {
+        String requesterEmail = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+        User requester = userRepository.findByEmail(requesterEmail).orElse(null);
+        
+        if (requester == null || requester.getRole() != Role.MASTER_ADMIN) {
             return ResponseEntity.status(403).body(Map.of("error", "Access Denied: Master Identity mismatch"));
         }
 
@@ -1055,7 +1069,7 @@ public class AdminController {
         log.setUserRole("MASTER_ADMIN");
         log.setEventType("UPDATE_ADMIN_PERMISSIONS");
         log.setSummary("Master Admin updated permissions for " + admin.getEmail() + " to: " + newPermissions);
-        log.setUserId("lawezy76");
+        log.setUserId(requester.getId());
         auditLogRepository.save(log);
 
         return ResponseEntity.ok(Map.of("message", "Administrative permissions updated successfully"));

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Eye, EyeOff } from 'lucide-react';
 import apiClient from '../../../services/apiClient';
 import useAuthStore from '../../../store/useAuthStore';
 import './Login.css';
@@ -15,6 +16,12 @@ const Login = () => {
   const [showMfa, setShowMfa] = useState(false);
   const [mfaOtp, setMfaOtp] = useState('');
   const [mfaEmail, setMfaEmail] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showAdminPassword, setShowAdminPassword] = useState(false);
+  const [showHelpModal, setShowHelpModal] = useState(false);
+  const [helpEmail, setHelpEmail] = useState('');
+  const [helpQuery, setHelpQuery] = useState('');
+  const [helpLoading, setHelpLoading] = useState(false);
   const navigate = useNavigate();
   const setAuth = useAuthStore((state) => state.setAuth);
 
@@ -85,10 +92,28 @@ const Login = () => {
       } else {
         navigate('/');
       }
-    } catch (err) {
-      setError(err.response?.data?.message || 'Invalid MFA code.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleHelpSubmit = async (e) => {
+    e.preventDefault();
+    setHelpLoading(true);
+    try {
+      await apiClient.post('/api/support/query', {
+        name: email || 'GUEST',
+        email: helpEmail || email || 'Not Provided',
+        query: helpQuery,
+        role: role
+      });
+      alert('Your query has been sent to LawEZY Support. We will get back to you soon.');
+      setShowHelpModal(false);
+      setHelpQuery('');
+    } catch (err) {
+      alert('Failed to send query. Please try again later.');
+    } finally {
+      setHelpLoading(false);
     }
   };
 
@@ -225,7 +250,23 @@ const Login = () => {
                   </div>
                   <div className="login-group">
                     <label className="login-label">Admin Key</label>
-                    <input name="adminKey" type="password" placeholder="••••••••••••" className="login-input" required disabled={loading} />
+                    <div className="input-with-icon">
+                      <input 
+                        name="adminKey" 
+                        type={showAdminPassword ? "text" : "password"} 
+                        placeholder="••••••••••••" 
+                        className="login-input" 
+                        required 
+                        disabled={loading} 
+                      />
+                      <button 
+                        type="button" 
+                        className="password-toggle"
+                        onClick={() => setShowAdminPassword(!showAdminPassword)}
+                      >
+                        {showAdminPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
                   </div>
                   <button type="submit" className="btn-login-primary admin-btn" disabled={loading}>
                     <span>{loading ? 'INITIALIZING...' : 'INITIALIZE ACCESS'}</span>
@@ -275,7 +316,7 @@ const Login = () => {
                     <label className="login-label">Password</label>
                     <div className="input-with-icon">
                       <input 
-                        type="password" 
+                        type={showPassword ? "text" : "password"} 
                         className="login-input" 
                         placeholder="••••••••••••" 
                         value={password}
@@ -285,6 +326,13 @@ const Login = () => {
                       <div className="input-icon">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
                       </div>
+                      <button 
+                        type="button" 
+                        className="password-toggle"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
                     </div>
                   </div>
 
@@ -311,6 +359,61 @@ const Login = () => {
           </div>
         </div>
       </div>
+
+      {/* HELP FLOATING BUTTON */}
+      <button 
+        className="help-float-btn stagger-reveal delay-5" 
+        onClick={() => setShowHelpModal(true)}
+        title="Need Help?"
+      >
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+        <span>Support</span>
+      </button>
+
+      {/* HELP MODAL */}
+      {showHelpModal && (
+        <div className="help-modal-overlay" onClick={() => setShowHelpModal(false)}>
+          <div className="help-modal-content" onClick={e => e.stopPropagation()}>
+            <div className="help-header">
+              <h3>Institutional Support</h3>
+              <p>Send your query directly to our governance team.</p>
+            </div>
+            <form onSubmit={handleHelpSubmit} className="help-form">
+              <div className="login-group">
+                <label className="login-label">Your Email</label>
+                <input 
+                  type="email" 
+                  className="login-input" 
+                  placeholder="Where should we reply?"
+                  value={helpEmail}
+                  onChange={e => setHelpEmail(e.target.value)}
+                  required 
+                />
+              </div>
+              <div className="login-group">
+                <label className="login-label">Describe your query</label>
+                <textarea 
+                  className="help-textarea" 
+                  placeholder="How can we assist you today?"
+                  value={helpQuery}
+                  onChange={e => setHelpQuery(e.target.value)}
+                  required
+                ></textarea>
+              </div>
+              <div className="help-actions">
+                <button type="button" className="btn-cancel" onClick={() => setShowHelpModal(false)}>Cancel</button>
+                <button type="submit" className="btn-send" disabled={helpLoading}>
+                  {helpLoading ? 'Sending...' : 'Send Message'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

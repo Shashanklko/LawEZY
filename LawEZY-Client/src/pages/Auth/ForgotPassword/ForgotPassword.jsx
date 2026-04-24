@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Eye, EyeOff } from 'lucide-react';
 import apiClient from '../../../services/apiClient';
 import './ForgotPassword.css';
 
@@ -12,6 +13,8 @@ const ForgotPassword = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleRequestOtp = async (e) => {
     e.preventDefault();
@@ -101,25 +104,43 @@ const ForgotPassword = () => {
               </div>
               <div className="login-group">
                 <label className="login-label">New Password</label>
-                <input 
-                  type="password" 
-                  className="login-input" 
-                  placeholder="••••••••" 
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  required 
-                />
+                <div className="input-with-icon">
+                  <input 
+                    type={showPassword ? "text" : "password"} 
+                    className="login-input" 
+                    placeholder="••••••••" 
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    required 
+                  />
+                  <button 
+                    type="button" 
+                    className="password-toggle"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
               </div>
               <div className="login-group">
                 <label className="login-label">Confirm Password</label>
-                <input 
-                  type="password" 
-                  className="login-input" 
-                  placeholder="••••••••" 
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required 
-                />
+                <div className="input-with-icon">
+                  <input 
+                    type={showConfirmPassword ? "text" : "password"} 
+                    className="login-input" 
+                    placeholder="••••••••" 
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required 
+                  />
+                  <button 
+                    type="button" 
+                    className="password-toggle"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  >
+                    {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
               </div>
               <button type="submit" className="btn-login-primary" disabled={loading}>
                 {loading ? 'RESETTING...' : 'RESET PASSWORD'}

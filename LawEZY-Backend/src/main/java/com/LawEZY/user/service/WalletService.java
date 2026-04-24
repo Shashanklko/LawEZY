@@ -145,7 +145,7 @@ public class WalletService {
             transactionRepository.save(expertTxn);
 
             // 🛡️ Institutional Audit: Explicit Platform Commission Log (Attributed to Master Admin)
-            User masterAdmin = userRepository.findById("lawezy76").orElse(user);
+            User masterAdmin = userRepository.findByRole(com.LawEZY.user.enums.Role.MASTER_ADMIN).stream().findFirst().orElse(user);
             String platformDesc = String.format("Platform Fee (Ref: %d) - Client: %s", appt.getId(), clientId);
             FinancialTransaction platformTxn = createTxn(masterAdmin, platformDesc, platformCut, "COMPLETED");
             transactionRepository.save(platformTxn);
@@ -201,7 +201,7 @@ public class WalletService {
             transactionRepository.save(expertTxn);
 
             // 🛡️ Institutional Audit: Explicit Platform Commission Log (Attributed to Master Admin)
-            User masterAdmin = userRepository.findById("lawezy76").orElse(user);
+            User masterAdmin = userRepository.findByRole(com.LawEZY.user.enums.Role.MASTER_ADMIN).stream().findFirst().orElse(user);
             String platformDesc = String.format("Platform Fee (Ref: %d) - Client: %s", appt.getId(), userId);
             FinancialTransaction platformTxn = createTxn(masterAdmin, platformDesc, platformCut, "COMPLETED");
             transactionRepository.save(platformTxn);
