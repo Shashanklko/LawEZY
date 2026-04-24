@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import './ProfessionalNexus.css';
-import financeImg from '../../../../assets/homepage/CA.jpg';
+const financeImg = '/assets/homepage/CA.jpg';
 
 const ProfessionalNexus = () => {
   const [isVisible, setIsVisible] = useState(false);
