@@ -13,7 +13,7 @@ dotenv.config();
 const app = express();
 
 // CORS configuration: Restricted to institutional origins
-const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "http://localhost:5173,http://localhost:8080").split(',');
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "http://localhost:5173,http://localhost:8080,https://lawezy-sigma.vercel.app").split(',').map(o => o.trim());
 app.use(cors({
     origin: ALLOWED_ORIGINS,
     credentials: true
@@ -86,7 +86,7 @@ const ChatMessage = mongoose.model('ChatMessage', ChatMessageSchema);
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: process.env.ALLOWED_ORIGINS.split(','),
+        origin: ALLOWED_ORIGINS,
         methods: ["GET", "POST"]
     }
 });

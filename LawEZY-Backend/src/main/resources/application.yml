@@ -54,7 +54,7 @@ app:
   messenger:
     url: ${MESSENGER_URL:https://lawezy-messenger.onrender.com}
   cors:
-    allowed-origins: ${ALLOWED_ORIGINS:http://localhost:5173,https://lawezy.onrender.com}
+    allowed-origins: ${ALLOWED_ORIGINS:http://localhost:5173,https://lawezy.onrender.com,https://lawezy-sigma.vercel.app}
 
 # Institutional Razorpay Config
 razorpay:
