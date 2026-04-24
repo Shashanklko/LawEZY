@@ -98,8 +98,8 @@ public class AppointmentService {
         
         proposal.setBaseFee(baseFee);
         // Formula: Base (Expert share) + 15% commission + 5% handling = 20% Total Platform Earning
-        proposal.setFee(Math.round(baseFee * 1.20));
-        proposal.setPlatformFee(Math.round(baseFee * 0.20));
+        proposal.setFee((double) Math.round(baseFee * 1.20));
+        proposal.setPlatformFee((double) Math.round(baseFee * 0.20));
         
         proposal.setStatus("PROPOSED");
         proposal.setExpiresAt(LocalDateTime.now().plusHours(24));
@@ -170,8 +170,8 @@ public class AppointmentService {
             if (newBaseFee > 10000.0) newBaseFee = 10000.0;
             
             appt.setBaseFee(newBaseFee);
-            appt.setFee(Math.round(newBaseFee * 1.20));
-            appt.setPlatformFee(Math.round(newBaseFee * 0.20));
+            appt.setFee((double) Math.round(newBaseFee * 1.20));
+            appt.setPlatformFee((double) Math.round(newBaseFee * 0.20));
         }
         
         appt.setStatus("COUNTERED");
