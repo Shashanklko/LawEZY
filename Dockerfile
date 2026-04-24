@@ -40,5 +40,5 @@ ENV BACKEND_PORT=8082
 # Expose Render's entry port
 EXPOSE 8080
 
-# Start Supervisor
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+# Start Supervisor after fixing Nginx port
+CMD ["/bin/sh", "-c", "sed -i \"s/listen 8080;/listen ${PORT:-8080};/g\" /etc/nginx/sites-available/default && /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf"]
