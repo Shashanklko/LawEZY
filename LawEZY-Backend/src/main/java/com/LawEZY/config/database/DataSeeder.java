@@ -24,9 +24,6 @@ public class DataSeeder implements CommandLineRunner {
 
         seedUser("shekhar Singh", "shekhar@test.com", "shekhar123", Role.CLIENT);
         seedUser("shashi shekhar", "shashi@gmail.com", "shashi123", Role.LAWYER);
-        seedUser("sri nayan", "srinayan@test.com", "srinayan123", Role.CA);
-        seedUser("Chartered Expert", "cfa@test.com", "cfa123", Role.CFA);
-
         log.info("✅ Institutional Data Seeding Complete.");
     }
 
