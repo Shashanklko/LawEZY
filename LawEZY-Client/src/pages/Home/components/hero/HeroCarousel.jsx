@@ -5,7 +5,7 @@ import './HeroCarousel.css';
 const images = [
   {
     id: "01",
-    url: '/src/assets/homepage/family-lawyer.png',
+    url: '/assets/homepage/family-lawyer.png',
     title: 'Modern Advice for Your Life & Business',
     body: 'LawEZY brings expert legal and financial help to everyone. Whether you are starting a business or protecting your family, we provide clear, honest advice to help you move forward with confidence.',
     cta: 'See how we can help',
@@ -13,7 +13,7 @@ const images = [
   },
   {
     id: "02",
-    url: '/src/assets/homepage/Lawyer-meeting.png',
+    url: '/assets/homepage/Lawyer-meeting.png',
     title: 'Easy Solutions for Every Growth Stage',
     body: 'Empowering individuals and growing startups with the same tools used by big firms. We make professional expertise simple, affordable, and accessible for your unique journey.',
     cta: 'Explore our services',
@@ -21,7 +21,7 @@ const images = [
   },
   {
     id: "03",
-    url: '/src/assets/homepage/CA_meeting.png',
+    url: '/assets/homepage/CA_meeting.png',
     title: 'The Perfect Partner for Your Ambition',
     body: 'Where your goals meet the experts who can make them happen. Our technology connects you with the right professionals instantly, giving you a real advantage in every decision.',
     cta: 'Discover LawinoAI',

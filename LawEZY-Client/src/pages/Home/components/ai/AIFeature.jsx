@@ -56,7 +56,7 @@ const AIFeature = () => {
             <div className="device-frame desktop-frame">
               <div className="frame-header-dots"><span></span><span></span><span></span></div>
               <img 
-                src="/src/assets/homepage/lawino_desktop.png" 
+                src="/assets/homepage/lawino_desktop.png" 
                 alt="Lawino AI Desktop Interface" 
                 className="preview-img desktop"
                 loading="lazy"
@@ -67,7 +67,7 @@ const AIFeature = () => {
             <div className="device-frame mobile-frame">
               <div className="mobile-bezel-line"></div>
               <img 
-                src="/src/assets/homepage/lawino_mobile.png" 
+                src="/assets/homepage/lawino_mobile.png" 
                 alt="Lawino AI Mobile Interface" 
                 className="preview-img mobile"
                 loading="lazy"
