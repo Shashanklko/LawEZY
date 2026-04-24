@@ -199,3 +199,4 @@ const Newsroom = ({ layout = 'horizontal' }) => {
 };
 
 export default Newsroom;
+

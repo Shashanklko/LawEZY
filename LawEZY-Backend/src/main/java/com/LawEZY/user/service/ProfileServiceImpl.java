@@ -15,6 +15,8 @@ import java.util.Optional;
 @Service
 public class ProfileServiceImpl implements ProfileService {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ProfileServiceImpl.class);
+
     @Autowired private UserRepository userRepository;
     @Autowired private LawyerProfileRepository lawyerRepo;
     @Autowired private CAProfileRepository caRepo;
@@ -22,6 +24,18 @@ public class ProfileServiceImpl implements ProfileService {
     @Autowired private ClientProfileRepository clientRepo;
     @Autowired private WalletRepository walletRepo;
     @Autowired private ObjectMapper objectMapper;
+    @Autowired private AdminBroadcastService adminBroadcastService;
+
+    private boolean objectsEqual(Object a, Object b) {
+        String s1 = (a == null) ? "" : a.toString().trim();
+        String s2 = (b == null) ? "" : b.toString().trim();
+        
+        // Handle JSON array variations (e.g. null vs [])
+        if (s1.equals("[]") && s2.isEmpty()) return true;
+        if (s2.equals("[]") && s1.isEmpty()) return true;
+        
+        return s1.equals(s2);
+    }
 
     @Override
     public Object getMyProfile(String email) {
@@ -131,66 +145,122 @@ public class ProfileServiceImpl implements ProfileService {
 
         if (role == Role.LAWYER) {
             LawyerProfile p = lawyerRepo.findByUserId(userId).orElse(new LawyerProfile());
+            
+            // Capture state for re-verification audit
+            String oldLic = p.getBarLicenseNumber();
+            String oldAuth = p.getIssuingAuthority();
+            String oldLink = p.getLicenseDriveLink();
+            String oldEdu = p.getEducationHistory();
+
             p.setId(userId); p.setUser(user);
             updateBaseFields(p, data);
             validateProfessionalMandatories(data, "Bar License Number");
-            p.setBarLicenseNumber((String) data.getOrDefault("licenseNumber", data.get("barLicenseNumber")));
-            p.setIssuingAuthority((String) data.get("issuingAuthority"));
-            p.setLicenseDriveLink((String) data.get("licenseDriveLink"));
+            
+            String newLic = (String) data.getOrDefault("licenseNumber", data.get("barLicenseNumber"));
+            String newAuth = (String) data.get("issuingAuthority");
+            String newLink = (String) data.get("licenseDriveLink");
+            String newEdu = json(data.get("educationList"));
+
+            // CHANGE DETECTION: Reset verification if critical identity data changed
+            boolean criticalChange = !objectsEqual(oldLic, newLic) || 
+                                     !objectsEqual(oldAuth, newAuth) || 
+                                     !objectsEqual(oldLink, newLink) || 
+                                     !objectsEqual(oldEdu, newEdu);
+
+            p.setBarLicenseNumber(newLic);
+            p.setIssuingAuthority(newAuth);
+            p.setLicenseDriveLink(newLink);
             p.setYoutubeLink((String) data.get("youtubeLink"));
             p.setLinkedinLink((String) data.get("linkedinLink"));
             p.setWebsiteLink((String) data.get("websiteLink"));
             p.setConsultationFee(data.get("consultationFee") != null ? Double.valueOf(data.get("consultationFee").toString()) : 499.0);
             p.setDomains(json(data.get("domains")));
-            p.setEducationHistory(json(data.get("educationList")));
+            p.setEducationHistory(newEdu);
             p.setExperienceHistory(json(data.get("experienceList")));
             p.setExperienceSnapshots(json(data.get("experienceSnapshots")));
             
-            // Allow explicit verification trigger while defaulting to false for normal updates
-            boolean isExplicitAudit = data.containsKey("verified") && (Boolean) data.get("verified");
-            p.setVerified(isExplicitAudit);
+            if (criticalChange) {
+                p.setVerified(false);
+                log.warn("[GOVERNANCE] Profile {} updated critical credentials. Verification status reset to PENDING.", userId);
+            }
             
             savedProfile = lawyerRepo.save(p);
         }
 
         else if (role == Role.CA) {
             CAProfile p = caRepo.findByUserId(userId).orElse(new CAProfile());
+            
+            String oldLic = p.getMembershipNumber();
+            String oldAuth = p.getIssuingAuthority();
+            String oldLink = p.getLicenseDriveLink();
+            String oldEdu = p.getEducationHistory();
+
             p.setId(userId); p.setUser(user);
             updateBaseFields(p, data);
             validateProfessionalMandatories(data, "Membership Number");
-            p.setMembershipNumber((String) data.getOrDefault("licenseNumber", data.get("membershipNumber")));
-            p.setIssuingAuthority((String) data.get("issuingAuthority"));
-            p.setLicenseDriveLink((String) data.get("licenseDriveLink"));
+            
+            String newLic = (String) data.getOrDefault("licenseNumber", data.get("membershipNumber"));
+            String newAuth = (String) data.get("issuingAuthority");
+            String newLink = (String) data.get("licenseDriveLink");
+            String newEdu = json(data.get("educationList"));
+
+            boolean criticalChange = !objectsEqual(oldLic, newLic) || 
+                                     !objectsEqual(oldAuth, newAuth) || 
+                                     !objectsEqual(oldLink, newLink) || 
+                                     !objectsEqual(oldEdu, newEdu);
+
+            p.setMembershipNumber(newLic);
+            p.setIssuingAuthority(newAuth);
+            p.setLicenseDriveLink(newLink);
             p.setConsultationFee(data.get("consultationFee") != null ? Double.valueOf(data.get("consultationFee").toString()) : 499.0);
             p.setDomains(json(data.get("domains")));
-            p.setEducationHistory(json(data.get("educationList")));
+            p.setEducationHistory(newEdu);
             p.setExperienceHistory(json(data.get("experienceList")));
             p.setExperienceSnapshots(json(data.get("experienceSnapshots")));
 
-            // Allow explicit verification trigger
-            boolean isExplicitAudit = data.containsKey("verified") && (Boolean) data.get("verified");
-            p.setVerified(isExplicitAudit);
+            if (criticalChange) {
+                p.setVerified(false);
+                log.warn("[GOVERNANCE] Profile {} updated critical credentials. Verification status reset to PENDING.", userId);
+            }
 
             savedProfile = caRepo.save(p);
         }
         
         else if (role == Role.CFA) {
             CFAProfile p = cfaRepo.findByUserId(userId).orElse(new CFAProfile());
+            
+            String oldLic = p.getCharterNumber();
+            String oldAuth = p.getIssuingAuthority();
+            String oldLink = p.getLicenseDriveLink();
+            String oldEdu = p.getEducationHistory();
+
             p.setId(userId); p.setUser(user);
             updateBaseFields(p, data);
             validateProfessionalMandatories(data, "Charter Number");
-            p.setCharterNumber((String) data.getOrDefault("licenseNumber", data.get("charterNumber")));
-            p.setIssuingAuthority((String) data.get("issuingAuthority"));
-            p.setLicenseDriveLink((String) data.get("licenseDriveLink"));
+            
+            String newLic = (String) data.getOrDefault("licenseNumber", data.get("charterNumber"));
+            String newAuth = (String) data.get("issuingAuthority");
+            String newLink = (String) data.get("licenseDriveLink");
+            String newEdu = json(data.get("educationList"));
+
+            boolean criticalChange = !objectsEqual(oldLic, newLic) || 
+                                     !objectsEqual(oldAuth, newAuth) || 
+                                     !objectsEqual(oldLink, newLink) || 
+                                     !objectsEqual(oldEdu, newEdu);
+
+            p.setCharterNumber(newLic);
+            p.setIssuingAuthority(newAuth);
+            p.setLicenseDriveLink(newLink);
             p.setConsultationFee(data.get("consultationFee") != null ? Double.valueOf(data.get("consultationFee").toString()) : 499.0);
             p.setDomains(json(data.get("domains")));
-            p.setEducationHistory(json(data.get("educationList")));
+            p.setEducationHistory(newEdu);
             p.setExperienceHistory(json(data.get("experienceList")));
             p.setExperienceSnapshots(json(data.get("experienceSnapshots")));
             
-            // Allow explicit verification trigger
-            boolean isExplicitAudit = data.containsKey("verified") && (Boolean) data.get("verified");
-            p.setVerified(isExplicitAudit);
+            if (criticalChange) {
+                p.setVerified(false);
+                log.warn("[GOVERNANCE] Profile {} updated critical credentials. Verification status reset to PENDING.", userId);
+            }
             
             savedProfile = cfaRepo.save(p);
         }
@@ -202,6 +272,22 @@ public class ProfileServiceImpl implements ProfileService {
             p.setPhoneNumber((String) data.get("phone"));
             p.setAddress((String) data.get("address"));
             savedProfile = clientRepo.save(p);
+        }
+
+        // 🚀 REAL-TIME BROADCAST: Update Admin Portal for Professional Updates
+        if (role != Role.CLIENT) {
+            try {
+                String name = (String) data.getOrDefault("firstName", user.getFirstName()) + " " + 
+                              (String) data.getOrDefault("lastName", user.getLastName());
+                adminBroadcastService.broadcastAdminEvent("PROFILE_UPDATE", Map.of(
+                    "userId", userId,
+                    "name", name,
+                    "role", role.name(),
+                    "summary", "Expert updated their professional dossier. Audit may be required."
+                ));
+            } catch (Exception e) {
+                log.warn("Institutional Broadcast failed for profile update: {}", e.getMessage());
+            }
         }
 
         return enrichProfileResponse(savedProfile, user);
@@ -221,6 +307,13 @@ public class ProfileServiceImpl implements ProfileService {
         if (isEmpty(data.get("bio")) || data.get("bio").toString().length() < 50) 
             throw new RuntimeException("Validation Failed: Professional Biography must be high-density (min 50 chars).");
         if (isEmpty(data.get("educationList"))) throw new RuntimeException("Validation Failed: Your Academic Pedigree (Education) is required for verification.");
+        
+        // Institutional Bank Settlement Validation
+        if (isEmpty(data.get("bankName"))) throw new RuntimeException("Validation Failed: Bank Name is mandatory for institutional payouts.");
+        if (isEmpty(data.get("accountNumber"))) throw new RuntimeException("Validation Failed: Account Number is mandatory for payouts.");
+        if (isEmpty(data.get("ifscCode"))) throw new RuntimeException("Validation Failed: IFSC Code is mandatory for bank transfers.");
+        if (isEmpty(data.get("accountHolderName"))) throw new RuntimeException("Validation Failed: Account Holder Name is mandatory.");
+        if (isEmpty(data.get("upiId"))) throw new RuntimeException("Validation Failed: UPI ID is mandatory for rapid settlements.");
         
         // Fee validation - ensure it's a valid number before parsing
         Object fee = data.get("consultationFee");
@@ -252,9 +345,36 @@ public class ProfileServiceImpl implements ProfileService {
         p.setTitle((String) data.getOrDefault("title", p.getTitle()));
         p.setLocation((String) data.getOrDefault("location", p.getLocation()));
         p.setBio((String) data.getOrDefault("bio", p.getBio()));
-        p.setUid((String) data.getOrDefault("uid", p.getUid()));
         p.setPhoneNumber((String) data.getOrDefault("phone", data.getOrDefault("phoneNumber", p.getPhoneNumber())));
         p.setExperience((String) data.getOrDefault("experience", p.getExperience()));
+        
+        // INSTITUTIONAL FEE SYNC: Persist time-based consultation settings
+        if (data.containsKey("textChatFee")) {
+            try {
+                p.setTextChatFee(Double.valueOf(data.get("textChatFee").toString()));
+            } catch (Exception e) {
+                log.warn("[GOVERNANCE] Invalid textChatFee format for user {}: {}", p.getId(), data.get("textChatFee"));
+            }
+        }
+        
+        if (data.containsKey("chatDurationMinutes")) {
+            try {
+                p.setChatDurationMinutes(Integer.valueOf(data.get("chatDurationMinutes").toString()));
+            } catch (Exception e) {
+                log.warn("[GOVERNANCE] Invalid chatDurationMinutes format for user {}: {}", p.getId(), data.get("chatDurationMinutes"));
+            }
+        }
+        
+        if (data.containsKey("customGreeting")) {
+            p.setCustomGreeting((String) data.get("customGreeting"));
+        }
+
+        // SYNC BANKING COORDINATES
+        p.setBankName((String) data.getOrDefault("bankName", p.getBankName()));
+        p.setAccountNumber((String) data.getOrDefault("accountNumber", p.getAccountNumber()));
+        p.setIfscCode((String) data.getOrDefault("ifscCode", p.getIfscCode()));
+        p.setAccountHolderName((String) data.getOrDefault("accountHolderName", p.getAccountHolderName()));
+        p.setUpiId((String) data.getOrDefault("upiId", p.getUpiId()));
     }
 
     private String json(Object obj) {

@@ -54,6 +54,9 @@ const ReviewModal = ({ appointment, onClose, onSuccess }) => {
                     <p style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '8px', fontWeight: 600 }}>
                         Consultation with {appointment.expertName || 'Expert'}
                     </p>
+                    <div style={{ marginTop: '15px', padding: '10px', background: 'rgba(16, 185, 129, 0.05)', borderRadius: '10px', border: '1px solid rgba(16, 185, 129, 0.1)', fontSize: '0.75rem', color: '#059669', fontWeight: 700 }}>
+                        🔒 ACTION: Confirming this session will release the held payment from the vault to the expert.
+                    </div>
                 </div>
 
                 <form onSubmit={handleSubmit}>
@@ -88,7 +91,7 @@ const ReviewModal = ({ appointment, onClose, onSuccess }) => {
                             Professional Testimonial (Optional)
                         </label>
                         <textarea
-                            value={comment}
+                            value={comment || ''}
                             onChange={(e) => setComment(e.target.value)}
                             placeholder="Share your institutional experience..."
                             style={{
@@ -133,3 +136,4 @@ const ReviewModal = ({ appointment, onClose, onSuccess }) => {
 };
 
 export default ReviewModal;
+

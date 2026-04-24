@@ -1,7 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './AIFeature.css';
 
 const AIFeature = () => {
+  const navigate = useNavigate();
   const [isVisible, setIsVisible] = useState(false);
   const sectionRef = useRef(null);
 
@@ -39,7 +41,7 @@ const AIFeature = () => {
           </p>
 
           <div className="ai-action-row">
-            <button className="btn-ai-launch">
+            <button className="btn-ai-launch" onClick={() => navigate('/lawino-ai')}>
               Ask Your Queries to Lawino <span className="btn-arrow">→</span>
             </button>
           </div>
@@ -79,3 +81,4 @@ const AIFeature = () => {
 };
 
 export default AIFeature;
+

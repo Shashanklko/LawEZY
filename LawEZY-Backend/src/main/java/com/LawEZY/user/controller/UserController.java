@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 @RestController
 @RequestMapping("/api/users")
@@ -29,6 +30,7 @@ public class UserController {
 
     // Now returns a UserResponse instead of the Entity
     @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or #id == principal.id")
     public ResponseEntity<UserResponse> getUserById(@PathVariable String id){
         UserResponse getUser = userService.getUserById(id);
         return ResponseEntity.status(HttpStatus.OK).body(getUser);    
@@ -36,6 +38,7 @@ public class UserController {
 
     // Now returns a List of UserResponse
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<UserResponse>> getAllUsers(){
         List<UserResponse> getAllUser = userService.getAllUsers();
         return ResponseEntity.status(HttpStatus.OK).body(getAllUser);   
@@ -43,18 +46,21 @@ public class UserController {
 
     // Notice we use @Valid here too, because updating needs to follow the same rules as creating!
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or #id == principal.id")
     public ResponseEntity<UserResponse> updateUser(@PathVariable String id, @Valid @RequestBody UserRequest userRequest){
         UserResponse updateuser = userService.updateUser(id, userRequest);
         return ResponseEntity.status(HttpStatus.OK).body(updateuser);
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or #id == principal.id")
     public ResponseEntity<Void> deleteUser(@PathVariable String id){
         userService.deleteUser(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build(); // 204 No Content
     }
 
     @PostMapping("/{id}/change-password")
+    @PreAuthorize("#id == principal.id")
     public ResponseEntity<String> changePassword(@PathVariable String id, @RequestBody java.util.Map<String, String> payload) {
         userService.changePassword(id, payload.get("current"), payload.get("new"));
         return ResponseEntity.ok("Password updated successfully");

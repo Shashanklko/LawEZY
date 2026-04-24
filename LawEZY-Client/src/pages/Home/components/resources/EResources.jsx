@@ -30,30 +30,35 @@ const EResources = () => {
     {
       id: 1,
       category: 'Corporate Law',
+      catId: 'corp',
       description: 'Master Corporate compliance, international contract frameworks, and M&A legalities.',
       icon: '🏛️'
     },
     {
       id: 2,
       category: 'Taxation & Tax',
+      catId: 'tax',
       description: 'Deep-dive into Direct/Indirect taxation, GST optimization, and tax-efficient structures.',
       icon: '📊'
     },
     {
       id: 3,
       category: 'Real Estate',
+      catId: 'other',
       description: 'Navigating property acquisition, high-value leasing, and Mumbai land-law specializations.',
       icon: '🏡'
     },
     {
       id: 4,
       category: 'IP & Startup',
+      catId: 'ip',
       description: 'Protecting innovation through Trademark, Patent law, and fundraising compliance.',
       icon: '💡'
     },
     {
       id: 5,
       category: 'Labor & HR',
+      catId: 'other',
       description: 'Optimizing human growth through employment law, ESOP frameworks, and benefit compliance.',
       icon: '👥'
     }
@@ -82,7 +87,12 @@ const EResources = () => {
             </div>
             <h3 className="cardTitle">{res.category}</h3>
             <p className="cardDesc">{res.description}</p>
-            <button className="cardAction">Get Access →</button>
+            <button 
+              className="cardAction" 
+              onClick={() => navigate(`/library?category=${res.catId}`)}
+            >
+              Get Access →
+            </button>
           </div>
         ))}
         
@@ -100,3 +110,4 @@ const EResources = () => {
 };
 
 export default EResources;
+

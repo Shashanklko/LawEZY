@@ -13,37 +13,46 @@ import java.util.List;
 import java.util.Map;
 
 @Service
-@RequiredArgsConstructor
-@Slf4j
 public class NotificationService {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(NotificationService.class);
 
     private final NotificationRepository notificationRepository;
+
+    public NotificationService(NotificationRepository notificationRepository) {
+        this.notificationRepository = notificationRepository;
+    }
     private final RestTemplate restTemplate = new RestTemplate();
 
     @Value("${app.messenger.url}")
     private String messengerUrl;
 
+    @Value("${app.internal.secret}")
+    private String internalSecret;
+
     public Notification sendNotification(String userId, String title, String message, String type, String category, String actionLink) {
         // 1. Persist to MongoDB
-        Notification notification = Notification.builder()
-                .userId(userId)
-                .title(title)
-                .message(message)
-                .type(type)
-                .category(category != null ? category : inferCategory(type))
-                .actionLink(actionLink)
-                .build();
+        Notification notification = new Notification();
+        notification.setUserId(userId);
+        notification.setTitle(title);
+        notification.setMessage(message);
+        notification.setType(type);
+        notification.setCategory(category != null ? category : inferCategory(type));
+        notification.setActionLink(actionLink);
         
         Notification saved = notificationRepository.save(notification);
         log.info("🔔 [NOTIFICATION] Saved alert for user {}: {} [{}]", userId, title, category);
 
-        // 2. Trigger Real-Time Relay via Messenger Bridge
+        // 2. Trigger Real-Time Relay via Messenger Bridge (Protected)
         try {
             Map<String, Object> payload = new HashMap<>();
             payload.put("userId", userId);
             payload.put("notification", saved);
             
-            restTemplate.postForObject(messengerUrl + "/api/internal/emit-notification", payload, String.class);
+            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+            headers.set("X-Internal-Secret", internalSecret);
+            org.springframework.http.HttpEntity<Map<String, Object>> entity = new org.springframework.http.HttpEntity<>(payload, headers);
+            
+            restTemplate.postForObject(messengerUrl + "/api/internal/emit-notification", entity, String.class);
             log.info("🛰️ [RELAY] Real-time pulse sent to Messenger for user {}", userId);
         } catch (Exception e) {
             log.warn("🛰️ [RELAY SILENT] Messenger bridge skipped or inactive. Local persistence confirmed.");

@@ -19,13 +19,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
-import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 
 @Service
-@Slf4j
 public class PostService {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(PostService.class);
 
     @Autowired
     private PostRepository postRepository;
@@ -41,6 +40,8 @@ public class PostService {
 
     @Autowired
     private NotificationService notificationService;
+    @Autowired
+    private com.LawEZY.user.service.AdminBroadcastService adminBroadcastService;
 
     public Post createPost(@NonNull PostRequest request) {
         String identifier = request.getAuthorId();
@@ -62,7 +63,17 @@ public class PostService {
         post.setType(request.getType());
         post.setTags(request.getTags() != null ? request.getTags() : new java.util.ArrayList<>());
         post.setPoll(request.getPoll());
-        return postRepository.save(post);
+        Post saved = postRepository.save(post);
+
+        // 🚀 REAL-TIME BROADCAST: Community Engagement
+        adminBroadcastService.broadcastAdminEvent("NEW_POST", java.util.Map.of(
+            "postId", saved.getId(),
+            "author", saved.getAuthorName(),
+            "title", saved.getTitle(),
+            "type", saved.getType().name()
+        ));
+
+        return saved;
     }
 
     @NonNull
@@ -148,8 +159,8 @@ public class PostService {
 
     public Post updatePost(@NonNull String postId, @NonNull String identifier, @NonNull PostRequest request) {
         Post post = getPostById(postId);
-        String requesterUid = resolveUid(identifier);
-        if (!post.getAuthorId().equals(requesterUid)) {
+        String requesterId = resolveToUserId(identifier);
+        if (!post.getAuthorId().equals(requesterId)) {
             throw new RuntimeException("Unauthorized: Only the author can update this post.");
         }
         post.setTitle(request.getTitle());
@@ -160,8 +171,8 @@ public class PostService {
 
     public void deletePost(@NonNull String postId, @NonNull String identifier) {
         Post post = getPostById(postId);
-        String requesterUid = resolveUid(identifier);
-        if (!post.getAuthorId().equals(requesterUid)) {
+        String requesterId = resolveToUserId(identifier);
+        if (!post.getAuthorId().equals(requesterId)) {
             throw new RuntimeException("Unauthorized: Only the author can delete this post.");
         }
         postRepository.delete(post);
@@ -214,7 +225,7 @@ public class PostService {
         return user.getEmail(); // Fallback to email if names are not set
     }
 
-    private String resolveUid(String identifier) {
+    private String resolveToUserId(String identifier) {
         if (identifier == null) return null;
         if (!identifier.contains("@")) return identifier;
         return userRepository.findByEmail(identifier)

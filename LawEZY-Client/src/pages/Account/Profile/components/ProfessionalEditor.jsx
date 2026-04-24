@@ -25,7 +25,15 @@ const ProfessionalEditor = ({ role, uid, profile, onUpdate }) => {
         experienceSnapshots: profile?.experienceSnapshots || [],
         email: profile?.email || '',
         phone: profile?.phoneNumber || '',
-        experience: profile?.experience || ''
+        experience: profile?.experience || '',
+        textChatFee: profile?.textChatFee || 100,
+        chatDurationMinutes: profile?.chatDurationMinutes || 20,
+        bankName: profile?.bankName || '',
+        accountNumber: profile?.accountNumber || '',
+        ifscCode: profile?.ifscCode || '',
+        accountHolderName: profile?.accountHolderName || '',
+        upiId: profile?.upiId || '',
+        docAuditFee: 0 // Decommissioned
     });
 
 
@@ -43,7 +51,15 @@ const ProfessionalEditor = ({ role, uid, profile, onUpdate }) => {
                 experienceSnapshots: profile.experienceSnapshots || [],
                 email: profile.email || prev.email || '',
                 phone: profile.phoneNumber || prev.phone || '',
-                experience: profile.experience || prev.experience || ''
+                experience: profile.experience || prev.experience || '',
+                textChatFee: profile.textChatFee || prev.textChatFee || 100,
+                chatDurationMinutes: profile.chatDurationMinutes || prev.chatDurationMinutes || 20,
+                bankName: profile.bankName || prev.bankName || '',
+                accountNumber: profile.accountNumber || prev.accountNumber || '',
+                ifscCode: profile.ifscCode || prev.ifscCode || '',
+                accountHolderName: profile.accountHolderName || prev.accountHolderName || '',
+                upiId: profile.upiId || prev.upiId || '',
+                docAuditFee: 0
             }));
 
         }
@@ -181,8 +197,28 @@ const ProfessionalEditor = ({ role, uid, profile, onUpdate }) => {
                 return;
             }
 
-            if (!formData.consultationFee || formData.consultationFee < 99) {
-                setMessage({ type: 'error', text: 'Institutional Audit: Minimum Consultation Fee is ₹99 for premium sessions.' });
+            if (!formData.consultationFee || formData.consultationFee < 500) {
+                setMessage({ type: 'error', text: 'Institutional Audit: Minimum Consultation Fee is ₹500 for premium sessions.' });
+                setSaving(false);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                return;
+            }
+            if (formData.consultationFee > 10000) {
+                setMessage({ type: 'error', text: 'Institutional Audit: Maximum Consultation Fee is capped at ₹10,000.' });
+                setSaving(false);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                return;
+            }
+            
+            if (formData.textChatFee < 50 || formData.textChatFee > 250) {
+                 setMessage({ type: 'error', text: 'Institutional Audit: Text Message blocks must be between ₹50 and ₹250.' });
+                 setSaving(false);
+                 window.scrollTo({ top: 0, behavior: 'smooth' });
+                 return;
+            }
+
+            if (!formData.bankName || !formData.accountNumber || !formData.ifscCode || !formData.accountHolderName || !formData.upiId) {
+                setMessage({ type: 'error', text: 'Institutional Audit: Complete Bank Details are mandatory for professional payouts.' });
                 setSaving(false);
                 window.scrollTo({ top: 0, behavior: 'smooth' });
                 return;
@@ -190,12 +226,18 @@ const ProfessionalEditor = ({ role, uid, profile, onUpdate }) => {
 
             const res = await apiClient.put('/api/profiles/my', {
                 ...formData,
+                chatDurationMinutes: 10,
                 uid: uid
             });
+            
+            const isNowVerified = res.data.isVerified || res.data.verified;
             onUpdate(res.data);
+            
             setMessage({ 
                 type: 'success', 
-                text: 'Dossier synchronized. Your profile has been queued for a fresh Institutional Audit to verify your latest milestones.' 
+                text: isNowVerified 
+                    ? 'Dossier synchronized successfully. Your verified status remains active.' 
+                    : 'Dossier synchronized. Your profile has been queued for a fresh Institutional Audit to verify your latest credential updates.' 
             });
             window.scrollTo({ top: 0, behavior: 'smooth' });
         } catch (err) {
@@ -210,13 +252,6 @@ const ProfessionalEditor = ({ role, uid, profile, onUpdate }) => {
 
     return (
         <form className="professional-editor-form animate-reveal" onSubmit={handleSubmit}>
-            <div className={`verification-status-banner ${ (profile?.isVerified || profile?.verified) ? 'verified' : 'pending'}`}>
-                {(profile?.isVerified || profile?.verified) ? (
-                    <><span className="status-icon">🛡️</span> Your professional dossier is fully audited and active in the marketplace.</>
-                ) : (
-                    <><span className="status-icon">⏳</span> Verification Pending: Your latest dossier updates are in the institutional audit queue.</>
-                )}
-            </div>
             <div className="form-section highlight">
                 <h3 className="section-subtitle">Credential Identification</h3>
                 <div className="form-row">
@@ -442,37 +477,108 @@ const ProfessionalEditor = ({ role, uid, profile, onUpdate }) => {
             </div>
 
 
-            <div className="form-section">
-                <h3 className="section-subtitle">Liquidity & Settlement Controls <span className="mandatory-star">*</span></h3>
+            <div className="form-section highlight-settlement">
+                <h3 className="section-subtitle">Financial Settlement Coordinates <span className="mandatory-star">*</span></h3>
+                <p className="section-hint-text">Enter your precise bank details for institutional payouts and earnings withdrawals.</p>
+                
+                <div className="form-row">
+                    <div className="input-group">
+                        <label>Bank Name <span className="mandatory-star">*</span></label>
+                        <input name="bankName" value={formData.bankName || ''} onChange={handleChange} placeholder="e.g. HDFC Bank, ICICI Bank" required />
+                    </div>
+                    <div className="input-group">
+                        <label>Account Holder Name <span className="mandatory-star">*</span></label>
+                        <input name="accountHolderName" value={formData.accountHolderName || ''} onChange={handleChange} placeholder="As per Bank Records" required />
+                    </div>
+                </div>
+
+                <div className="form-row">
+                    <div className="input-group">
+                        <label>Account Number <span className="mandatory-star">*</span></label>
+                        <input name="accountNumber" value={formData.accountNumber || ''} onChange={handleChange} placeholder="Enter Full Account Number" required />
+                    </div>
+                    <div className="input-group">
+                        <label>IFSC Code <span className="mandatory-star">*</span></label>
+                        <input name="ifscCode" value={formData.ifscCode || ''} onChange={handleChange} placeholder="e.g. HDFC0001234" required />
+                    </div>
+                </div>
+
                 <div className="input-group">
-                    <label>Base Consultation Fee (₹ per Session) <span className="mandatory-star">*</span></label>
-                    <input type="number" name="consultationFee" value={formData.consultationFee || 0} onChange={handleChange} style={{ width: '200px', fontSize: '1.2rem', fontWeight: 'bold' }} required />
-                    
-                    <div className="fee-breakdown-box animate-reveal">
-                        <div className="fee-item client-view">
-                            <span className="fee-label">Client Pays:</span>
-                            <span className="fee-value">₹{Number(formData.consultationFee || 0) + 100}</span>
-                            <small>(Includes ₹100 Institutional Fee)</small>
+                    <label>UPI ID (Primary for Settlement) <span className="mandatory-star">*</span></label>
+                    <input name="upiId" value={formData.upiId || ''} onChange={handleChange} placeholder="e.g. username@okaxis" required />
+                </div>
+
+                <div className="section-footer-action">
+                    <button type="submit" className="btn-section-update" disabled={saving}>Update Bank Details</button>
+                </div>
+            </div>
+
+
+            <div className="form-section" style={{ gap: '15px' }}>
+                <h3 className="section-subtitle" style={{ marginBottom: '5px' }}>Liquidity & Settlement Controls <span className="mandatory-star">*</span></h3>
+                
+                <div className="controls-side-by-side" style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+                    {/* LEFT: SESSION FEES */}
+                    <div className="control-group-block" style={{ flex: 1, minWidth: '300px' }}>
+                        <label style={{ fontSize: '0.8rem', fontWeight: 700, opacity: 0.8 }}>Consultation (1:1 Session)</label>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '5px' }}>
+                            <span style={{ fontSize: '0.9rem', opacity: 0.6 }}>Payout:</span>
+                            <input type="number" name="consultationFee" value={formData.consultationFee || 0} onChange={handleChange} style={{ width: '100px', fontSize: '1rem', fontWeight: 'bold', padding: '6px' }} min="500" max="10000" required />
                         </div>
-                        <div className="fee-item expert-view">
-                            <span className="fee-label">Your Payout:</span>
-                            <span className="fee-value payout">₹{Number(formData.consultationFee || 0) - 50}</span>
-                            <small>(After ₹50 Platform Governance Fee)</small>
+                        <small style={{ fontSize: '0.65rem', opacity: 0.5 }}>Range: ₹500 - ₹10,000</small>
+                        
+                        <div className="fee-breakdown-box animate-reveal" style={{ marginTop: '10px', padding: '10px', background: 'rgba(0,0,0,0.02)', borderStyle: 'dashed' }}>
+                            <div className="fee-item client-view" style={{ marginBottom: '4px' }}>
+                                <span className="fee-label" style={{ fontSize: '0.5rem' }}>Client Total:</span>
+                                <span className="fee-value" style={{ fontSize: '0.9rem' }}>₹{Math.round(Number(formData.consultationFee || 0) * 1.2 + 50)}</span>
+                            </div>
+                            <small style={{ fontSize: '0.6rem', opacity: 0.5, lineHeight: 1 }}>Incl. 20% + Handling</small>
                         </div>
                     </div>
-                                    </div>
-                <div className="section-footer-action">
+
+                    {/* RIGHT: MESSAGE FEES */}
+                    <div className="control-group-block" style={{ flex: 1, minWidth: '300px', borderLeft: '1px solid var(--glass-border)', paddingLeft: '20px' }}>
+                        <label style={{ fontSize: '0.8rem', fontWeight: 700, opacity: 0.8 }}>Messaging (10 Min Block)</label>
+                        <div className="form-row" style={{ alignItems: 'center', gap: '8px', display: 'flex', marginTop: '5px' }}>
+                            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                <span style={{ fontSize: '0.9rem', opacity: 0.6 }}>Fee:</span>
+                                <input type="number" name="textChatFee" value={formData.textChatFee || 0} onChange={handleChange} style={{ width: '70px', fontSize: '1rem', padding: '6px' }} min="50" max="250" required />
+                            </div>
+                            <div style={{ width: '100px', padding: '6px', fontSize: '0.75rem', background: 'var(--heritage-stone)', borderRadius: '4px', textAlign: 'center', fontWeight: 700 }}>
+                                10 MINUTES
+                            </div>
+                        </div>
+                        <small style={{ fontSize: '0.65rem', opacity: 0.5 }}>Range: ₹50 - ₹250</small>
+                        
+                        <div className="fee-breakdown-box animate-reveal" style={{ marginTop: '10px', padding: '10px', background: 'rgba(67, 97, 238, 0.03)', borderStyle: 'dashed' }}>
+                             <div className="fee-item expert-view" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span className="fee-label" style={{ fontSize: '0.5rem' }}>Your 80%:</span>
+                                <span className="fee-value payout" style={{ fontSize: '0.9rem' }}>₹{Math.round(Number(formData.textChatFee || 0) * 0.8)}</span>
+                            </div>
+                            <small style={{ fontSize: '0.6rem', opacity: 0.5, lineHeight: 1 }}>Initial trial for clients</small>
+                        </div>
+                    </div>
+
+                    {/* DOCUMENT AUDIT FEES removed as part of chat pivot */}
+                </div>
+
+                <div className="section-footer-action" style={{ marginTop: '10px', borderTop: 'none' }}>
                     <button type="submit" className="btn-section-update" disabled={saving}>Update Fees</button>
                 </div>
             </div>
 
 
-            <div className="editor-actions">
+            <div className="editor-master-actions">
                 {message.text && (
-                    <div className={`status-msg ${message.type}`}>
+                    <div className={`status-msg-v2 ${message.type}`}>
+                        <span className="msg-icon">{message.type === 'success' ? '✅' : '❌'}</span>
                         {message.text}
                     </div>
                 )}
+                
+                <button type="submit" className="btn-master-save" disabled={saving}>
+                    {saving ? 'SYNCHRONIZING DOSSIER...' : 'SAVE & SYNCHRONIZE ALL CREDENTIALS'}
+                </button>
             </div>
 
             
@@ -482,3 +588,4 @@ const ProfessionalEditor = ({ role, uid, profile, onUpdate }) => {
 };
 
 export default ProfessionalEditor;
+

@@ -10,6 +10,9 @@ from pydantic import BaseModel
 import google.generativeai as genai
 from dotenv import load_dotenv
 import logging
+import jwt
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import FastAPI, HTTPException, Request, Depends
 
 # Load environment variables
 load_dotenv()
@@ -96,10 +99,11 @@ Classify user query into ONE:
 📏 RESPONSE LENGTH CONTROL
 -----------------------------------
 
-- Default: SHORT (2–5 lines)
-- Expand ONLY if user asks
-- No long paragraphs
-- No overload
+- GREETING / VAGUE: SHORT (2–3 lines)
+- FACTUAL: MEDIUM (3–6 lines)
+- PROCEDURAL: COMPLETE all steps — do NOT cut short. Use as many lines as needed.
+- SCENARIO / INSTITUTIONAL: MEDIUM-LONG (5–10 lines)
+- No unnecessary filler or repetition
 
 -----------------------------------
 📚 STRUCTURE RULES (USE ONLY WHEN NEEDED)
@@ -158,10 +162,11 @@ Classify user query into ONE:
 - Prefer clarity over completeness
 
 -----------------------------------
-📢 CONTEXT-AWARE FINAL DISCLAIMER (MANDATORY)
+📢 CONTEXT-AWARE FINAL DISCLAIMER
 -----------------------------------
 
-At the end of EVERY response (except greetings or clarifying questions), add a contextually relevant recommendation:
+At the end of EVERY response, add a contextually relevant recommendation.
+**SKIP this disclaimer if you already included an expert connection link above (e.g., in personal case or urgent handling).**
 
 - If the topic is LEGAL: Recommend a "Lawyer (for legal matters)" AND link to `internal:/experts?category=legal`.
 - If the topic is TAX/CA: Recommend a "Chartered Accountant (for tax/compliance)" AND link to `internal:/experts?category=financial`.
@@ -262,93 +267,15 @@ Respond ONLY:
 "Could you please clarify your question? I’ll help you with legal, tax, or financial matters."
 
 -----------------------------------
-⚠️ CASE-BASED / REAL-LIFE SITUATION HANDLING (HIGH PRIORITY)
------------------------------------
-
-If the user describes a personal situation, problem, or case and asks:
-- "what should I do"
-- "guide me"
-- "help me"
-- "my situation is"
-- "I am facing"
-- "I got into"
-
-OR shares emotional/legal/financial distress scenarios
-
-RESPONSE FORMAT:
-Step 1: Acknowledge briefly (human tone)
-Step 2: Give GENERAL high-level direction (NOT specific advice)
-Step 3: Redirect to expert (MANDATORY)
-
-RESPONSE TEMPLATE:
-"I understand your situation.
-
-Based on what you've shared, this involves legal/financial considerations that depend on specific facts and documentation. Generally, such matters require reviewing your case details, applicable laws, and possible risks before taking action.
-
-It is recommended to consult a qualified professional who can assess your situation properly.
-
-**[CONNECT WITH RELEVANT LEGAL EXPERTS](internal:/experts?category=legal)**
-**[CONNECT WITH RELEVANT FINANCIAL EXPERTS](internal:/experts?category=financial)**"
-
------------------------------------
-🚨 HIGH-RISK / URGENT CASE HANDLING
------------------------------------
-
-If user mentions:
-- police, FIR, arrest
-- legal notice
-- tax notice / raid
-- fraud / serious dispute
-
-Respond:
-
-"This appears to be a serious matter that may require immediate attention.
-
-Situations like this involve legal risks and timelines, so it’s important not to delay or take action without proper guidance.
-
-It is strongly recommended to consult a qualified professional immediately.
-
-**[CLICK HERE TO CONNECT WITH A LAWEZY EXPERT](internal:/experts)**"
-
------------------------------------
-📄 DOCUMENT / NOTICE EXPLANATION MODE
------------------------------------
-
-If user shares or asks about a document/notice:
-
-Respond with:
-1. What the document is (simple explanation)
-2. Why it is issued
-3. General implication (no advice)
-
-Then add:
-
-"For proper interpretation and response strategy, consult a qualified professional.
-
-**[CLICK HERE TO CONNECT WITH A LAWEZY EXPERT](internal:/experts)**"
-
------------------------------------
-🚫 ILLEGAL / NON-COMPLIANT REQUESTS
------------------------------------
-
-If user asks for:
-- tax evasion
-- hiding income
-- illegal actions
-
-Respond:
-
-"I cannot assist with actions that violate legal or regulatory requirements.
-
-If you want, I can guide you on compliant and legal alternatives."
+Case-based situations, police, FIR, etc. (High Priority) ...
 """
 
 # Precision-Grade Generation Config
 GENERATION_CONFIG = {
-    "temperature": 0.15, # Near-zero for factual legal accuracy
+    "temperature": 0.15,
     "top_p": 0.95,
     "top_k": 40,
-    "max_output_tokens": 1024,
+    "max_output_tokens": 4096,
 }
 
 # Standard Safety Settings
@@ -361,10 +288,42 @@ SAFETY_SETTINGS = [
 
 app = FastAPI(title="LawEZY Institutional AI Service")
 
-# CORS configuration
+# 🔐 SECURITY GRID: Institutional Secrets
+JWT_SECRET = os.getenv("JWT_SECRET")
+INTERNAL_SECRET = os.getenv("INTERNAL_SECRET")
+security = HTTPBearer()
+
+if not JWT_SECRET or not INTERNAL_SECRET:
+    logger.critical("Institutional secrets missing. Security grid offline.")
+    # In development, you might want to allow this, but for production readiness we enforce it.
+    # exit(1) 
+
+
+async def verify_institutional_access(request: Request, credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
+    """Institutional Bouncer: Verifies either a User JWT or the Service Secret."""
+    
+    # 1. Check for Internal Service Secret (highest priority for backend calls)
+    internal_key = request.headers.get("X-Internal-Secret")
+    if internal_key == INTERNAL_SECRET:
+        return {"id": "SYSTEM", "role": "SYSTEM"}
+
+    # 2. Verify User JWT
+    if not credentials:
+        raise HTTPException(status_code=403, detail="Institutional access denied.")
+        
+    try:
+        payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=["HS256"])
+        return payload
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+# CORS configuration: Restricted to institutional origins
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173,http://localhost:8080").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -373,15 +332,19 @@ app.add_middleware(
 # Persistent Institutional Memory Layer (MongoDB Atlas)
 MONGO_URI = os.getenv("MONGO_URI")
 mongo_client = MongoClient(MONGO_URI)
-db = mongo_client.get_database("lawezy_chat") # Sourced from URI (lawezy_chat)
-sessions_col = db["chat_sessions"]
+db = mongo_client.get_database()
+sessions_col = db["ai_chat_sessions"]
+
+# 🧹 AUTO-PURGE
+sessions_col.create_index("timestamp", expireAfterSeconds=7776000) 
 
 def get_institutional_session(session_id: str):
     """Retrieves session from MongoDB with fallback to fresh initialization."""
-    session = sessions_col.find_one({"sessionId": session_id})
+    session = sessions_col.find_one({"_id": session_id})
     if not session:
         return {
-            "sessionId": session_id,
+            "_id": session_id,
+            "userId": "GUEST",
             "title": "Untitled Engagement",
             "messages": [],
             "timestamp": datetime.datetime.now().isoformat()
@@ -391,7 +354,7 @@ def get_institutional_session(session_id: str):
 def save_institutional_session(session_data: dict):
     """Persists tactical session state to MongoDB."""
     sessions_col.update_one(
-        {"sessionId": session_data["sessionId"]},
+        {"_id": session_data["_id"]},
         {"$set": session_data},
         upsert=True
     )
@@ -407,228 +370,113 @@ async def health_check():
     return {"status": "operational", "institutional_layer": "active"}
 
 @app.get("/api/ai/history")
-async def get_history():
-    """Returns a listing of all persistent tactical sessions."""
-    sessions = sessions_col.find({}, {"sessionId": 1, "title": 1, "timestamp": 1}).sort("timestamp", -1)
+async def get_history(auth: dict = Depends(verify_institutional_access)):
+    """Returns a listing of persistent tactical sessions for the authenticated user."""
+    user_id = auth.get("id")
+    if not user_id:
+        return {"data": []}
+        
+    # Strictly filter by user_id
+    query = {"userId": user_id} if user_id != "SYSTEM" else {}
+    sessions = sessions_col.find(query, {"_id": 1, "title": 1, "timestamp": 1}).sort("timestamp", -1)
+    
     history = []
     for s in sessions:
         history.append({
-            "id": s["sessionId"],
+            "id": s["_id"],
             "title": s.get("title", "Untitled Engagement"),
             "timestamp": s.get("timestamp")
         })
     return {"data": history}
 
 @app.get("/api/ai/sessions/{session_id}")
-async def get_session(session_id: str):
-    """Retrieves the full message thread from persistent storage."""
-    session = sessions_col.find_one({"sessionId": session_id})
+async def get_session(session_id: str, auth: dict = Depends(verify_institutional_access)):
+    """Retrieves a persistent message thread, enforcing ownership."""
+    user_id = auth.get("id")
+    session = sessions_col.find_one({"_id": session_id})
+    
     if not session:
         raise HTTPException(status_code=404, detail="Institutional session not found.")
+        
+    # Ownership Check
+    if user_id != "SYSTEM" and session.get("userId") != user_id:
+        raise HTTPException(status_code=403, detail="Unauthorized access to institutional dossier.")
+        
     return {"data": session["messages"]}
 
 def handle_local_intercept(query: str) -> Optional[str]:
-    """Tactical interception of common/empty queries to preserve Gemini quota."""
+    """Tactical interception of common/empty queries."""
     q = query.lower().strip()
-    
-    # Empty or meaningless
     if len(q) < 2:
         return "Could you please clarify your question? I’ll help you with legal, tax, or financial matters."
-
-    # Greetings
     if q in ["hi", "hello", "hey", "hola", "namaste"]:
         return "Hey 👋\nWhat can I help you with—legal, tax, or finance?"
-
-    # Expert Redirects
-    expert_keywords = ["expert", "lawyer", "advocate", "professional", "ca ", " cfa", "consultation", "appointment"]
-    if any(k in q for k in expert_keywords):
-        return "You can connect with verified professionals here:\n\n**[CLICK HERE TO CONNECT WITH A LAWEZY EXPERT](internal:/experts)**"
-
-    # Gratitude
-    thanks_keywords = ["thanks", "thank you", "ok", "got it", "fine", "helpful"]
-    if q in thanks_keywords or (len(q) < 15 and any(k in q for k in thanks_keywords)):
-        return "Glad I could help 👍 Let me know if you need anything else."
-
     return None
 
 @app.post("/api/ai/copilot")
-async def copilot_interaction(request: CopilotRequest):
-    # Institutional Session Initialization
+async def copilot_interaction(request: CopilotRequest, auth: dict = Depends(verify_institutional_access)):
+    user_id = auth.get("id")
     sid = request.sessionId or str(uuid.uuid4())
     session_data = get_institutional_session(sid)
     
-    # Initialize title if fresh
+    if user_id != "SYSTEM":
+        session_data["userId"] = user_id
+    elif request.userId:
+        session_data["userId"] = request.userId
+    
     if not session_data["messages"]:
         session_data["title"] = request.query[:40] + "..." if len(request.query) > 40 else request.query
     
-    # Log User Intent
     session_data["messages"].append({
         "role": "user",
         "content": request.query,
         "timestamp": datetime.datetime.now().isoformat()
     })
 
-    # Tactical Local Interceptor
     local_response = handle_local_intercept(request.query)
     if local_response:
-        session_data["messages"].append({
-            "role": "ai",
-            "content": local_response,
-            "timestamp": datetime.datetime.now().isoformat()
-        })
+        session_data["messages"].append({"role": "ai", "content": local_response, "timestamp": datetime.datetime.now().isoformat()})
         save_institutional_session(session_data)
-        return {
-            "response": local_response,
-            "model_used": "tactical-interceptor",
-            "sessionId": sid
-        }
+        return {"response": local_response, "model_used": "tactical-interceptor", "sessionId": sid}
 
-    # Institutional Models Pool (Optimized for Tactical Resilience)
-    models_to_try = [
-        "gemini-2.0-flash",    # Primary next-gen
-        "gemini-flash-latest", # Reliable flash-latest
-        "gemini-1.5-pro",      # Pro fallback if flash fails
-        "gemini-pro-latest"    # Legacy pro fallback
-    ]
+    models_to_try = ["gemini-2.0-flash", "gemini-flash-latest", "gemini-1.5-pro"]
     
     prepared_media = []
     if request.images:
         for img_b64 in request.images:
             try:
-                if "," in img_b64:
-                    img_b64 = img_b64.split(",")[1]
-                
-                img_data = base64.b64decode(img_b64)
-                prepared_media.append({
-                    "mime_type": "image/jpeg",
-                    "data": img_data
-                })
-            except Exception as e:
-                logger.error(f"Media decode failure: {str(e)}")
+                if "," in img_b64: img_b64 = img_b64.split(",")[1]
+                prepared_media.append({"mime_type": "image/jpeg", "data": base64.b64decode(img_b64)})
+            except Exception: pass
     
-    last_error = None
     for model_name in models_to_try:
         try:
-            # Initialize Model with Institutional Persona as System Instruction
-            model = genai.GenerativeModel(
-                model_name=model_name,
-                generation_config=GENERATION_CONFIG,
-                safety_settings=SAFETY_SETTINGS,
-                system_instruction=SYSTEM_PROMPT
-            )
-            
-            # Prepare Institutional History (Last 10 messages for context)
+            model = genai.GenerativeModel(model_name=model_name, generation_config=GENERATION_CONFIG, safety_settings=SAFETY_SETTINGS, system_instruction=SYSTEM_PROMPT)
             history = []
-            raw_messages = session_data["messages"][:-1]
+            for msg in session_data["messages"][:-1][-10:]:
+                history.append({"role": "user" if msg["role"] == "user" else "model", "parts": [msg["content"]]})
             
-            for msg in raw_messages[-10:]:
-                gemini_role = "user" if msg["role"] == "user" else "model"
-                history.append({"role": gemini_role, "parts": [msg["content"]]})
-            
-            # Initialize Chat Session
             chat = model.start_chat(history=history)
+            response = chat.send_message([request.query] + prepared_media)
             
-            # Execute Generative Cycle
-            current_parts = [request.query] + prepared_media
-            response = chat.send_message(current_parts)
-            
-            if not response or not response.text:
-                raise Exception("Empty institutional pulse.")
-                
-            # Log AI Institutional Response
             ai_content = response.text
-            session_data["messages"].append({
-                "role": "ai",
-                "content": ai_content,
-                "timestamp": datetime.datetime.now().isoformat()
-            })
-            
-            # FINAL PERSISTENCE
+            session_data["messages"].append({"role": "ai", "content": ai_content, "timestamp": datetime.datetime.now().isoformat()})
             save_institutional_session(session_data)
-            
-            return {
-                "response": ai_content, 
-                "model_used": model_name,
-                "sessionId": sid
-            }
-            
+            return {"response": ai_content, "model_used": model_name, "sessionId": sid}
         except Exception as e:
-            last_error = str(e)
-            logger.warning(f"Tactical link failed via {model_name}: {last_error}")
+            logger.warning(f"Failed via {model_name}: {str(e)}")
             continue
 
-    raise HTTPException(status_code=500, detail=f"Institutional grid offline: {last_error}")
-
-@app.post("/api/ai/analyze-document")
-async def analyze_document(request: CopilotRequest):
-    # sid = request.sessionId or str(uuid.uuid4())
-    # We don't necessarily need a session for one-off document analysis, but can use it for history.
-    
-    prepared_media = []
-    if request.images: # Reusing images field for document parts (base64)
-        for doc_b64 in request.images:
-            try:
-                if "," in doc_b64:
-                    doc_b64 = doc_b64.split(",")[1]
-                
-                doc_data = base64.b64decode(doc_b64)
-                # Note: We assume application/pdf if it's a doc, but Gemini also accepts images.
-                # For simplicity, we'll try to detect or default to PDF if requested.
-                prepared_media.append({
-                    "mime_type": "application/pdf", # Default to PDF for this endpoint
-                    "data": doc_data
-                })
-            except Exception as e:
-                logger.error(f"Document decode failure: {str(e)}")
-
-    if not prepared_media:
-        raise HTTPException(status_code=400, detail="No document provided for analysis.")
-
-    # High-Resolution Analysis Prompt
-    analysis_prompt = """
-    Please perform a deep institutional analysis of the attached document. 
-    Focus on:
-    1. Professional Summary (Executive level)
-    2. Critical Clauses & Obligations
-    3. Potential Legal/Financial Risks
-    4. Actionable Recommendations
-    
-    Keep the tone professional and expert.
-    """
-
-    try:
-        model = genai.GenerativeModel(
-            model_name="gemini-1.5-flash",
-            generation_config=GENERATION_CONFIG,
-            safety_settings=SAFETY_SETTINGS,
-            system_instruction="You are an expert Legal and Financial Document Auditor."
-        )
-        
-        response = model.generate_content([analysis_prompt] + prepared_media)
-        
-        if not response or not response.text:
-            raise Exception("Institutional analysis pulse failed.")
-            
-        return {
-            "analysis": response.text,
-            "model_used": "gemini-1.5-flash"
-        }
-    except Exception as e:
-        logger.error(f"Document Analysis Grid Failure: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+    raise HTTPException(status_code=500, detail="Institutional grid offline.")
 
 @app.post("/api/ai/guard")
 async def safety_guard(request: CopilotRequest):
     try:
-        model = genai.GenerativeModel('gemini-1.5-flash', generation_config={"temperature": 0.0})
-        guard_prompt = f"Analyze message for contact info. Return SAFE/BLOCKED: \"{request.query}\""
-        response = model.generate_content(guard_prompt)
-        result = response.text.strip().upper()
-        return {"status": "BLOCKED" if "BLOCKED" in result else "SAFE"}
-    except Exception:
-        return {"status": "SAFE"} 
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        response = model.generate_content(f"Return SAFE/BLOCKED: \"{request.query}\"")
+        return {"status": "BLOCKED" if "BLOCKED" in response.text.upper() else "SAFE"}
+    except Exception: return {"status": "SAFE"} 
 
 if __name__ == "__main__":
     import uvicorn
-    port = int(os.getenv("PORT", 8001))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8001)))

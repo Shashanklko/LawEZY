@@ -212,97 +212,62 @@
 
 .card-footer {
   border-top: 1px solid var(--glass-border);
-  padding-top: 12px; 
-  margin-top: auto;   /* Pushes footer to the absolute bottom of the card */
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end; 
-}
-
-.expert-card-actions {
+  padding-top: 18px; 
+  margin-top: auto;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  width: 155px; /* Increased to prevent 'SEND MESSAGE (₹50)' from wrapping too early */
+  gap: 15px;
 }
 
-.price-info {
+.footer-main-action {
+    width: 100%;
+}
+
+.btn-book-institutional.full-width {
+    width: 100%;
+    justify-content: center;
+    padding: 14px;
+    font-size: 0.85rem;
+}
+
+.footer-secondary-actions {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.price-label {
-  font-size: 0.55rem; /* Smaller labels */
-  text-transform: uppercase;
-  color: var(--elite-gold);
-  letter-spacing: 2px;
-  font-weight: 800;
-  opacity: 0.5;
-}
-
-.price-value {
-  font-family: 'Outfit', serif;
-  font-size: 1.1rem; /* Smaller price */
-  font-weight: 500;
-  color: var(--deep-charcoal);
-}
-
-.price-value span {
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  font-weight: 400;
-}
-
-.price-info .btn-book-institutional {
-    margin-top: 12px;
-}
-
-.btn-connect-expert-small {
-  background: var(--elite-gold);
-  border: 1px solid var(--elite-gold);
-  color: var(--heritage-parchment);
-  padding: 8px 12px; 
-  border-radius: 4px;
-  font-size: 0.6rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.5px; /* Reduced for better fit */
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 10px rgba(142, 107, 71, 0.1);
+  gap: 10px;
   width: 100%;
-  text-align: center;
-  white-space: nowrap;
 }
 
-.btn-send-message-small {
+.btn-secondary {
+  flex: 1;
   background: transparent;
   border: 1px solid var(--elite-gold);
   color: var(--elite-gold);
-  padding: 8px 12px;
-  border-radius: 4px;
-  font-size: 0.6rem;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 0.65rem;
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.5px; /* Reduced for better fit */
+  letter-spacing: 0.8px;
   cursor: pointer;
   transition: all 0.3s ease;
-  width: 100%;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   white-space: nowrap;
 }
 
-.btn-connect-expert-small:hover:not(:disabled),
-.btn-send-message-small:hover:not(:disabled) {
-  transform: translateY(-2px);
+.btn-secondary:hover:not(:disabled) {
   background: var(--elite-gold);
   color: var(--heritage-parchment);
-  box-shadow: 0 6px 15px rgba(142, 107, 71, 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(142, 107, 71, 0.2);
 }
 
-.btn-connect-expert-small:disabled,
-.btn-send-message-small:disabled,
+.btn-secondary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 .btn-book-institutional:disabled {
     opacity: 0.5;
     cursor: not-allowed;
@@ -389,4 +354,11 @@
     margin: 0;
     line-height: 1.5;
     font-weight: 600;
+}
+
+/* Removed Audit Badge Styles */
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
 }

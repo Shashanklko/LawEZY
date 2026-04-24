@@ -32,6 +32,8 @@ const LawinoAI = () => {
   const [sessionId, setSessionId] = useState(localStorage.getItem('lawino_session_id') || null);
   const [history, setHistory] = useState([]);
   const [showQuotaModal, setShowQuotaModal] = useState(false);
+  const [selectedPackage, setSelectedPackage] = useState('AI_15');
+  const [isProcessing, setIsProcessing] = useState(false);
   const [quotaType, setQuotaType] = useState('AI_REFILL');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => localStorage.getItem('lawino_sidebar_collapsed') === 'true');
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
@@ -49,14 +51,14 @@ const LawinoAI = () => {
   const scrollRef = useRef(null);
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
-  const { user } = useAuthStore();
-  const { updateUser } = useAuthStore();
-  const userName = user?.email?.split('@')[0] || 'Guest User';
-  const userRole = user?.role || 'Expert Tier';
+  const { user, updateUser, viewMode } = useAuthStore();
+  const userName = user?.firstName || user?.email?.split('@')[0] || 'Guest User';
+  const userRole = viewMode === 'EXPERT' ? (user?.role || 'Expert Tier') : 'SEEKER MODE';
 
-  // Load History on Mount
+  // Load History + Wallet on Mount
   useEffect(() => {
     fetchHistory();
+    refreshWallet();
   }, []);
 
   // Wallet Refresh: ensure sidebar quota reflects live DB state
@@ -69,18 +71,18 @@ const LawinoAI = () => {
         updateUser({
           freeAiTokens: fresh.freeAiTokens,
           freeChatTokens: fresh.freeChatTokens,
-          tokenBalance: fresh.tokenBalance,
+          cashBalance: fresh.cashBalance,
           isUnlimited: fresh.isUnlimited,
+          aiLimit: fresh.aiLimit, // Institutional sync: ensure total capacity mirrors DB
         });
       }
     } catch (err) {
-      console.warn('[WALLET] Could not refresh AI token balance:', err.message);
+      console.warn('[WALLET] Could not refresh token balance:', err.message);
     }
   };
 
-  useEffect(() => {
-    refreshWallet();
-  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+
 
   const fetchHistory = async () => {
     try {
@@ -314,6 +316,28 @@ const LawinoAI = () => {
     }
   };
 
+  const handlePurchasePackage = async () => {
+    if (!selectedPackage) return;
+    setIsProcessing(true);
+    try {
+      const response = await apiClient.post('/api/wallet/purchase-package', { packageType: selectedPackage });
+      const freshWallet = response.data;
+      updateUser({
+        freeAiTokens: freshWallet.freeAiTokens,
+        freeDocTokens: freshWallet.freeDocTokens,
+        cashBalance: freshWallet.cashBalance, aiLimit: freshWallet.aiLimit || freshWallet.aiTokenLimit, docLimit: freshWallet.docLimit || freshWallet.docTokenLimit
+      });
+      alert(`Successfully purchased ${selectedPackage === 'AI_15' ? '15 AI Queries' : '5 Document Audits'}!`);
+      setShowQuotaModal(false);
+    } catch (err) {
+      console.error('Purchase Error:', err);
+      alert(err.response?.data?.message || "Failed to process tactical refill. Ensure wallet balance is sufficient.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+
   const handleStartEdit = (index, content) => {
     setEditingIndex(index);
     setEditingValue(content);
@@ -463,9 +487,13 @@ const LawinoAI = () => {
                   <div className="user-name">{userName}</div>
                   <div className="user-status-row">
                     <span className="user-role">{userRole}</span>
-                    <div className="user-quota-badge">
+                    <div 
+                      className="user-quota-badge clickable" 
+                      onClick={() => setShowQuotaModal(true)}
+                      title="Refill Institutional Units"
+                    >
                       <Zap size={10} />
-                      <span>{user?.isUnlimited ? '∞' : `${user?.freeAiTokens ?? 0}/5`}</span>
+                      <span>{user?.isUnlimited ? '∞' : `${user?.freeAiTokens ?? 0}/${user?.aiLimit ?? 5}`}</span>
                     </div>
                   </div>
                 </div>
@@ -490,6 +518,24 @@ const LawinoAI = () => {
           >
             {theme === 'dark' ? '☀' : '☾'}
           </button>
+        </div>
+
+        {/* 🛡️ INSTITUTIONAL SAFETY BANNER */}
+        <div className="safety-advisory-banner animate-reveal" style={{
+          background: 'rgba(239, 68, 68, 0.05)',
+          borderBottom: '1px solid rgba(239, 68, 68, 0.15)',
+          padding: '12px 24px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          zIndex: 50,
+          backdropFilter: 'blur(5px)'
+        }}>
+          <ShieldCheck size={16} color="#ef4444" />
+          <span style={{ fontSize: '0.75rem', color: '#dc2626', fontWeight: 700, letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+            Institutional Disclaimer: AI insights are for orientation and may not reflect the latest regulatory updates. 
+            <span className="cta-link" onClick={() => navigate('/experts')} style={{ marginLeft: '8px', textDecoration: 'underline', cursor: 'pointer' }}>Verify critical findings with LawEZY Experts.</span>
+          </span>
         </div>
 
         {isMobile && (
@@ -562,7 +608,7 @@ const LawinoAI = () => {
                         <div className="edit-mode-container">
                           <textarea 
                             className="edit-textarea"
-                            value={editingValue}
+                            value={editingValue || ''}
                             onChange={(e) => setEditingValue(e.target.value)}
                             autoFocus
                           />
@@ -575,7 +621,7 @@ const LawinoAI = () => {
                         <ReactMarkdown 
                           remarkPlugins={[remarkGfm]}
                           components={MarkdownComponents}
-                          transformUri={transformUri}
+                          urlTransform={transformUri}
                         >
                           {msg.content}
                         </ReactMarkdown>
@@ -636,7 +682,7 @@ const LawinoAI = () => {
                 <textarea 
                   ref={textareaRef}
                   placeholder="Ask Lawino AI anything..."
-                  value={input}
+                  value={input || ''}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
@@ -667,10 +713,6 @@ const LawinoAI = () => {
                 </div>
               </div>
             </div>
-            <div className="subtle-disclaimer centered">
-              <ShieldCheck size={14} />
-              <span>Expert guidance for orientation only. <span className="cta-link" onClick={() => navigate('/experts')}>Verify with LawEZY Experts.</span></span>
-            </div>
           </div>
         </div>
       </main>
@@ -680,33 +722,51 @@ const LawinoAI = () => {
         <div className="quota-modal-overlay">
           <div className="quota-modal-card">
             <div className="modal-header">
-              <Zap className="header-icon" size={24} />
-              <h3>Institutional Quota Exhausted</h3>
+              <Zap className={`header-icon ${isProcessing ? 'spinning' : ''}`} size={24} />
+              <h3>Institutional Refill</h3>
             </div>
             <div className="modal-body">
-              <p>Your current tactical AI units have been fully utilized. To continue with high-fidelity legal intelligence, please refill your quota.</p>
+              <p>Select a tactical package to continue with high-fidelity legal intelligence.</p>
               
-              <div className="package-option active">
-                <div className="option-details">
-                  <span className="option-name">Standard Refill</span>
-                  <span className="option-description">10 Institutional AI Tokens</span>
+              <div className="package-options-grid">
+                <div 
+                  className={`package-option ${selectedPackage === 'AI_15' ? 'active' : ''}`} 
+                  onClick={() => setSelectedPackage('AI_15')}
+                >
+                  <div className="option-details">
+                    <span className="option-name">AI Intelligence (Refill)</span>
+                    <span className="option-description">15 Tactical Queries</span>
+                  </div>
+                  
                 </div>
-                <div className="option-price">₹100</div>
+
+                <div 
+                  className={`package-option ${selectedPackage === 'DOC_5' ? 'active' : ''}`} 
+                  onClick={() => setSelectedPackage('DOC_5')}
+                >
+                  <div className="option-details">
+                    <span className="option-name">Document Auditor (Refill)</span>
+                    <span className="option-description">5 Deep-Scan Audits</span>
+                  </div>
+                  
+                </div>
               </div>
             </div>
             <div className="modal-footer">
-              <button className="btn-cancel" onClick={() => setShowQuotaModal(false)}>Cancel</button>
-              <button className="btn-refill" onClick={async () => {
-                try {
-                  await apiClient.post('/api/wallet/purchase-tokens-direct', { packageType: quotaType });
-                  setShowQuotaModal(false);
-                  refreshWallet();
-                } catch (err) {
-                  console.error('Purchase Failure:', err);
-                  alert('Institutional purchase failed. Please check your network.');
-                }
-              }}>
-                Pay & Refill Now
+              <button className="btn-cancel" onClick={() => setShowQuotaModal(false)}>Close</button>
+              <button 
+                className={`btn-primary purchase-btn ${isProcessing ? 'loading' : ''}`}
+                onClick={handlePurchasePackage}
+                disabled={isProcessing || !selectedPackage}
+              >
+                                {isProcessing ? 'Processing...' : `Buy Package (₹${selectedPackage === 'AI_15' ? '150' : '250'})`}
+
+              </button>
+              <button 
+                className="btn-secondary" 
+                onClick={() => navigate('/dashboard?tab=wallet')}
+              >
+                Top up Wallet
               </button>
             </div>
           </div>

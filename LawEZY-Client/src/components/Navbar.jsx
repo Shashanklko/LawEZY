@@ -11,7 +11,10 @@ const Navbar = () => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   
   // Real Auth State from Zustand Store
-  const { user, token, isAuthenticated, logout } = useAuthStore();
+  const { 
+    user, token, isAuthenticated, logout, viewMode, toggleViewMode, toggleFloatingChat,
+    unreadCount, setUnreadCount, msgUnreadCount, setMsgUnreadCount, incrementMsgUnreadCount
+  } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
   const isLoggedIn = isAuthenticated;
@@ -27,12 +30,13 @@ const Navbar = () => {
     return r;
   };
 
-  const userRoleLabel = getRoleLabel(user?.role);
-  const isExpert = ['LAWYER', 'CA', 'CFA', 'OTHER', 'PRO'].includes(user?.role?.toUpperCase());
+  const userRoleLabel = viewMode === 'CLIENT' && user?.role !== 'CLIENT' ? 'CLIENT MODE' : getRoleLabel(user?.role);
+  const isAdmin = user?.role?.toUpperCase() === 'ADMIN';
+  const isExpert = ['LAWYER', 'CA', 'CFA', 'OTHER', 'PRO', 'EXPERT'].includes(user?.role?.toUpperCase());
+  const canSwitch = isExpert;
   
   const [walletBalance, setWalletBalance] = useState('₹ 0');
   const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
   
   // Professional Pulse: Socket Listener for Global Alerts
   useEffect(() => {
@@ -43,7 +47,7 @@ const Navbar = () => {
     const handleNewNotification = (notification) => {
       console.log('🔔 [NAVBAR] Real-time link pulse received:', notification);
       setNotifications(prev => [notification, ...prev].slice(0, 10)); // Keep only recent
-      setUnreadCount(prev => prev + 1);
+      setUnreadCount(unreadCount + 1);
       
       // If the browser supports it, show a native toast or play a brief sound
       if (Notification.permission === 'granted') {
@@ -51,20 +55,21 @@ const Navbar = () => {
       }
     };
 
-    socket.on('notification_received', handleNewNotification);
+    socket.on('new_notification', handleNewNotification);
     
     // Initial Sync
     fetchNotifications();
     fetchUnreadCount();
+    fetchMessageUnreadCount();
 
     return () => {
-      socket.off('notification_received', handleNewNotification);
+      socket.off('new_notification', handleNewNotification);
     };
-  }, [isAuthenticated, user?.id, token]);
+  }, [isAuthenticated, user?.id, token, location.pathname]);
 
   const fetchNotifications = async () => {
     try {
-      const targetId = user.uid || user.id;
+      const targetId = user.id || user.id;
       const response = await apiClient.get(`/api/notifications?userId=${targetId}`);
       setNotifications(response.data?.data?.slice(0, 5) || []);
     } catch (err) {
@@ -74,11 +79,20 @@ const Navbar = () => {
 
   const fetchUnreadCount = async () => {
     try {
-      const targetId = user.uid || user.id;
+      const targetId = user.id || user.id;
       const response = await apiClient.get(`/api/notifications/unread-count?userId=${targetId}`);
       setUnreadCount(response.data?.data || 0);
     } catch (err) {
       console.warn('[NAVBAR] Could not fetch unread tally');
+    }
+  };
+
+  const fetchMessageUnreadCount = async () => {
+    try {
+      const response = await apiClient.get('/api/chat/unread-count');
+      setMsgUnreadCount(response.data.data || 0);
+    } catch (err) {
+      console.warn('[NAVBAR] Could not fetch message unread tally');
     }
   };
 
@@ -95,10 +109,18 @@ const Navbar = () => {
   useEffect(() => {
     if (isAuthenticated) {
       apiClient.get('/api/wallet/balance')
-        .then(res => setWalletBalance(`₹ ${res.data.earnedBalance?.toLocaleString() || '0'}`))
+        .then(res => {
+          const balance = viewMode === 'EXPERT' ? res.data.earnedBalance : res.data.cashBalance;
+          setWalletBalance(`₹ ${balance?.toLocaleString() || '0'}`);
+        })
         .catch(() => setWalletBalance('₹ --'));
+      
+      // Reset msg unread count when entering messages
+      if (location.pathname === '/messages') {
+        setMsgUnreadCount(0);
+      }
     }
-  }, [isAuthenticated, location.pathname]); 
+  }, [isAuthenticated, location.pathname, viewMode]); 
   
   const notifyRef = useRef(null);
   const profileRef = useRef(null);
@@ -129,15 +151,11 @@ const Navbar = () => {
       {isDashboard && <div className="navbar-hover-trigger" style={{ position: 'fixed', top: 0, left: 0, right: 0, height: '10px', zIndex: 1999 }} />}
       <nav className={`navbar-premium glass ${isDashboard ? 'autohide' : ''}`}>
         <div className="section-container nav-content">
-          <div className="brand-section">
+          <div className="brand-container-link">
             <Link to="/" className="brand-link" onClick={closeMenu}>
-              <span className="brand-name">LAWEZY</span>
-            </Link>
-            <div className="brand-divider"></div>
-            <Link to="/lawino-ai" className="ai-brand-link" onClick={closeMenu}>
-              <div className="ai-brand">
-                <span className="ai-name">LawinoAI</span>
-                <span className="ai-tagline">LEGAL & BUSINESS INTELLIGENCE</span>
+              <div className="brand-container">
+                <div className="lawezy-logo large">LAWEZY<span className="logo-dot">.</span></div>
+                <div className="brand-marketplace">LEGAL & FINANCIAL CONSULTANT MARKETPLACE</div>
               </div>
             </Link>
           </div>
@@ -159,7 +177,18 @@ const Navbar = () => {
               <Link to="/lawino-ai" className={`nav-link ${location.pathname === '/lawino-ai' ? 'active' : ''}`} onClick={closeMenu}>LAWINOAI</Link>
               <Link to="/library" className={`nav-link ${location.pathname === '/library' ? 'active' : ''}`} onClick={closeMenu}>LIBRARY</Link>
               <Link to="/experts" className={`nav-link ${location.pathname === '/experts' ? 'active' : ''}`} onClick={closeMenu}>EXPERTS</Link>
-              <Link to="/messages" className={`nav-link ${location.pathname === '/messages' ? 'active' : ''}`} onClick={closeMenu}>MESSAGES</Link>
+              <div className="nav-link-group">
+                <Link to="/messages" className={`nav-link ${location.pathname === '/messages' ? 'active' : ''}`} onClick={closeMenu}>
+                  MESSAGES
+                  {msgUnreadCount > 0 && location.pathname !== '/messages' && <span className="nav-msg-dot"></span>}
+                </Link>
+                {location.pathname !== '/messages' && (
+                  <button className="mini-chat-toggle" onClick={() => { toggleFloatingChat(); closeMenu(); }} title="Quick Chat">
+                    💬
+                    {msgUnreadCount > 0 && <span className="toggle-dot"></span>}
+                  </button>
+                )}
+              </div>
               <Link to="/community" className={`nav-link ${location.pathname === '/community' ? 'active' : ''}`} onClick={closeMenu}>COMMUNITY</Link>
               <Link to="/about" className={`nav-link ${location.pathname === '/about' ? 'active' : ''}`} onClick={closeMenu}>ABOUT</Link>
             </div>
@@ -182,8 +211,13 @@ const Navbar = () => {
               ) : (
                 <div className="logged-in-actions mobile-only">
                   {/* 📊 Quick Dashboard Link */}
-                  <Link to="/dashboard" className="btn-secondary dashboard-quick-btn" onClick={closeMenu} style={{ padding: '12px 14px', fontSize: '0.85rem', width: '100%' }}>
-                    Dashboard
+                  <Link 
+                    to={isAdmin ? "/admin" : "/dashboard"} 
+                    className="btn-secondary dashboard-quick-btn" 
+                    onClick={closeMenu} 
+                    style={{ padding: '12px 14px', fontSize: '0.85rem', width: '100%', ...(isAdmin ? { color: '#c9a84c', borderColor: '#c9a84c' } : {}) }}
+                  >
+                    {isAdmin ? 'Admin Portal' : 'Dashboard'}
                   </Link>
 
                   {/* 👤 Mobile User Info (Simple Text) */}
@@ -191,6 +225,9 @@ const Navbar = () => {
                     <span className="user-name-text">{user?.firstName} {user?.lastName}</span>
                     <span className="user-role-text">{userRoleLabel}</span>
                   </div>
+
+                  {/* 🛡️ Admin Portal Link (mobile) */}
+                  {/* Removing duplicate Admin Portal link as primary button now serves this role */}
 
                   {/* 🚪 Sign out Button */}
                   <button 
@@ -208,9 +245,12 @@ const Navbar = () => {
           {/* PERSISTENT ACTIONS (Notifications & Desktop Profile) */}
           {isLoggedIn && (
             <div className="persistent-header-actions">
-              {/* 📊 Desktop Dashboard Link */}
-              <Link to="/dashboard" className="btn-secondary dashboard-desktop-link desktop-only" style={{ marginRight: '10px' }}>
-                Dashboard
+              <Link 
+                to={isAdmin ? "/admin" : "/dashboard"} 
+                className="btn-secondary dashboard-desktop-link desktop-only" 
+                style={{ marginRight: '10px', ...(isAdmin ? { color: '#c9a84c', borderColor: '#c9a84c' } : {}) }}
+              >
+                {isAdmin ? 'Admin Portal' : 'Dashboard'}
               </Link>
 
               {/* 🔔 Notifications */}
@@ -262,7 +302,7 @@ const Navbar = () => {
                         <button className="notify-mark-all" onClick={async (e) => {
                           e.stopPropagation();
                           try {
-                            const id = user?.uid || user?.id;
+                            const id = user?.id || user?.id;
                             await apiClient.put(`/api/notifications/mark-all-read?userId=${id}`);
                             setNotifications(prev => prev.map(n => ({ ...n, read: true })));
                             setUnreadCount(0);
@@ -297,6 +337,24 @@ const Navbar = () => {
                       <span className="user-role-badge">{userRoleLabel}</span>
                     </div>
                     <div className="dropdown-divider"></div>
+                    {canSwitch && (
+                      <button 
+                        className="dropdown-item switch-mode-item" 
+                        onClick={() => { toggleViewMode(); closeMenu(); navigate('/dashboard'); }}
+                      >
+                         {viewMode === 'EXPERT' ? '🔄 Switch to Seeker View' : '🔄 Switch to Expert View'}
+                      </button>
+                    )}
+                    {user?.role?.toUpperCase() === 'ADMIN' && (
+                      <Link
+                        to="/admin"
+                        className="dropdown-item"
+                        onClick={() => { setIsProfileOpen(false); closeMenu(); }}
+                        style={{ color: '#c9a84c', fontWeight: '600', textDecoration: 'none', display: 'block', padding: '10px 16px' }}
+                      >
+                        🛡️ Admin Portal
+                      </Link>
+                    )}
                     <button className="dropdown-item logout-item" onClick={() => { logout(); closeMenu(); }}>
                        Sign out
                     </button>
@@ -342,24 +400,71 @@ const Navbar = () => {
           max-width: 100%;
           margin: 0 auto;
         }
-        .brand-section {
+        .brand-link {
+          text-decoration: none;
+          color: inherit;
+          display: block;
+        }
+        .brand-container {
+          display: flex;
+          flex-direction: column;
+          line-height: 1;
+          text-decoration: none;
+          align-items: center;
+          justify-content: center;
+          transition: transform 0.3s ease;
+        }
+        .brand-container:hover {
+          transform: scale(1.02);
+        }
+        .brand-marketplace {
+          font-family: 'Inter', sans-serif;
+          font-size: 0.5rem;
+          font-weight: 700;
+          color: var(--accent-burgundy);
+          letter-spacing: 1.5px;
+          margin-top: -2px;
+          text-transform: uppercase;
+          text-align: center;
+          opacity: 0.85;
+          width: 100%;
+        }
+        
+        .nav-link-group {
           display: flex;
           align-items: center;
-          gap: 28px;
-          min-width: 280px; /* Prevent shrinking */
+          gap: 6px;
         }
-        .brand-link, .ai-brand-link { text-decoration: none; color: inherit; display: block; }
-        .brand-name {
-          font-family: 'Outfit', sans-serif;
-          font-weight: 900;
-          font-size: 1.35rem; /* Slightly larger */
-          color: var(--accent-burgundy);
-          letter-spacing: -0.05em;
+        .mini-chat-toggle {
+          background: transparent;
+          border: none;
+          cursor: pointer;
+          font-size: 0.9rem;
+          padding: 2px;
+          border-radius: 4px;
+          transition: all 0.2s;
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
-        .brand-divider { width: 1px; height: 30px; background: rgba(212, 175, 55, 0.15); }
-        .ai-brand { display: flex; flex-direction: column; }
-        .ai-name { font-family: 'Outfit', sans-serif; font-weight: 900; font-size: 1.1rem; color: var(--accent-burgundy); }
-        .ai-tagline { font-family: 'Outfit', sans-serif; font-size: 0.55rem; font-weight: 800; color: #D4AF37; letter-spacing: 0.5px; margin-top: -2px; }
+        .mini-chat-toggle:hover {
+          background: rgba(127, 29, 29, 0.05);
+          transform: scale(1.2);
+        }
+        .mini-chat-toggle {
+          position: relative;
+        }
+        .toggle-dot {
+          position: absolute;
+          top: -2px;
+          right: -2px;
+          width: 10px;
+          height: 10px;
+          background: #ff4444;
+          border: 2px solid white;
+          border-radius: 50%;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
 
         .nav-menu-wrapper {
           display: flex;
@@ -401,6 +506,24 @@ const Navbar = () => {
           display: flex; 
           align-items: center; 
           gap: 18px; 
+        }
+        .nav-msg-dot {
+          display: inline-block;
+          width: 8px;
+          height: 8px;
+          background-color: #ff4444;
+          border-radius: 50%;
+          margin-left: 6px;
+          vertical-align: middle;
+          box-shadow: 0 0 12px rgba(255, 68, 68, 0.6);
+          animation: nav-dot-pulse 1.5s infinite;
+          position: relative;
+          top: -1px;
+        }
+        @keyframes nav-dot-pulse {
+          0% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(1.3); opacity: 0.7; }
+          100% { transform: scale(1); opacity: 1; }
         }
         .persistent-header-actions {
           display: flex;
@@ -680,6 +803,8 @@ const Navbar = () => {
         .dropdown-item:hover { background: rgba(0, 0, 0, 0.03); color: var(--text-main); }
         .logout-item { color: rgba(15, 23, 42, 0.7); }
         .logout-item:hover { background: rgba(239, 68, 68, 0.05) !important; color: #ef4444 !important; }
+        .switch-mode-item { color: var(--accent-burgundy); font-weight: 800; }
+        .switch-mode-item:hover { background: rgba(212, 175, 55, 0.05) !important; }
 
         .btn-secondary {
           padding: 8px 16px;
@@ -824,3 +949,4 @@ const Navbar = () => {
 }
 
 export default Navbar
+

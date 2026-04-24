@@ -11,8 +11,11 @@ import org.springframework.stereotype.Repository;
 public interface UserRepository extends JpaRepository<User, String>{
 
     Optional<User> findByEmail(String email);
+    Optional<User> findByEmailOrIdOrLoginId(String email, String id, String loginId);
     boolean existsByEmail(String email);
+    boolean existsByLoginId(String loginId);
     java.util.List<User> findByRoleIn(java.util.List<com.LawEZY.user.enums.Role> roles);
+    long countByRoleIn(java.util.List<com.LawEZY.user.enums.Role> roles);
 
     // Industrial Query: Find the highest ID matching a prefix (e.g., '11NS%')
     @org.springframework.data.jpa.repository.Query(value = "SELECT id FROM users WHERE id LIKE ?1 ORDER BY id DESC LIMIT 1", nativeQuery = true)

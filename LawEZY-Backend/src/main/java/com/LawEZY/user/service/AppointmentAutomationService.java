@@ -16,11 +16,15 @@ import java.util.List;
  * Handles institutional lifecycle events that require timed execution or cleanup.
  */
 @Service
-@Slf4j
 public class AppointmentAutomationService {
 
-    @Autowired
-    private AppointmentRepository appointmentRepository;
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AppointmentAutomationService.class);
+
+    private final AppointmentRepository appointmentRepository;
+
+    public AppointmentAutomationService(AppointmentRepository appointmentRepository) {
+        this.appointmentRepository = appointmentRepository;
+    }
 
     /**
      * ⚖️ AUTO-COMPLETE PROTOCOL

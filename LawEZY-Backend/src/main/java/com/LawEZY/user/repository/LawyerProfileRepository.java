@@ -8,5 +8,7 @@ import java.util.Optional;
 @Repository
 public interface LawyerProfileRepository extends JpaRepository<LawyerProfile, String> {
     Optional<LawyerProfile> findByUserId(String userId);
-    Optional<LawyerProfile> findByUidIgnoreCase(String uid);
+    Optional<LawyerProfile> findBySlug(String slug);
+    Optional<LawyerProfile> findByPhoneNumber(String phoneNumber);
+    void deleteByUserId(String userId);
 }

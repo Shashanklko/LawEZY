@@ -5,8 +5,14 @@
 .env.*
 !.env.example
 secrets.json
+tokens/
+**/tokens/
+brain/
+**/brain/
 *.pem
 *.key
+
+
 
 # === 💻 IDE / System ===
 .vscode/

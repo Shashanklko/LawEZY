@@ -3,18 +3,20 @@ import { Link } from 'react-router-dom';
 
 const ClientOverview = ({ user, profile, wallet, sessions, transactions }) => {
     const pendingActions = sessions.filter(s => !s.isAppointmentPaid && s.status === 'ACTIVE').length;
-    const totalSpent = transactions.filter(tx => tx.amount < 0 && tx.status === 'PAID').reduce((acc, tx) => acc + Math.abs(tx.amount), 0);
+    const totalDeposited = transactions
+        .filter(t => t.description?.toLowerCase().includes('deposit') || t.description?.toLowerCase().includes('top-up'))
+        .reduce((acc, t) => acc + (t.amount || 0), 0);
 
     return (
         <div className="dashboard-overview animate-reveal">
             <div className="stats-grid">
                 <div className="stat-card">
                     <div className="stat-header">
-                        <span className="stat-label">Wallet Balance</span>
+                        <span className="stat-label">Cash Balance</span>
                         <span className="stat-icon">💳</span>
                     </div>
-                    <div className="stat-value">₹{wallet?.balance?.toLocaleString() || '0'}</div>
-                    <div className="stat-delta delta-up">Institutional Credit</div>
+                    <div className="stat-value">₹{wallet?.cashBalance?.toLocaleString() || '0'}</div>
+                    <div className="stat-delta delta-up">Available for Assets</div>
                 </div>
                 <div className="stat-card">
                     <div className="stat-header">
@@ -23,14 +25,6 @@ const ClientOverview = ({ user, profile, wallet, sessions, transactions }) => {
                     </div>
                     <div className="stat-value">{pendingActions}</div>
                     <div className="stat-delta">Requires Attention</div>
-                </div>
-                <div className="stat-card">
-                    <div className="stat-header">
-                        <span className="stat-label">Institutional Investment</span>
-                        <span className="stat-icon">📈</span>
-                    </div>
-                    <div className="stat-value">₹{totalSpent.toLocaleString()}</div>
-                    <div className="stat-delta">Total Case Spend</div>
                 </div>
             </div>
 
@@ -62,3 +56,4 @@ const ClientOverview = ({ user, profile, wallet, sessions, transactions }) => {
 };
 
 export default ClientOverview;
+

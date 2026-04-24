@@ -23,6 +23,7 @@ import java.util.Arrays;
 
 @Configuration 
 @EnableWebSecurity // Turns on Spring Security for the whole application
+@org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity // Enable @PreAuthorize
 public class SecurityConfig {
 
     @Autowired
@@ -62,11 +63,17 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(AbstractHttpConfigurer::disable) // Disable CSRF since we are using JWT tokens
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**").permitAll() // ALLOW anyone to hit login and register endpoints
-                .requestMatchers("/api/ai/**").permitAll()   // ALLOW Lawino AI access
+                .requestMatchers("/api/auth/**").permitAll()         // ALLOW anyone to hit login/register
                 .requestMatchers("/api/professionals/**").permitAll() // ALLOW access to professional listings
-                .requestMatchers("/ws/**").permitAll()       // ALLOW WebSocket handshake
-                .anyRequest().authenticated() // Block ALL other endpoints unless they have a valid Pass
+                .requestMatchers("/api/system/mode").permitAll()     // ALLOW system mode check (used by MainLayout on load)
+                .requestMatchers("/api/ai/copilot").authenticated()  // AI intelligence requires valid account
+                .requestMatchers("/api/ai/document/**").authenticated() // Analysis requires authentication
+                .requestMatchers("/ws/**").permitAll()               // ALLOW WebSocket handshake
+                // 🔐 ADMIN GOVERNANCE: Strictly enforce ROLE_ADMIN or ROLE_MASTER_ADMIN for all command-center endpoints
+                .requestMatchers("/api/admin/**").hasAnyRole("ADMIN", "MASTER_ADMIN")
+                // 🛡️ RESOURCE PROTECTION: Any authenticated user can publish; only Admins can delete
+                .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/api/resources/**").hasRole("ADMIN")
+                .anyRequest().authenticated()                        // Block ALL other endpoints without a valid JWT
             )
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS) // We don't want Spring to remember sessions; JWT handles that

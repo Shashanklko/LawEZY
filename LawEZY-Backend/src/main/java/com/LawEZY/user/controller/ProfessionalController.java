@@ -28,9 +28,9 @@ public class ProfessionalController {
         return ResponseEntity.ok(userService.getProfessionalById(id));
     }
 
-    @org.springframework.web.bind.annotation.PatchMapping("/{uid}/status")
-    public ResponseEntity<Void> updateStatus(@PathVariable String uid, @org.springframework.web.bind.annotation.RequestBody java.util.Map<String, Boolean> body) {
-        userService.updateProfessionalStatus(uid, body.get("online"));
+    @org.springframework.web.bind.annotation.PatchMapping("/{id}/status")
+    public ResponseEntity<Void> updateStatus(@PathVariable String id, @org.springframework.web.bind.annotation.RequestBody java.util.Map<String, Boolean> body) {
+        userService.updateProfessionalStatus(id, body.get("online"));
         return ResponseEntity.ok().build();
     }
 }

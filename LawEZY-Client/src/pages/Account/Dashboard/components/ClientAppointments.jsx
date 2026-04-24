@@ -1,18 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import apiClient from '../../../../services/apiClient';
+import { getSocket } from '../../../../services/socket';
 import AppointmentCard from './AppointmentCard';
 import ReviewModal from './ReviewModal';
 
-const ClientAppointments = ({ user }) => {
+const ClientAppointments = ({ user, walletBalance, onRefresh }) => {
     const [appointments, setAppointments] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [filter, setFilter] = useState('PROPOSALS');
+    const [filter, setFilter] = useState('ACTIVE');
     const [showReviewModal, setShowReviewModal] = useState(false);
     const [selectedAppt, setSelectedAppt] = useState(null);
-
-    useEffect(() => {
-        fetchAppointments();
-    }, []);
+    const fetchRef = useRef(null);
 
     const fetchAppointments = async () => {
         try {
@@ -26,25 +24,54 @@ const ClientAppointments = ({ user }) => {
         }
     };
 
-    const handleAction = async (appt, action) => {
+    useEffect(() => {
+        fetchRef.current = fetchAppointments;
+        fetchAppointments();
+
+        const token = localStorage.getItem('lawezy_token');
+        if (token) {
+            const socket = getSocket(token);
+            const handler = () => {
+                fetchRef.current?.();
+                onRefresh?.();
+            };
+            socket.on('notification_received', handler);
+            socket.on('discovery_sync', handler);
+            return () => {
+                socket.off('notification_received', handler);
+                socket.off('discovery_sync', handler);
+            };
+        }
+    }, [onRefresh]);
+
+    const handleAction = async (appt, action, data) => {
         try {
             if (action === 'accept') {
                 await apiClient.post(`/api/appointments/${appt.id}/accept`);
-                alert("Institutional Schedule Confirmed. Proceeding to finalization.");
+                setFilter('ACTIVE');
             } else if (action === 'paid') {
                 await apiClient.patch(`/api/appointments/${appt.id}/status?status=PAID`);
-                alert("Institutional payment verified. Access to room granted.");
+                setFilter('ACTIVE');
             } else if (action === 'revoke') {
                 await apiClient.patch(`/api/appointments/${appt.id}/status?status=CANCELLED`);
-                alert("Institutional Revocation Dispatched: Protocol terminated.");
             } else if (action === 'review') {
                 setSelectedAppt(appt);
                 setShowReviewModal(true);
-                return; // Modal handles the rest
+                return;
+            } else if (action === 'counter') {
+                await apiClient.post(`/api/appointments/${appt.id}/counter`, data);
+            } else if (action === 'finalize') {
+                await apiClient.post(`/api/appointments/${appt.id}/finalize?slotIndex=${data?.slotIndex || 1}`);
+                setFilter('ACTIVE');
             }
-            fetchAppointments();
+            fetchRef.current?.();
+            onRefresh?.();
         } catch (err) {
-            alert(`Institutional action failed: ${action}`);
+            const errorMsg = err.response?.data?.message || err.message || "";
+            if (errorMsg.includes("Insufficient") || errorMsg.includes("Balance")) {
+                throw err;
+            }
+            alert(`Action failed: ${errorMsg || "The system was unable to process the request."}`);
         }
     };
 
@@ -53,11 +80,9 @@ const ClientAppointments = ({ user }) => {
             const currentPrice = appt.fee;
             const discount = Math.round(currentPrice * (percent / 100));
             const newPrice = currentPrice - discount;
-            
-            // Note: -100 to remove platform fee before sending base back
             await apiClient.post(`/api/appointments/${appt.id}/negotiate?baseFee=${newPrice - 100}`);
-            alert("Counter-proposal dispatched to expert ledger.");
-            fetchAppointments();
+            fetchRef.current?.();
+            onRefresh?.();
         } catch (err) {
             alert("Negotiation failed.");
         }
@@ -65,11 +90,10 @@ const ClientAppointments = ({ user }) => {
 
     const filtered = appointments.filter(a => {
         const apptStatus = a.status || a.appointmentStatus || 'PROPOSED';
-        if (filter === 'PROPOSALS') return apptStatus === 'PROPOSED' || apptStatus === 'COUNTERED';
-        if (filter === 'UPCOMING') return ['CONFIRMED', 'ACCEPTED', 'AWAITING_PAYMENT', 'PAID', 'PENDING_REVIEW'].includes(apptStatus);
+        if (filter === 'ACTIVE') return !['COMPLETED', 'CANCELLED', 'REJECTED'].includes(apptStatus);
         
-        if (filter === 'COMPLETED') {
-            if (apptStatus !== 'COMPLETED') return false;
+        if (filter === 'HISTORY') {
+            if (!['COMPLETED', 'CANCELLED', 'REJECTED'].includes(apptStatus)) return false;
             
             // 90-Day Retention Logic
             const completionDate = a.updatedAt || a.scheduledAt || new Date();
@@ -79,13 +103,13 @@ const ClientAppointments = ({ user }) => {
         return true;
     });
 
-    if (loading) return <div style={{ padding: '40px', textAlign: 'center', opacity: 0.6 }}>Synchronizing Institutional Ledger...</div>;
+    if (loading) return <div style={{ padding: '40px', textAlign: 'center', opacity: 0.6 }}>Synchronizing Case Ledger...</div>;
 
     return (
         <div className="appointments-tab-container animate-reveal">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px', gap: '20px', flexWrap: 'wrap' }}>
                 <div className="tab-filters" style={{ display: 'flex', gap: '8px', background: 'rgba(212, 175, 55, 0.05)', padding: '6px', borderRadius: '14px', border: '1px solid rgba(212, 175, 55, 0.1)' }}>
-                    {['PROPOSALS', 'UPCOMING', 'COMPLETED'].map(f => (
+                    {['ACTIVE', 'HISTORY'].map(f => (
                         <button 
                             key={f}
                             className={`filter-pill ${filter === f ? 'active' : ''}`}
@@ -98,12 +122,12 @@ const ClientAppointments = ({ user }) => {
                                 letterSpacing: '0.5px'
                             }}
                         >
-                            {f === 'PROPOSALS' ? 'Institutional Proposals' : f === 'UPCOMING' ? 'Confirmed Sessions' : 'Institutional History'}
+                            {f === 'ACTIVE' ? 'Active Sessions' : 'Session History'}
                         </button>
                     ))}
                 </div>
 
-                {filter === 'COMPLETED' && (
+                {filter === 'HISTORY' && (
                     <div style={{ 
                         fontSize: '0.65rem', 
                         fontWeight: 800, 
@@ -145,7 +169,8 @@ const ClientAppointments = ({ user }) => {
                         key={appt.id} 
                         appt={appt} 
                         user={user} 
-                        onAction={(action) => handleAction(appt, action)}
+                        walletBalance={walletBalance}
+                        onAction={(action, data) => handleAction(appt, action, data)}
                         onNegotiate={(percent) => handleNegotiate(appt, percent)}
                         onReschedule={() => alert("Redirecting to Expert Profile for alternate booking...")}
                     />
@@ -167,7 +192,7 @@ const ClientAppointments = ({ user }) => {
                     onSuccess={() => {
                         setShowReviewModal(false);
                         fetchAppointments();
-                        alert("Institutional Review Submitted. Institutional Mission COMPLETED.");
+                        alert("Review Submitted successfully. Session closed.");
                     }}
                 />
             )}
@@ -176,3 +201,4 @@ const ClientAppointments = ({ user }) => {
 };
 
 export default ClientAppointments;
+

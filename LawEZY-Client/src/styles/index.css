@@ -98,6 +98,67 @@ h1 {
 }
 
 h2 {
+  font-size: 2.5rem;
+}
+
+/* --- Institutional Branding System --- */
+.lawezy-logo {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  color: var(--accent-burgundy);
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  display: flex;
+  align-items: baseline;
+  user-select: none;
+  line-height: 1;
+  text-decoration: none !important;
+}
+
+.lawezy-logo .logo-dot {
+  color: #D4AF37; /* Heritage Gold */
+  margin-left: 1px;
+}
+
+.lawezy-logo.xl {
+  font-size: 2.8rem;
+}
+
+.lawezy-logo.xl .logo-dot {
+  font-size: 3.2rem;
+}
+
+.lawezy-logo.large {
+  font-size: 1.9rem;
+}
+
+.lawezy-logo.large .logo-dot {
+  font-size: 2.2rem;
+}
+
+.lawezy-logo.medium {
+  font-size: 1.5rem;
+}
+
+.lawezy-logo.medium .logo-dot {
+  font-size: 1.8rem;
+}
+
+.lawezy-logo.small {
+  font-size: 1.1rem;
+}
+
+.lawezy-logo.small .logo-dot {
+  font-size: 1.3rem;
+}
+
+.lawezy-logo.tiny {
+  font-size: 0.9rem;
+}
+
+.lawezy-logo.tiny .logo-dot {
+  font-size: 1.1rem;
+}
   font-size: 2.8rem;
 }
 
@@ -157,4 +218,72 @@ h3 {
   width: 100%;
   margin: 0;
   padding: var(--spacing-lg) var(--spacing-md);
+}
+
+@keyframes pulse-red {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 4px rgba(239, 68, 68, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+.elite-sync-spinner {
+  width: 50px;
+  height: 50px;
+  border: 3px solid rgba(127, 29, 29, 0.1);
+  border-top-color: var(--accent-burgundy);
+  border-radius: 50%;
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* System Governance Styles */
+.testing-mode-banner {
+  background: #FEF3C7;
+  color: #92400E;
+  text-align: center;
+  padding: 8px 20px;
+  font-size: 0.85rem;
+  font-family: var(--font-accent);
+  border-bottom: 1px solid #FDE68A;
+  z-index: 999;
+  position: relative;
+  width: 100%;
+}
+
+.maintenance-lock-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 60vh;
+  text-align: center;
+  padding: 40px;
+  background: var(--secondary-bg);
+  border-radius: 12px;
+  margin: 40px;
+  box-shadow: 0 10px 30px var(--glass-border);
+}
+
+.maintenance-lock-screen .lock-icon {
+  font-size: 4rem;
+  margin-bottom: 20px;
+  opacity: 0.8;
+}
+
+.maintenance-lock-screen h2 {
+  font-family: var(--font-heading);
+  color: var(--text-main);
+  font-size: 2rem;
+  margin-bottom: 12px;
+}
+
+.maintenance-lock-screen p {
+  font-family: var(--font-body);
+  color: var(--text-muted);
+  max-width: 500px;
+  line-height: 1.6;
 }

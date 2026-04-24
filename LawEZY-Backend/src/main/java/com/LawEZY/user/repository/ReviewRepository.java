@@ -8,9 +8,12 @@ import java.util.Optional;
 
 @Repository
 public interface ReviewRepository extends JpaRepository<Review, Long> {
-    List<Review> findByExpertUidOrderByCreatedAtDesc(String expertUid);
+    List<Review> findByExpert_IdOrderByCreatedAtDesc(String expertId);
     Optional<Review> findByAppointmentId(Long appointmentId);
     
     // Aggregate queries for rating calculations
-    long countByExpertUid(String expertUid);
+    long countByExpert_Id(String expertId);
+
+    void deleteByExpert_Id(String expertId);
+    void deleteByClient_Id(String clientId);
 }

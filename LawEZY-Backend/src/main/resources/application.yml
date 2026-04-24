@@ -1,0 +1,86 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: LawEZY-Backend
+  # profiles:
+  #   active: dev # Deactivated to use real Cloud DBs
+
+  # MySQL Configuration
+  datasource:
+    url: ${TIDB_URL:jdbc:mysql://your-tidb-host:4000/lawezy?useSSL=true}
+    username: ${TIDB_USER:your-tidb-user}
+    password: ${TIDB_PASSWORD:your-tidb-password}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  # JPA / Hibernate Configurations
+  jpa:
+    hibernate:
+      ddl-auto: ${JPA_DDL:update}
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+
+  # MongoDB Configuration (Consolidated High-Performance Architecture)
+  data:
+    mongodb:
+      uri: ${MONGO_URI:mongodb+srv://your-user:your-pass@your-cluster.mongodb.net/lawezy_main}
+
+  # 📧 INSTITUTIONAL EMAIL INFRASTRUCTURE (Google Gmail API - OAuth2)
+  gmail:
+    client-id: ${GMAIL_CLIENT_ID:your-client-id}
+    client-secret: ${GMAIL_CLIENT_SECRET:your-client-secret}
+    refresh-token: ${GMAIL_REFRESH_TOKEN:your-refresh-token}
+    user-email: ${GMAIL_USER_EMAIL:your-email@gmail.com}
+
+  # 🏛️ SPRING AI ELITE GEMINI CONFIG (Expert Intelligence)
+  # Using Native Google GenAI SDK (Spring AI 2.0.0-M4)
+  ai:
+    google:
+      genai:
+        api-key: ${GOOGLE_AI_API_KEY:your-google-ai-key}
+        chat:
+          options:
+            model: gemini-1.5-flash
+
+# Custom JWT Application Properties
+jwt:
+  secret: ${JWT_SECRET:your-256-bit-secret-placeholder-for-production}
+  expirationMs: 86400000 # 24 hours
+
+# Custom Application Properties
+app:
+  internal:
+    secret: ${INTERNAL_SECRET:your-internal-grid-secret}
+  messenger:
+    url: ${MESSENGER_URL:http://localhost:8080}
+  cors:
+    allowed-origins: ${ALLOWED_ORIGINS:http://localhost:5173,http://localhost:8080}
+
+# Institutional Razorpay Config
+razorpay:
+  key:
+    id: ${RAZORPAY_KEY_ID:your-razorpay-id}
+    secret: ${RAZORPAY_KEY_SECRET:your-razorpay-secret}
+
+# Supabase Cloud Storage Config
+supabase:
+  url: ${SUPABASE_URL:https://your-project.supabase.co}
+  key: ${SUPABASE_KEY:your-supabase-service-role-key}
+  bucket: ${SUPABASE_BUCKET:legal-docs}
+
+
+
+
+# 🚀 UNIVERSAL LOGGING CONFIG 🚀
+logging:
+  level:
+    root: INFO
+    com.LawEZY: INFO         # Show all our custom logs
+    org.springframework.web: INFO  # Show web request/response flow
+    org.hibernate.SQL: INFO
+    org.hibernate.type.descriptor.sql.BasicBinder: INFO
+    org.springframework.ai: INFO
+

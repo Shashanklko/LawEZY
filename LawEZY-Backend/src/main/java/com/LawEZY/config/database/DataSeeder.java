@@ -7,16 +7,10 @@ import com.LawEZY.user.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
-import lombok.extern.slf4j.Slf4j;
-
-/**
- * 🛠️ INSTITUTIONAL DATA SEEDER
- * Responsible for establishing a stable testing baseline for the LawEZY platform.
- * Ensures critical test identities exist in the ledger upon server initialization.
- */
 @Component
-@Slf4j
 public class DataSeeder implements CommandLineRunner {
+
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(DataSeeder.class);
 
     @Autowired
     private UserService userService;

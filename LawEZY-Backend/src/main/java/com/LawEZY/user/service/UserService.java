@@ -16,6 +16,8 @@ public interface UserService {
     void disableUser(String userId);
     List<ProfessionalProfileDTO> getAllProfessionals();
     ProfessionalProfileDTO getProfessionalById(String id);
-    ProfessionalProfileDTO getProfessionalByUid(String uid);
-    void updateProfessionalStatus(String uid, boolean online);
+    ProfessionalProfileDTO getProfessionalBySlug(String slug);
+    void updateProfessionalStatus(String id, boolean online);
+    void verifyExpert(String id);
+    void updatePassword(String email, String newPassword);
 }

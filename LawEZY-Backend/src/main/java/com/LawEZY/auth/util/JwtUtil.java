@@ -27,12 +27,14 @@ public class JwtUtil {
 
     // 1. EXTRACT USERNAME (Email) FROM TOKEN
     public String extractUsername(String token) {
-        return extractClaim(token, "sub", String.class);
+        final Claims claims = extractAllClaims(token);
+        return claims.getSubject();
     }
 
     // 2. EXTRACT EXPIRATION DATE FROM TOKEN
     public Date extractExpiration(String token) {
-        return extractClaim(token, "exp", Date.class);
+        final Claims claims = extractAllClaims(token);
+        return claims.getExpiration();
     }
 
     // Generic method to pull any specific piece of data (Claim) out of the token
@@ -59,11 +61,10 @@ public class JwtUtil {
     public String generateToken(UserDetails userDetails) {
         Map<String, Object> claims = new HashMap<>(); 
         
-        // Institutional Identity Bridge: Extract Hex ID and Public UID from our Custom wrapper
+        // Institutional Identity Bridge: Extract Hex ID from our Custom wrapper
         if (userDetails instanceof com.LawEZY.auth.dto.CustomUserDetails) {
             com.LawEZY.auth.dto.CustomUserDetails custom = (com.LawEZY.auth.dto.CustomUserDetails) userDetails;
             claims.put("id", custom.getId());
-            claims.put("uid", custom.getUid());
         }
         
         String role = userDetails.getAuthorities().stream().findFirst().map(auth -> auth.getAuthority()).orElse("ROLE_CLIENT");

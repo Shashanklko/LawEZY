@@ -20,7 +20,7 @@ export const getSocket = (token) => {
         reconnectionAttempts: 10,
         reconnectionDelay: 2000,
         timeout: 10000,
-        transports: ['websocket', 'polling']
+        transports: ['websocket']
     });
 
     socket.on('connect', () => {
@@ -44,3 +44,4 @@ export const disconnectSocket = () => {
         socket = null;
     }
 };
+

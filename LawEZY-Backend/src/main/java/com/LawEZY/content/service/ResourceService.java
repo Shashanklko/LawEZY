@@ -23,6 +23,9 @@ public class ResourceService {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private com.LawEZY.user.service.AdminBroadcastService adminBroadcastService;
+
     public List<LegalResource> getAllResources(String category) {
         if (category != null) {
             return resourceRepository.findByCategoryIgnoreCase(category);
@@ -30,10 +33,19 @@ public class ResourceService {
         return resourceRepository.findAll();
     }
 
-    public LegalResource updateResource(String resourceId, String content) {
+    public LegalResource updateResource(@NonNull String resourceId, @NonNull ResourceRequest request) {
         LegalResource res = resourceRepository.findById(resourceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Resource not found"));
-        res.setContent(content);
+        
+        if (request.getTitle() != null) res.setTitle(request.getTitle());
+        if (request.getContent() != null) res.setContent(request.getContent());
+        if (request.getCategory() != null) res.setCategory(request.getCategory());
+        if (request.getCoverUrl() != null) res.setCoverUrl(request.getCoverUrl());
+        if (request.getAbstractText() != null) res.setAbstractText(request.getAbstractText());
+        if (request.getDriveLink() != null) res.setDriveLink(request.getDriveLink());
+        if (request.getFileUrl() != null) res.setFileUrl(request.getFileUrl());
+        if (request.getPageCount() != null) res.setPageCount(request.getPageCount());
+        
         return resourceRepository.save(res);
     }
 
@@ -56,7 +68,18 @@ public class ResourceService {
         resource.setAbstractText(request.getAbstractText());
         resource.setDriveLink(request.getDriveLink());
         resource.setFileUrl(request.getFileUrl());
-        return resourceRepository.save(resource);
+        resource.setPageCount(request.getPageCount());
+        LegalResource saved = resourceRepository.save(resource);
+
+        // 🚀 REAL-TIME BROADCAST: Library Publication
+        adminBroadcastService.broadcastAdminEvent("NEW_RESOURCE", java.util.Map.of(
+            "resourceId", saved.getId(),
+            "title", saved.getTitle(),
+            "author", saved.getAuthorName(),
+            "category", saved.getCategory()
+        ));
+
+        return saved;
     }
 
     public void deleteResource(@NonNull String id) {

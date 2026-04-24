@@ -7,8 +7,7 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface ClientProfileRepository extends JpaRepository<ClientProfile, String> {
     java.util.Optional<ClientProfile> findByUserId(String userId);
-    java.util.Optional<ClientProfile> findByUid(String uid);
-    java.util.Optional<ClientProfile> findByUidIgnoreCase(String uid);
     java.util.Optional<ClientProfile> findByPhoneNumber(String phoneNumber);
+    void deleteByUserId(String userId);
 }
 

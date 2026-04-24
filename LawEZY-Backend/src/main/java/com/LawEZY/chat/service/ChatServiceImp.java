@@ -14,6 +14,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.lang.NonNull;
@@ -38,11 +39,10 @@ import com.LawEZY.user.entity.ProfessionalProfile;
 
 import com.LawEZY.common.exception.ResourceNotFoundException;
 
-import lombok.extern.slf4j.Slf4j;
-
-@Slf4j
 @Service
 public class ChatServiceImp implements ChatService {
+
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ChatServiceImp.class);
 
     @Autowired
     private ChatSessionRepository chatSessionRepository;
@@ -60,7 +60,16 @@ public class ChatServiceImp implements ChatService {
     private com.LawEZY.user.service.FinancialService financialService;
     
     @Autowired
+    private com.LawEZY.user.service.WalletService walletService;
+    
+    @Autowired
     private com.LawEZY.user.repository.LawyerProfileRepository lawyerProfileRepository;
+
+    @Autowired
+    private com.LawEZY.user.repository.CAProfileRepository caProfileRepository;
+
+    @Autowired
+    private com.LawEZY.user.repository.CFAProfileRepository cfaProfileRepository;
 
     @Autowired
     private com.LawEZY.user.service.UserService userService;
@@ -68,13 +77,21 @@ public class ChatServiceImp implements ChatService {
     @Autowired
     private com.LawEZY.notification.service.NotificationService notificationService;
 
+    @Autowired
+    private com.LawEZY.chat.repository.TrialAuditRepository trialAuditRepository;
+
+    @Autowired
+    private com.LawEZY.user.service.AppointmentService appointmentService;
+
+    @Autowired
+    private com.LawEZY.common.service.EmailService emailService;
+
     private void verifySessionAccess(ChatSession session) {
         String currentId = getCurrentAuthenticatedId();
         Set<String> myIdentities = getUniversalIdentities(currentId);
         
         boolean isParticipant = myIdentities.contains(session.getUserId()) || 
-                               myIdentities.contains(session.getProfessionalId()) ||
-                               myIdentities.contains(session.getProUid());
+                               myIdentities.contains(session.getProfessionalId());
                                
         if (!isParticipant) {
             log.error("[SECURITY] Unauthorized access attempt by user {} on session {}", currentId, session.getId());
@@ -100,25 +117,33 @@ public class ChatServiceImp implements ChatService {
     @Override
     @NonNull
     public ChatSessionResponse startSession(@NonNull StartChatRequest request) {
-        log.info("[INSTITUTIONAL START] Initializing session. User: {} | Prof: {}", request.getUserId(), request.getProfessionalId());
-        
-        String resolvedUser = resolveInternalId(request.getUserId());
-        String resolvedProf = resolveInternalId(request.getProfessionalId());
+        String resolvedUser = null;
+        String resolvedProf = null;
+
+        try {
+            resolvedUser = resolveInternalId(request.getUserId());
+            resolvedProf = resolveInternalId(request.getProfessionalId());
+        } catch (Exception e) {
+            log.error("[INSTITUTIONAL ERROR] Critical failure during Identity Resolution: {}", e.getMessage());
+            throw new RuntimeException("Institutional Identity Engine failure. Handshake aborted.");
+        }
 
         if (resolvedUser == null || resolvedProf == null) {
-            log.error("[INSTITUTIONAL ERROR] Handshake Failed. Identity resolution returned NULL. User: {} -> {} | Prof: {} -> {}", 
-                      request.getUserId(), resolvedUser, request.getProfessionalId(), resolvedProf);
-            throw new IllegalArgumentException("Could not resolve institutional identities. Handshake aborted.");
+            String fault = (resolvedUser == null) ? "USER" : "PROFESSIONAL";
+            String rawId = (resolvedUser == null) ? request.getUserId() : request.getProfessionalId();
+            log.error("[INSTITUTIONAL ERROR] Handshake Failed. Could not resolve {} identity (Input: {}).", 
+                      fault, rawId);
+            throw new IllegalArgumentException("Institutional Handshake Failed: Could not resolve " + fault + " identity [" + rawId + "]. Check provided identifiers.");
         }
+
+        final String finalUser = resolvedUser;
+        final String finalProf = resolvedProf;
 
         // --- DUPLICATE PREVENTION LOGIC ---
         // Check for existing active or awaiting reply sessions
         List<ChatSession> existingSessions = chatSessionRepository.findByUserIdAndProfessionalIdAndStatus(resolvedUser, resolvedProf, ChatStatus.ACTIVE);
-        if (existingSessions.isEmpty()) {
+        if (existingSessions == null || existingSessions.isEmpty()) {
             existingSessions = chatSessionRepository.findByUserIdAndProfessionalIdAndStatus(resolvedUser, resolvedProf, ChatStatus.AWAITING_REPLY);
-        }
-        if (existingSessions.isEmpty()) {
-            existingSessions = chatSessionRepository.findByUserIdAndProUidAndStatus(resolvedUser, resolvedProf, ChatStatus.ACTIVE);
         }
         
         if (!existingSessions.isEmpty()) {
@@ -131,27 +156,33 @@ public class ChatServiceImp implements ChatService {
         session.setUserId(resolvedUser);
         session.setProfessionalId(resolvedProf);
         
-        // Capture UID for ledger consistency
-        if (resolvedProf != null) {
-            professionalProfileRepository.findById(resolvedProf).ifPresent(p -> session.setProUid(p.getUid()));
-            if (session.getProUid() == null) {
-                // Fallback: try finding by UID if resolvedProf was already a UID
-                professionalProfileRepository.findByUidIgnoreCase(resolvedProf).ifPresent(p -> {
-                    session.setProfessionalId(p.getId());
-                    session.setProUid(p.getUid());
-                });
-            }
-        }
-        
+        // 🛡️ PERSISTENT TRIAL GOVERNANCE
+        // Check if a trial has already been used between this pair in any previous (deleted) session
+        trialAuditRepository.findByUserIdAndProfessionalId(finalUser, finalProf)
+            .ifPresent(audit -> {
+                log.info("[INSTITUTIONAL AUDIT] Trial already consumed for User: {} | Prof: {}. Flagging session as trial-ended.", finalUser, finalProf);
+                session.setTrialEnded(true);
+            });
+
         session.setStatus(ChatStatus.AWAITING_REPLY);
-        session.setTokensGranted(0);
-        session.setTokensConsumed(0);
+        
+        // --- INSTITUTIONAL METADATA CACHE ---
+        try {
+            com.LawEZY.user.dto.ProfessionalProfileDTO prof = userService.getProfessionalById(resolvedProf);
+            session.setTextChatFee(prof.getTextChatFee() != null ? prof.getTextChatFee() : 100.0);
+            session.setChatDurationMinutes(prof.getChatDurationMinutes() != null ? prof.getChatDurationMinutes() : 20);
+        } catch (Exception e) {
+            log.warn("[INSTITUTIONAL WARN] Could not cache expert metadata for {}. Using defaults.", resolvedProf);
+            session.setTextChatFee(100.0);
+            session.setChatDurationMinutes(20);
+        }
+
         session.setCreatedAt(LocalDateTime.now());
         session.setLastUpdateAt(LocalDateTime.now());
 
         ChatSession savedSession = chatSessionRepository.save(session);
-        log.info("[INSTITUTIONAL SYNC] Secure Channel Established. Session ID: {} | User: {} | Prof: {} | Public UID: {}", 
-                 savedSession.getId(), savedSession.getUserId(), savedSession.getProfessionalId(), savedSession.getProUid());
+        log.info("[INSTITUTIONAL SYNC] Secure Channel Established. Session ID: {} | User: {} | Prof: {}", 
+                 savedSession.getId(), savedSession.getUserId(), savedSession.getProfessionalId());
         
         // Return mapped response for instant frontend latching
         return mapToSessionResponse(savedSession, false, null, null);
@@ -171,11 +202,12 @@ public class ChatServiceImp implements ChatService {
                 .or(() -> userRepository.findByEmail(identifier))
                 .orElse(null);
 
-        // WAVE 2: Profile-Based Resolution (If identifier is a UID or Phone)
+        // WAVE 2: Profile-Based Resolution (If identifier is a Phone)
         if (user == null) {
-            professionalProfileRepository.findByUidIgnoreCase(identifier).ifPresent(p -> identities.add(p.getId()));
             professionalProfileRepository.findByPhoneNumber(identifier).ifPresent(p -> identities.add(p.getId()));
-            clientProfileRepository.findByUidIgnoreCase(identifier).ifPresent(p -> identities.add(p.getId()));
+            lawyerProfileRepository.findByPhoneNumber(identifier).ifPresent(p -> identities.add(p.getId()));
+            caProfileRepository.findByPhoneNumber(identifier).ifPresent(p -> identities.add(p.getId()));
+            cfaProfileRepository.findByPhoneNumber(identifier).ifPresent(p -> identities.add(p.getId()));
             clientProfileRepository.findByPhoneNumber(identifier).ifPresent(p -> identities.add(p.getId()));
             
             // Re-attempt User resolution if ID was found in profiles
@@ -186,38 +218,25 @@ public class ChatServiceImp implements ChatService {
 
         // WAVE 3: Identity Aggregation
         if (user != null) {
-            String uid = user.getId();
-            identities.add(uid);
+            String id = user.getId();
+            identities.add(id);
             if (user.getEmail() != null) identities.add(user.getEmail());
             
-            // 🛡️ INSTITUTIONAL FIX: Always use findByUserId to bridge User -> Profile
-            professionalProfileRepository.findByUserId(uid).ifPresent(p -> {
-                if (p.getUid() != null) {
-                    identities.add(p.getUid());
-                    identities.add(p.getUid().toUpperCase());
-                    identities.add(p.getUid().toLowerCase());
-                }
+            professionalProfileRepository.findByUserId(id).ifPresent(p -> {
                 if (p.getPhoneNumber() != null) identities.add(p.getPhoneNumber());
             });
-            clientProfileRepository.findByUserId(uid).ifPresent(p -> {
-                if (p.getUid() != null) {
-                    identities.add(p.getUid());
-                    identities.add(p.getUid().toUpperCase());
-                    identities.add(p.getUid().toLowerCase());
-                }
+            lawyerProfileRepository.findById(id).ifPresent(p -> {
                 if (p.getPhoneNumber() != null) identities.add(p.getPhoneNumber());
             });
-            if (uid != null) {
-                lawyerProfileRepository.findById(uid).ifPresent(p -> {
-                    // LawyerProfile usually uses UserID as ID, but we check UID specifically
-                    if (p.getUid() != null) {
-                        identities.add(p.getUid());
-                        identities.add(p.getUid().toUpperCase());
-                        identities.add(p.getUid().toLowerCase());
-                    }
-                    if (p.getPhoneNumber() != null) identities.add(p.getPhoneNumber());
-                });
-            }
+            caProfileRepository.findById(id).ifPresent(p -> {
+                if (p.getPhoneNumber() != null) identities.add(p.getPhoneNumber());
+            });
+            cfaProfileRepository.findById(id).ifPresent(p -> {
+                if (p.getPhoneNumber() != null) identities.add(p.getPhoneNumber());
+            });
+            clientProfileRepository.findByUserId(id).ifPresent(p -> {
+                if (p.getPhoneNumber() != null) identities.add(p.getPhoneNumber());
+            });
         }
 
         log.info("[INSTITUTIONAL SYNC] Final Resolved Identities for {}: {}", identifier, identities);
@@ -227,7 +246,7 @@ public class ChatServiceImp implements ChatService {
 
 
     private String resolveInternalId(String identifier) {
-        if (identifier == null || identifier.trim().isEmpty() || identifier.equalsIgnoreCase("null")) return null;
+        if (identifier == null || identifier.trim().isEmpty() || identifier.equalsIgnoreCase("null") || identifier.equalsIgnoreCase("undefined")) return null;
         
         // 🚀 Aggressive Resolution
         // 1. Check ID directly
@@ -237,20 +256,19 @@ public class ChatServiceImp implements ChatService {
         Optional<User> byEmail = userRepository.findByEmail(identifier);
         if (byEmail.isPresent()) return byEmail.get().getId();
 
-        // 3. Check Phone (Professionals)
-        Optional<ProfessionalProfile> byPhonePro = professionalProfileRepository.findByPhoneNumber(identifier);
-        if (byPhonePro.isPresent()) return byPhonePro.get().getId();
+        // 3. Check Phone (Experts)
+        if (professionalProfileRepository.findByPhoneNumber(identifier).isPresent()) 
+            return professionalProfileRepository.findByPhoneNumber(identifier).get().getId();
+        if (lawyerProfileRepository.findByPhoneNumber(identifier).isPresent())
+            return lawyerProfileRepository.findByPhoneNumber(identifier).get().getId();
+        if (caProfileRepository.findByPhoneNumber(identifier).isPresent())
+            return caProfileRepository.findByPhoneNumber(identifier).get().getId();
+        if (cfaProfileRepository.findByPhoneNumber(identifier).isPresent())
+            return cfaProfileRepository.findByPhoneNumber(identifier).get().getId();
 
         // 4. Check Phone (Clients)
         Optional<com.LawEZY.user.entity.ClientProfile> byPhoneCli = clientProfileRepository.findByPhoneNumber(identifier);
         if (byPhoneCli.isPresent()) return byPhoneCli.get().getId();
-
-        // 5. Check UID
-        Optional<ProfessionalProfile> byUidPro = professionalProfileRepository.findByUidIgnoreCase(identifier);
-        if (byUidPro.isPresent()) return byUidPro.get().getId();
-        
-        Optional<com.LawEZY.user.entity.ClientProfile> byUidCli = clientProfileRepository.findByUidIgnoreCase(identifier);
-        if (byUidCli.isPresent()) return byUidCli.get().getId();
 
         return identifier;
     }
@@ -279,9 +297,15 @@ public class ChatServiceImp implements ChatService {
         String receiverId = resolveInternalId(request.getReceiverId());
 
         // 🛡️ AI SECURITY GUARD (Python + Gemini Powered Delegate)
-        // Blocking is BYPASSED if an official appointment has been scheduled and paid.
+        boolean isProfessional = senderId != null && senderId.equals(session.getProfessionalId());
         boolean isPaid = session.getIsAppointmentPaid() != null && session.getIsAppointmentPaid();
-        if (!isPaid && content != null && !content.trim().isEmpty()) {
+        
+        // --- INSTITUTIONAL GOVERNANCE: PERSONAL MESSAGING BLOCK ---
+        // Experts are ALWAYS blocked from sharing contact details to prevent platform bypass.
+        // Clients are only blocked if the consultation hasn't been officially paid/unlocked.
+        boolean shouldEnforceSafety = isProfessional || !isPaid;
+
+        if (shouldEnforceSafety && content != null && !content.trim().isEmpty()) {
             String aiSafetyResult = aiService.checkSafety(content);
 
             if (aiSafetyResult != null && aiSafetyResult.contains("BLOCKED")) {
@@ -289,10 +313,15 @@ public class ChatServiceImp implements ChatService {
                     "Contact details blocked",
                     "Content: " + content,
                     senderId,
-                    "USER" // Fallback role
+                    isProfessional ? "EXPERT" : "CLIENT"
                 );
-                log.warn("AI Blocked a message containing contact details: {}", content);
-                throw new RuntimeException("Sharing contact details is strictly blocked. Please schedule an appointment to exchange verified contact info.");
+                log.warn("[GOVERNANCE] {} Blocked from sharing contact details in Session {}: {}", isProfessional ? "EXPERT" : "CLIENT", sId, content);
+                
+                String errorMsg = isProfessional 
+                    ? "Sharing personal contact details is strictly prohibited for Experts to maintain platform integrity. Please use official consultation channels."
+                    : "Sharing contact details is blocked. Please schedule an appointment to exchange verified contact info.";
+                    
+                throw new RuntimeException(errorMsg);
             }
         }
 
@@ -318,49 +347,134 @@ public class ChatServiceImp implements ChatService {
             }
         }
 
-        // Token logic for User messages (Now using Industrial Wallet)
-        if (senderId != null && senderId.equals(session.getUserId())) {
-            Wallet wallet = walletRepository.findById(senderId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Wallet not found for user: " + senderId));
+        // --- INSTITUTIONAL GOVERNANCE: TIME-BASED BILLING ---
+        LocalDateTime now = LocalDateTime.now();
+
+        // 1. Expert's First Response (Grants 5 Minutes Free Trial IF NOT ALREADY USED)
+        if (isProfessional && session.getStatus() == ChatStatus.AWAITING_REPLY && request.getType() == com.LawEZY.chat.enums.MessageType.TEXT) {
+            boolean trialAlreadyUsed = Boolean.TRUE.equals(session.getTrialEnded());
             
-            Integer balance = wallet.getTokenBalance();
-            if (balance == null || balance <= 0) {
-                log.warn("[QUOTA] User {} exhausted expert chat units. Blocking outbound message.", senderId);
-                throw new org.springframework.security.access.AccessDeniedException("QUOTA_EXHAUSTED: Expert chat units depleted.");
+            if (!trialAlreadyUsed) {
+                log.info("[GOVERNANCE] Expert greeted. Granting 5-minute Free Trial to session {}", sId);
+                session.setExpiryTime(now.plusMinutes(5));
+                session.setTrialEnded(true);
+                
+                // 🛡️ Record trial usage in persistent audit to prevent re-trial after deletion
+                if (trialAuditRepository.findByUserIdAndProfessionalId(session.getUserId(), session.getProfessionalId()).isEmpty()) {
+                    trialAuditRepository.save(new com.LawEZY.chat.model.TrialAudit(session.getUserId(), session.getProfessionalId()));
+                    log.info("[INSTITUTIONAL AUDIT] Permanent Trial Audit recorded for User: {} | Prof: {}", session.getUserId(), session.getProfessionalId());
+                }
+            } else {
+                log.info("[GOVERNANCE] Expert greeted but trial already consumed. Session remains locked until payment.");
+                // Session status will become ACTIVE but expiry remains NULL (locked) or past
             }
             
-            wallet.setTokenBalance(balance - 1);
-            Integer consumedCount = session.getTokensConsumed();
-            session.setTokensConsumed(consumedCount != null ? consumedCount + 1 : 1);
-            walletRepository.save(wallet);
-            
-            // 🔔 Credit exhaustion alert for chat tokens
-            if (wallet.getTokenBalance() <= 0) {
-                try {
-                    notificationService.sendNotification(senderId,
-                        "⚠️ Chat Credits Exhausted",
-                        "Your expert chat tokens are depleted. Refill now to continue consultations.",
-                        "SYSTEM", "FINANCIAL", "/wallet");
-                } catch (Exception ignored) {}
+            session.setStatus(ChatStatus.ACTIVE);
+
+            // --- AUTOMATED GREETING & PRICING SYNC ---
+            try {
+                com.LawEZY.user.dto.ProfessionalProfileDTO prof = userService.getProfessionalById(session.getProfessionalId());
+                if (prof != null) {
+                    // 1. Custom Greeting (if set)
+                    if (prof.getCustomGreeting() != null && !prof.getCustomGreeting().trim().isEmpty()) {
+                        ChatMessage greetingMsg = new ChatMessage();
+                        greetingMsg.setChatSessionId(sId);
+                        greetingMsg.setSenderId(session.getProfessionalId());
+                        greetingMsg.setReceiverId(session.getUserId());
+                        greetingMsg.setContent(prof.getCustomGreeting());
+                        greetingMsg.setTimestamp(LocalDateTime.now().plusNanos(1000));
+                        chatMessageRepository.save(greetingMsg);
+                    }
+
+                    // 2. Institutional Pricing Notice
+                    Double fee10 = prof.getTextChatFee() != null ? prof.getTextChatFee() : 100.0;
+                    Double fee20 = (double) Math.round(fee10 * 1.8); // 10% discount for 20 mins
+                    
+                    String noticeContent = trialAlreadyUsed 
+                        ? String.format("📢 Consultation initiated. Free trial already consumed. To unlock interaction, please extend for 10 min (₹%.0f) or 20 min (₹%.0f).", fee10, fee20)
+                        : String.format("🌟 5-Minute Free Trial Started. To continue after expiry, extend for 10 min (₹%.0f) or 20 min (₹%.0f - Best Value).", fee10, fee20);
+
+                    ChatMessage pricingNotice = new ChatMessage();
+                    pricingNotice.setChatSessionId(sId);
+                    pricingNotice.setSenderId("SYSTEM");
+                    pricingNotice.setType(com.LawEZY.chat.enums.MessageType.SYSTEM_NOTICE);
+                    pricingNotice.setContent(noticeContent);
+                    pricingNotice.setTimestamp(LocalDateTime.now().plusNanos(2000));
+                    chatMessageRepository.save(pricingNotice);
+                    
+                    log.info("[GOVERNANCE] Trial/Pricing notice injected for session {}. TrialUsed: {}", sId, trialAlreadyUsed);
+                }
+            } catch (Exception e) {
+                log.warn("[GOVERNANCE] Failed to inject custom greeting/pricing: {}", e.getMessage());
             }
-            
-            // 📊 Record Real Transaction
-            financialService.recordTransaction(senderId, "AI Credit Consumption: Msg Session " + session.getId().substring(0, 4), -1.0, "COMPLETED", "DEBIT");
-            
-            log.info("[TOKENS] Deducted 1 token from Wallet of User {}. New Balance: {}", senderId, wallet.getTokenBalance());
         }
 
-        // Locked reply logic for Lawyer's initial response
-        if (senderId != null && senderId.equals(session.getProfessionalId()) && session.getStatus() == ChatStatus.AWAITING_REPLY) {
-            message.setIsLocked(true);
-            session.setStatus(ChatStatus.LOCKED_REPLY);
+        // 2. Client Expiry Enforcement (Paid Window Check)
+        if (!isProfessional) {
+            if (isPaid) {
+                // Hardened Appointment Governance: Check if the scheduled time + duration has passed
+                try {
+                    com.LawEZY.user.entity.Appointment appt = appointmentService.getByChatSession(sId);
+                    if (appt != null && appt.getScheduledAt() != null) {
+                        LocalDateTime endTime = appt.getScheduledAt().plusMinutes(appt.getDurationMinutes());
+                        if (now.isAfter(endTime)) {
+                            log.warn("[GOVERNANCE] Appointment Ref-{} expired for Client {}. Blocking outbound message.", appt.getId(), senderId);
+                            throw new org.springframework.security.access.AccessDeniedException("APPOINTMENT_EXPIRED: Your scheduled consultation time has ended. Please schedule a new session to continue.");
+                        }
+                    }
+                } catch (org.springframework.security.access.AccessDeniedException e) {
+                    throw e; // Re-throw security exception
+                } catch (Exception e) {
+                    log.warn("[GOVERNANCE] Appointment verification bypass: {}", e.getMessage());
+                }
+            } else if (session.getExpiryTime() != null && now.isAfter(session.getExpiryTime())) {
+                log.warn("[GOVERNANCE] Session {} expired for Client {}. Blocking outbound message.", sId, senderId);
+                throw new org.springframework.security.access.AccessDeniedException("SESSION_EXPIRED: Your consultation window has concluded. Please refill to continue.");
+            }
         }
+
+        // Locked reply logic for Lawyer's initial response - DECOMMISSIONED
 
         session.setLastUpdateAt(LocalDateTime.now());
         chatSessionRepository.save(session);
         log.info("[CHAT] MESSAGE SENT in Session: {} | Sender: {} | Type: {}", sId, senderId, request.getType());
         
         ChatMessage savedMessage = chatMessageRepository.save(message);
+
+        // 🔔 ENGAGEMENT NOTIFICATIONS
+        try {
+            boolean isFirstMessage = chatMessageRepository.countByChatSessionId(sId) <= 1;
+            String senderName = "A Client";
+            
+            // Try to resolve a friendlier name for the notification
+            try {
+                User sender = userRepository.findById(senderId).orElse(null);
+                if (sender != null) senderName = sender.getFirstName();
+            } catch (Exception ignored) {}
+
+            if (isFirstMessage && senderId.equals(session.getUserId())) {
+                // New Client Arrival Notification
+                notificationService.sendNotification(receiverId,
+                    "🌟 New Consultation Request",
+                    senderName + " has initiated a new consultation with you.",
+                    "MESSAGE", "ENGAGEMENT", "/chat/" + sId);
+            } else if (request.getType() == com.LawEZY.chat.enums.MessageType.APPOINTMENT) {
+                // Appointment Proposal in Chat
+                notificationService.sendNotification(receiverId,
+                    "📅 Appointment Proposal",
+                    senderName + " has sent a new appointment proposal in your chat.",
+                    "APPOINTMENT", "ENGAGEMENT", "/chat/" + sId);
+            } else {
+                // Standard Message Notification
+                notificationService.sendNotification(receiverId,
+                    "💬 New Message from " + senderName,
+                    content != null && content.length() > 50 ? content.substring(0, 47) + "..." : (content != null ? content : "Media shared"),
+                    "MESSAGE", "ENGAGEMENT", "/chat/" + sId);
+            }
+        } catch (Exception e) {
+            log.warn("[NOTIFICATION FAIL] Could not dispatch chat alert: {}", e.getMessage());
+        }
+
         return mapToResponse(savedMessage, session.getStatus());
     }
 
@@ -388,25 +502,9 @@ public class ChatServiceImp implements ChatService {
 
         verifySessionAccess(session);
         session.setStatus(ChatStatus.RESOLVED);
-
-        
-        // ROLLOVER LOGIC
-        Integer granted = session.getTokensGranted();
-        Integer consumed = session.getTokensConsumed();
-        int leftover = (granted != null ? granted : 0) - (consumed != null ? consumed : 0);
-        
-        if (leftover > 0) {
-            String userId = session.getUserId();
-            if (userId != null) {
-                walletRepository.findById(userId).ifPresent(wallet -> {
-                    Integer balance = wallet.getTokenBalance();
-                    wallet.setTokenBalance(balance != null ? balance + leftover : leftover);
-                    walletRepository.save(wallet);
-                });
-            }
-        }
         
         chatSessionRepository.save(session);
+        sendSessionSummary(session);
     }
 
     @Override
@@ -421,50 +519,87 @@ public class ChatServiceImp implements ChatService {
     }
 
     @Override
-    public void unlockReply(@NonNull String sessionId) {
+    @Transactional
+    public void unlockReply(@NonNull String sessionId, int requestedMinutes) {
         ChatSession session = chatSessionRepository.findById(sessionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Session not found"));
 
         verifySessionAccess(session);
-        if (session.getStatus() == ChatStatus.LOCKED_REPLY) {
+        
+        // --- INSTITUTIONAL GOVERNANCE: DYNAMIC TIME-BASED UNLOCK ---
+        String clientId = session.getUserId();
+        String professionalId = session.getProfessionalId();
+        
+        // Check balance before proceeding
+        Wallet clientWallet = walletService.getWalletByUserId(clientId);
+        
+        // --- IDENTITY RESOLUTION ---
+        // We use the userService to find the profile as it handles lookup across Lawyer, CA, CFA, and Professional tables.
+        com.LawEZY.user.dto.ProfessionalProfileDTO prof = userService.getProfessionalById(professionalId);
+        if (prof == null) {
+            throw new ResourceNotFoundException("Professional Profile not found for ID: " + professionalId);
+        }
 
-            session.setStatus(ChatStatus.ACTIVE);
-            Integer grantedCount = session.getTokensGranted();
-            session.setTokensGranted(grantedCount != null ? grantedCount + 10 : 10);
-            
-            String professionalId = session.getProfessionalId();
-            if (professionalId != null) {
-                // Resolve Internal ID from UID if needed
-                ProfessionalProfile prof = professionalProfileRepository.findById(professionalId)
-                        .orElseGet(() -> professionalProfileRepository.findByUidIgnoreCase(professionalId).orElse(null));
-                
-                if (prof != null && prof.getId() != null) {
-                    String internalId = prof.getId();
-                    Wallet wallet = walletRepository.findById(internalId).orElse(null);
-                    
-                    if (wallet != null) {
-                        Double fee = prof.getChatUnlockFee();
-                        double earnings = (fee != null ? fee : 99.0) * 0.8;
-                        Double currentBalance = wallet.getEarnedBalance();
-                        wallet.setEarnedBalance(currentBalance != null ? currentBalance + earnings : earnings);
-                        walletRepository.save(wallet);
-    
-                        // 📊 Record Real Transaction for Expert
-                        String userId = session.getUserId();
-                        String clientUid = "UNKNOWN-CLIENT";
-                        if (userId != null) {
-                            clientUid = clientProfileRepository.findById(userId)
-                                    .map(p -> p.getUid()).orElse("UNKNOWN-CLIENT");
-                        }
-                        financialService.recordTransaction(internalId, "Expert Consultation - Client: " + clientUid, earnings, "COMPLETED", "CREDIT");
-                        
-                        log.info("Professional ID: {} credited with earnings: {} for Session ID: {}", internalId, earnings, sessionId);
-                    }
-                }
-            }
+        // --- DYNAMIC FEE RESOLUTION ---
+        // We fetch the latest fees from the expert profile instead of using the session's cached values.
+        Double baseFee = prof.getTextChatFee() != null ? prof.getTextChatFee() : 100.0;
+        int baseDuration = prof.getChatDurationMinutes() != null ? prof.getChatDurationMinutes() : 10;
+        
+        Double fee;
+        if (requestedMinutes == 20 && baseDuration == 10) {
+            // Institutional Logic: 10% discount for double duration (100*2*0.9 = 180)
+            fee = baseFee * 1.8;
+            log.info("[GOVERNANCE] Applying bulk discount for 20m extension. Base: {}, Final: {}", baseFee, fee);
+        } else {
+            double multiplier = (double) requestedMinutes / baseDuration;
+            fee = baseFee * multiplier;
+        }
+        
+        if (clientWallet.getCashBalance() < fee) {
+            throw new RuntimeException("BALANCE_INSUFFICIENT: ₹" + String.format("%.2f", fee) + " required for " + requestedMinutes + "-minute extension.");
+        }
 
-            chatSessionRepository.save(session);
-            log.info("[CHAT] Session ID: {} UNLOCKED and set to ACTIVE.", sessionId);
+        double platformCut = fee * 0.20;
+        double earnings = fee - platformCut;
+
+        // 3. Update Session State
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime currentExpiry = session.getExpiryTime();
+        
+        // Extend from either now or current expiry, whichever is later
+        LocalDateTime baseTime = (currentExpiry != null && currentExpiry.isAfter(now)) ? currentExpiry : now;
+        session.setExpiryTime(baseTime.plusMinutes(requestedMinutes));
+        session.setStatus(ChatStatus.ACTIVE);
+        session.setIsAppointmentPaid(true); // Treat as paid window
+
+        // 4. Record Transactions
+        String profName = prof.getName() != null ? prof.getName() : "Expert";
+        
+        financialService.recordTransaction(clientId, "Chat Extension (" + requestedMinutes + "m) - Expert: " + profName, -fee, "COMPLETED", "DEBIT");
+        financialService.recordTransaction(professionalId, "Chat Extension (" + requestedMinutes + "m) - Client: " + clientId, earnings, "COMPLETED", "CREDIT");
+        
+        // 🛡️ Institutional Audit: Explicit Platform Commission Log (Attributed to Master Admin)
+        financialService.recordTransaction("lawezy76", "Message Service Platform Fee (Ref: " + sessionId + ")", platformCut, "COMPLETED", "CREDIT");
+
+        // 5. Inject Automated Extension Message
+        ChatMessage extMsg = new ChatMessage();
+        extMsg.setChatSessionId(sessionId);
+        extMsg.setSenderId("SYSTEM");
+        extMsg.setContent("⚡ Consultation window extended by " + requestedMinutes + " minutes. Happy chatting!");
+        extMsg.setTimestamp(LocalDateTime.now());
+        chatMessageRepository.save(extMsg);
+
+        chatSessionRepository.save(session);
+        log.info("[GOVERNANCE] Session {} extended by {} minutes. Fee: ₹{}. Expert: {}", sessionId, requestedMinutes, fee, prof.getId());
+        
+        // 6. Trigger Financial Notification
+        try {
+            notificationService.sendNotification(professionalId,
+                "💰 Extension Credits",
+                "Consultation extended by " + requestedMinutes + "m. ₹" + String.format("%.2f", earnings) + " credited.",
+                "PAYMENT", "FINANCIAL", "/chat/" + sessionId);
+        } catch (Exception e) {
+            log.warn("[GOVERNANCE] Extension notification failed: {}", e.getMessage());
         }
     }
 
@@ -523,9 +658,12 @@ public class ChatServiceImp implements ChatService {
         res.setUserId(session.getUserId());
         res.setProfessionalId(session.getProfessionalId());
         res.setStatus(session.getStatus());
+        res.setExpiryTime(session.getExpiryTime());
+        res.setTrialEnded(session.getTrialEnded() != null ? session.getTrialEnded() : false);
+        res.setTextChatFee(session.getTextChatFee());
+        res.setChatDurationMinutes(session.getChatDurationMinutes());
         res.setCreatedAt(session.getCreatedAt());
         res.setLastUpdateAt(session.getLastUpdateAt());
-        res.setProUid(session.getProUid());
 
         if (isProView) {
             // Expert View -> Get Client Name (Cached)
@@ -545,43 +683,36 @@ public class ChatServiceImp implements ChatService {
                                   (client.getLastName() != null ? " " + client.getLastName() : "");
                     res.setOtherPartyName(name);
                     res.setOtherPartyAvatar("https://ui-avatars.com/api/?name=" + name.charAt(0) + "&background=0D1B2A&color=E0C389&bold=true");
+                    res.setIsOtherPartyEnabled(client.getEnabled());
                 }
             } catch (Exception e) {
                 res.setOtherPartyName("Institutional Client " + (session.getUserId() != null ? session.getUserId() : ""));
+                res.setIsOtherPartyEnabled(true);
             }
         } else {
             // Client View -> Get Expert Name (Cached)
             try {
                 com.LawEZY.user.dto.ProfessionalProfileDTO profDTO;
-                String targetUid = session.getProUid() != null ? session.getProUid() : session.getProfessionalId();
+                String targetId = session.getProfessionalId();
                 
-                if (proCache != null && proCache.containsKey(targetUid)) {
-                    profDTO = proCache.get(targetUid);
+                if (proCache != null && proCache.containsKey(targetId)) {
+                    profDTO = proCache.get(targetId);
                 } else {
-                    try {
-                        // Priority 1: Direct Internal ID Lookup
-                        profDTO = userService.getProfessionalById(targetUid);
-                    } catch (Exception e1) {
-                        try {
-                            // Priority 2: Public UID Lookup
-                            profDTO = userService.getProfessionalByUid(targetUid);
-                        } catch (Exception e2) {
-                            // Priority 3: Internal ID via resolveInternalId
-                            String proId = resolveInternalId(targetUid);
-                            profDTO = userService.getProfessionalById(proId);
-                        }
-                    }
-                    if (proCache != null) proCache.put(targetUid, profDTO);
+                    profDTO = userService.getProfessionalById(targetId);
+                    if (proCache != null) proCache.put(targetId, profDTO);
                 }
                 
                 res.setOtherPartyName(profDTO.getName());
                 res.setOtherPartyAvatar(profDTO.getAvatar());
-                res.setProUid(profDTO.getUid());
+                
+                // Fetch user to check enabled status
+                userRepository.findById(targetId).ifPresent(u -> res.setIsOtherPartyEnabled(u.isEnabled()));
             } catch (Exception e) {
                 log.error("[INSTITUTIONAL ERROR] Name resolution failed for Target: {}. Defaulting to Expert Counsel.", 
-                           session.getProUid() != null ? session.getProUid() : session.getProfessionalId());
+                           session.getProfessionalId());
                 res.setOtherPartyName("Expert Counsel"); 
                 res.setOtherPartyAvatar("https://ui-avatars.com/api/?name=Expert&background=0D1B2A&color=E0C389&bold=true");
+                res.setIsOtherPartyEnabled(true);
             }
         }
 
@@ -592,17 +723,32 @@ public class ChatServiceImp implements ChatService {
         });
 
         // --- INSTITUTIONAL LIQUIDITY SYNC ---
-        // Fetch peer's token balance for transparency
-        try {
-            String peerId = isProView ? session.getUserId() : session.getProfessionalId();
-            if (peerId != null && !peerId.equals("null")) {
-                walletRepository.findById(peerId).ifPresent(w -> res.setPeerTokenBalance(w.getTokenBalance()));
-            }
-        } catch (Exception e) {
-            log.warn("[INSTITUTIONAL SYNC] Could not resolve peer liquidity for session {}", session.getId());
-        }
+        // DECOMMISSIONED: Token balance sync removed in favor of time-based service
 
-        res.setUnreadCount(0);
+        // Get Unread Count for the current viewer
+        String currentViewerId = isProView ? session.getProfessionalId() : session.getUserId();
+        long unread = chatMessageRepository.countByChatSessionIdAndReceiverIdAndIsReadFalse(session.getId(), currentViewerId);
+        res.setUnreadCount((int) unread);
+        
+        res.setExpiryTime(session.getExpiryTime());
+        res.setTrialEnded(session.getTrialEnded());
+        
+        // Finalize fee resolution using latest expert profile data
+        if (isProView) {
+            // In Pro view, we stick to session cached values or fetch if needed
+            res.setTextChatFee(session.getTextChatFee());
+            res.setChatDurationMinutes(session.getChatDurationMinutes());
+        } else {
+            // In Client view, we always try to get the LATEST fees from the expert
+            try {
+                com.LawEZY.user.dto.ProfessionalProfileDTO profDTO = userService.getProfessionalById(session.getProfessionalId());
+                res.setTextChatFee(profDTO.getTextChatFee() != null ? profDTO.getTextChatFee() : session.getTextChatFee());
+                res.setChatDurationMinutes(profDTO.getChatDurationMinutes() != null ? profDTO.getChatDurationMinutes() : session.getChatDurationMinutes());
+            } catch (Exception e) {
+                res.setTextChatFee(session.getTextChatFee());
+                res.setChatDurationMinutes(session.getChatDurationMinutes());
+            }
+        }
         return res;
     }
 
@@ -622,6 +768,7 @@ public class ChatServiceImp implements ChatService {
         res.setAppointmentStatus(msg.getAppointmentStatus());
         res.setTimestamp(msg.getTimestamp());
         res.setStatus(status);
+        res.setIsRead(msg.getIsRead());
         return res;
     }
 
@@ -646,8 +793,51 @@ public class ChatServiceImp implements ChatService {
         verifySessionAccess(session);
         log.info("[INSTITUTIONAL AUDIT] Institutional consultation resolution requested for: {}", sessionId);
         session.setStatus(ChatStatus.RESOLVED);
+        
         chatSessionRepository.save(session);
+        sendSessionSummary(session);
         log.info("[INSTITUTIONAL AUDIT] Session {} successfully marked as RESOLVED.", sessionId);
     }
 
+    private void sendSessionSummary(ChatSession session) {
+        try {
+            User client = userRepository.findById(session.getUserId()).orElse(null);
+            com.LawEZY.user.dto.ProfessionalProfileDTO prof = userService.getProfessionalById(session.getProfessionalId());
+            
+            if (client != null && prof != null) {
+                Map<String, Object> model = new HashMap<>();
+                model.put("greeting", "Hello " + client.getFirstName() + ", your consultation with " + prof.getName() + " has ended.");
+                model.put("expertName", prof.getName());
+                model.put("duration", (session.getChatDurationMinutes() != null ? session.getChatDurationMinutes() : 20) + " Minutes");
+                model.put("fee", "₹" + String.format("%.0f", (session.getTextChatFee() != null ? session.getTextChatFee() : 100.0)));
+                model.put("sessionId", session.getId());
+                model.put("feedbackUrl", "https://lawezy.com/dashboard?session=" + session.getId());
+
+                emailService.sendHtmlEmail(client.getEmail(), "LawEZY: Consultation Summary", "emails/session-summary", model);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to dispatch session summary email: {}", e.getMessage());
+        }
+    }
+
+    @Override
+    public void markAsRead(@NonNull String sessionId) {
+        ChatSession session = chatSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Session not found"));
+        
+        verifySessionAccess(session);
+        List<com.LawEZY.chat.model.ChatMessage> unread = chatMessageRepository.findByChatSessionIdOrderByTimestampAsc(sessionId);
+        unread.forEach(msg -> {
+            if (!Boolean.TRUE.equals(msg.getIsRead())) {
+                msg.setIsRead(true);
+            }
+        });
+        chatMessageRepository.saveAll(unread);
+        log.info("[CHAT] Session {} marked as read.", sessionId);
+    }
+
+    @Override
+    public long getTotalUnreadCount(@NonNull String userId) {
+        return chatMessageRepository.countByReceiverIdAndIsReadFalse(userId);
+    }
 }

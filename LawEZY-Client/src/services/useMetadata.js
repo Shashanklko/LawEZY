@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import apiClient from './apiClient';
 
 /**
@@ -19,7 +19,7 @@ const useMetadata = () => {
 
     const [loading, setLoading] = useState(true);
 
-    const refreshMetadata = async () => {
+    const refreshMetadata = useCallback(async () => {
         try {
             const [profileRes, walletRes] = await Promise.allSettled([
                 apiClient.get('/api/profiles/my'),
@@ -42,7 +42,7 @@ const useMetadata = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
     useEffect(() => {
         refreshMetadata();
@@ -52,3 +52,4 @@ const useMetadata = () => {
 };
 
 export default useMetadata;
+

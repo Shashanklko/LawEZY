@@ -11,4 +11,7 @@ public interface ChatMessageRepository extends MongoRepository<ChatMessage , Str
     List<ChatMessage> findByChatSessionIdOrderByTimestampAsc(String chatSessionId);
     java.util.Optional<ChatMessage> findTopByChatSessionIdOrderByTimestampDesc(String chatSessionId);
     void deleteAllByChatSessionId(String chatSessionId);
+    long countByChatSessionId(String chatSessionId);
+    long countByChatSessionIdAndReceiverIdAndIsReadFalse(String chatSessionId, String receiverId);
+    long countByReceiverIdAndIsReadFalse(String receiverId);
 }

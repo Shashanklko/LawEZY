@@ -56,16 +56,22 @@
 }
 
 .institutional-card {
-  padding: 22px 20px; /* High-density padding */
+  padding: 24px 22px; /* Slightly more breathing room */
   display: flex;
   flex-direction: column;
-  min-height: 250px; /* Aggressive height reduction */
+  min-height: 260px; 
   transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
-  background: transparent;
+  background: #fdfbf7; /* Slight warm paper feel from screenshot */
   position: relative;
-  border-right: 1px solid rgba(0, 0, 0, 0.04);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+  border-right: 1px solid rgba(0, 0, 0, 0.06);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   cursor: pointer;
+  overflow: hidden;
+}
+
+/* Ensure first column doesn't have double left border if grid has container border */
+.institutional-card:nth-child(4n) {
+  border-right: none;
 }
 
 .institutional-card:hover {
@@ -167,13 +173,16 @@
 .reveal-active .institutional-card:nth-child(7) { transition-delay: 0.7s; }
 .reveal-active .institutional-card:nth-child(8) { transition-delay: 0.8s; }
 
-@media (max-width: 1200px) {
+@media (max-width: 1100px) {
   .institutional-portfolio-grid { grid-template-columns: repeat(2, 1fr); }
+  .institutional-card:nth-child(4n) { border-right: 1px solid rgba(0, 0, 0, 0.06); }
+  .institutional-card:nth-child(2n) { border-right: none; }
 }
 
 @media (max-width: 768px) {
-  .institutional-portfolio-grid { grid-template-columns: 1fr; }
-  .sovereign-title { font-size: 2.2rem; }
+  .institutional-portfolio-grid { grid-template-columns: 1fr; border-right: none; }
+  .institutional-card { border-right: none; }
+  .sovereign-title { font-size: 1.8rem; }
   .why-choose-us-professional { padding: 50px 5%; min-height: auto; }
   .institutional-card { min-height: 280px; padding: 25px; }
   .card-heading { font-size: 1.3rem; }

@@ -34,12 +34,37 @@ const DocumentAnalyzer = () => {
     const [progress, setProgress] = useState(0);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(localStorage.getItem('lawino_sidebar_collapsed') === 'true');
     const [showQuotaModal, setShowQuotaModal] = useState(false);
+    const [selectedPackage, setSelectedPackage] = useState('DOC_5');
+    const [isProcessing, setIsProcessing] = useState(false);
     const [quotaType, setQuotaType] = useState('DOC_REFILL');
     const fileInputRef = useRef(null);
 
     useEffect(() => {
         fetchHistory();
+        refreshWallet();
     }, []);
+
+    // Wallet Refresh: ensure sidebar quota reflects live DB state
+    const refreshWallet = async () => {
+        if (!user?.id) return;
+        try {
+            const response = await apiClient.get(`/api/users/${user.id}`);
+            const fresh = response.data;
+            if (fresh) {
+                updateUser({
+                    freeAiTokens: fresh.freeAiTokens,
+                    freeChatTokens: fresh.freeChatTokens,
+                    freeDocTokens: fresh.freeDocTokens,
+                    cashBalance: fresh.cashBalance,
+                    isUnlimited: fresh.isUnlimited,
+                    docLimit: fresh.docLimit, // Institutional sync: ensure total capacity mirrors DB
+                    aiLimit: fresh.aiLimit
+                });
+            }
+        } catch (err) {
+            console.warn('[WALLET] Could not refresh token balance:', err.message);
+        }
+    };
 
     const fetchHistory = async () => {
         try {
@@ -78,9 +103,10 @@ const DocumentAnalyzer = () => {
             setSelectedDoc(result);
             setHistory(prev => [result, ...prev]);
             
-            // Update local user state for quota
+            // Update local user state for quota (1 Audit = 5 Tokens)
             if (!user.isUnlimited) {
-                updateUser({ freeDocTokens: (user.freeDocTokens || 1) - 1 });
+                const current = user.freeDocTokens ?? 0;
+                updateUser({ freeDocTokens: Math.max(0, current - 5) });
             }
         } catch (err) {
             console.error('Analysis Failure:', err);
@@ -93,6 +119,29 @@ const DocumentAnalyzer = () => {
         } finally {
             setIsLoading(false);
             setProgress(0);
+        }
+    };
+
+    const handlePurchasePackage = async () => {
+        if (!selectedPackage) return;
+        setIsProcessing(true);
+        try {
+            const response = await apiClient.post('/api/wallet/purchase-package', { packageType: selectedPackage });
+            const freshWallet = response.data;
+            updateUser({
+                freeAiTokens: freshWallet.freeAiTokens,
+                freeDocTokens: freshWallet.freeDocTokens,
+                cashBalance: freshWallet.cashBalance,
+                docLimit: freshWallet.docLimit || freshWallet.docTokenLimit,
+                aiLimit: freshWallet.aiLimit || freshWallet.aiTokenLimit
+            });
+            alert(`Successfully purchased ${selectedPackage === 'AI_15' ? '15 AI Queries' : '5 Document Audits'}!`);
+            setShowQuotaModal(false);
+        } catch (err) {
+            console.error('Purchase Error:', err);
+            alert(err.response?.data?.message || "Failed to process tactical refill. Ensure wallet balance is sufficient.");
+        } finally {
+            setIsProcessing(false);
         }
     };
 
@@ -111,7 +160,7 @@ const DocumentAnalyzer = () => {
             {/* Sidebar */}
             <aside className={`doc-sidebar ${isSidebarCollapsed ? 'collapsed' : ''}`}>
                 <button 
-                    className="sidebar-toggle" 
+                    className="sidebar-toggle-btn" 
                     onClick={() => {
                         const newState = !isSidebarCollapsed;
                         setIsSidebarCollapsed(newState);
@@ -163,15 +212,22 @@ const DocumentAnalyzer = () => {
                     <div className="sidebar-footer">
                         <div className="user-card">
                             <div className="user-avatar">
-                                {user?.name?.substring(0, 2).toUpperCase() || 'AI'}
+                                {(user?.firstName || user?.email || 'G').substring(0, 2).toUpperCase()}
                             </div>
                             <div className="user-info">
-                                <div className="user-name">{user?.name || 'Guest'}</div>
+                                <div className="user-name">{user?.firstName || user?.email?.split('@')[0] || 'Guest'}</div>
                                 <div className="user-status-row">
-                                    <span className="user-role">CLIENT</span>
-                                    <div className="user-quota-badge">
+                                    <span className="user-role">{user?.role || 'CLIENT'}</span>
+                                    <div 
+                                        className="user-quota-badge clickable" 
+                                        onClick={() => {
+                                            setQuotaType('DOC_REFILL');
+                                            setShowQuotaModal(true);
+                                        }}
+                                        title="Refill Institutional Units"
+                                    >
                                         <Zap size={10} />
-                                        <span>{user?.isUnlimited ? '∞' : `${user?.freeDocTokens ?? 0} LEFT`}</span>
+                                        <span>{user?.isUnlimited ? '∞' : `${Math.floor((user?.freeDocTokens ?? 0) / 5)}/${Math.floor((user?.docLimit ?? 5) / 5)} Audits`}</span>
                                     </div>
                                 </div>
                             </div>
@@ -193,8 +249,25 @@ const DocumentAnalyzer = () => {
                         }}
                         title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
                     >
-                        {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
                     </button>
+                </div>
+
+                {/* 🛡️ INSTITUTIONAL SAFETY BANNER */}
+                <div className="safety-advisory-banner animate-reveal" style={{
+                    background: 'rgba(239, 68, 68, 0.05)',
+                    borderBottom: '1px solid rgba(239, 68, 68, 0.15)',
+                    padding: '12px 24px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    zIndex: 50,
+                    backdropFilter: 'blur(5px)'
+                }}>
+                    <ShieldCheck size={16} color="#ef4444" />
+                    <span style={{ fontSize: '0.75rem', color: '#dc2626', fontWeight: 700, letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                        Institutional Disclaimer: AI analysis is for diagnostic orientation and may not reflect the latest legal precedents. 
+                        <span className="cta-link" onClick={() => navigate('/experts')} style={{ marginLeft: '8px', textDecoration: 'underline', cursor: 'pointer' }}>Verify findings with LawEZY Experts.</span>
+                    </span>
                 </div>
 
                 {isLoading && (
@@ -212,13 +285,20 @@ const DocumentAnalyzer = () => {
                                 <FileSearch size={56} />
                             </div>
                             <h1 className="hero-greeting">
-                                Institutional <span className="brand-highlight">Document Auditor</span>
+                                Lawino <span className="brand-highlight">Document Auditor</span>
                             </h1>
                         </div>
 
                         <div 
                             className="modern-upload-zone"
-                            onClick={() => fileInputRef.current.click()}
+                            onClick={() => {
+                                if (!user?.isUnlimited && (user?.freeDocTokens || 0) <= 0) {
+                                    setQuotaType('DOC_REFILL');
+                                    setShowQuotaModal(true);
+                                    return;
+                                }
+                                fileInputRef.current.click();
+                            }}
                         >
                             <div className="upload-glow"></div>
                             <div className="upload-content">
@@ -259,14 +339,7 @@ const DocumentAnalyzer = () => {
                             </div>
                         </div>
 
-                        <div className="workspace-disclaimer">
-                            <Shield size={16} />
-                            <p>
-                                AI analysis is for diagnostic purposes only. 
-                                For definitive legal governance, <span className="cta-link" onClick={() => navigate('/experts')}>VERIFY WITH LAWEZY EXPERTS</span>.
-                            </p>
                         </div>
-                    </div>
                 ) : (
                     <div className="analysis-panel">
                         <header className="analysis-header">
@@ -303,45 +376,56 @@ const DocumentAnalyzer = () => {
                         </div>
                     </div>
                 )}
-            </main>
-
-            {/* Institutional Quota Modal */}
+            </main>            {/* Institutional Quota Modal */}
             {showQuotaModal && (
                 <div className="quota-modal-overlay">
                     <div className="quota-modal-card">
                         <div className="modal-header">
-                            <Zap className="header-icon" size={24} />
-                            <h3>Audit Units Exhausted</h3>
+                            <Zap className={`header-icon ${isProcessing ? 'spinning' : ''}`} size={24} />
+                            <h3>Institutional Refill</h3>
                         </div>
                         <div className="modal-body">
-                            <p>Your institutional document analysis units have been fully utilized. To perform further audits, please acquire additional tactical units.</p>
+                            <p>Select a tactical package to continue with high-fidelity document auditing.</p>
                             
-                            <div className="package-option active">
-                                <div className="option-details">
-                                    <span className="option-name">Auditor Refill</span>
-                                    <span className="option-description">5 Analysis Units</span>
+                            <div className="package-options-grid">
+                                <div 
+                                    className={`package-option ${selectedPackage === 'AI_15' ? 'active' : ''}`} 
+                                    onClick={() => setSelectedPackage('AI_15')}
+                                >
+                                    <div className="option-details">
+                                        <span className="option-name">AI Intelligence (Refill)</span>
+                                        <span className="option-description">15 Tactical Queries</span>
+                                    </div>
+                                    
                                 </div>
-                                <div className="option-price">₹250</div>
+
+                                <div 
+                                    className={`package-option ${selectedPackage === 'DOC_5' ? 'active' : ''}`} 
+                                    onClick={() => setSelectedPackage('DOC_5')}
+                                >
+                                    <div className="option-details">
+                                        <span className="option-name">Document Auditor (Refill)</span>
+                                        <span className="option-description">5 Deep-Scan Audits</span>
+                                    </div>
+                                    
+                                </div>
                             </div>
                         </div>
                         <div className="modal-footer">
-                            <button className="btn-cancel" onClick={() => setShowQuotaModal(false)}>Cancel</button>
-                            <button className="btn-refill" onClick={async () => {
-                                try {
-                                    await apiClient.post('/api/wallet/purchase-tokens-direct', { packageType: quotaType });
-                                    setShowQuotaModal(false);
-                                    // Refresh user data to update quota display
-                                    const walletRes = await apiClient.get('/api/wallet/balance');
-                                    updateUser({ 
-                                        freeDocTokens: walletRes.data.freeDocTokens,
-                                        freeAiTokens: walletRes.data.freeAiTokens 
-                                    });
-                                } catch (err) {
-                                    console.error('Purchase Failure:', err);
-                                    alert('Institutional purchase failed. Please check your network.');
-                                }
-                            }}>
-                                Pay & Refill Now
+                            <button className="btn-cancel" onClick={() => setShowQuotaModal(false)}>Close</button>
+                            <button 
+                                className={`btn-primary purchase-btn ${isProcessing ? 'loading' : ''}`}
+                                onClick={handlePurchasePackage}
+                                disabled={isProcessing || !selectedPackage}
+                            >
+                                                                {isProcessing ? 'Processing...' : `Buy Package (₹${selectedPackage === 'AI_15' ? '150' : '250'})`}
+
+                            </button>
+                            <button 
+                                className="btn-secondary" 
+                                onClick={() => navigate('/dashboard?tab=wallet')}
+                            >
+                                Top up Wallet
                             </button>
                         </div>
                     </div>
@@ -352,3 +436,4 @@ const DocumentAnalyzer = () => {
 };
 
 export default DocumentAnalyzer;
+

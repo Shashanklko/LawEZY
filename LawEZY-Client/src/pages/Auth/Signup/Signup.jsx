@@ -20,8 +20,32 @@ const Signup = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [isAdminLogin, setIsAdminLogin] = useState(false);
+  const [otp, setOtp] = useState('');
+  const [showOtpField, setShowOtpField] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpLoading, setOtpLoading] = useState(false);
 
   const navigate = useNavigate();
+
+  const handleRequestOtp = async () => {
+    if (!email || !email.includes('@')) {
+      setError('Please enter a valid email address first.');
+      return;
+    }
+    setOtpLoading(true);
+    setError('');
+    try {
+      await apiClient.post('/api/auth/request-otp', { email, purpose: 'REGISTRATION' });
+      setOtpSent(true);
+      setShowOtpField(true);
+      alert('Security code dispatched to ' + email);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to send verification code.');
+    } finally {
+      setOtpLoading(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -50,15 +74,19 @@ const Signup = () => {
         role: backendRole
       };
 
-      await apiClient.post('/api/auth/register', payload);
+      await apiClient.post(`/api/auth/register?otp=${otp}`, payload);
 
       setSuccess(true);
       setTimeout(() => {
         navigate('/login');
       }, 2000);
     } catch (err) {
-      console.error('Signup error:', err);
-      setError(err.response?.data?.message || 'Registration failed. Try again.');
+      console.error('Signup error details:', err.response?.data);
+      const errorMsg = err.response?.data?.message || 
+                     err.response?.data?.data || 
+                     (typeof err.response?.data === 'string' ? err.response?.data : null) ||
+                     'Registration failed. Institutional server currently unavailable.';
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -72,7 +100,7 @@ const Signup = () => {
       <div className="login-portal-header stagger-reveal">
         <Link to="/" className="portal-brand-link-wrapper">
           <div className="portal-brand-block">
-            <span className="portal-brand-name">LAWEZY</span>
+            <span className="lawezy-logo medium">LAWEZY<span className="logo-dot">.</span></span>
             <div className="portal-brand-divider"></div>
             <div className="portal-ai-brand">
               <span className="portal-ai-name">LawinoAI</span>
@@ -91,13 +119,28 @@ const Signup = () => {
       <Link to="/" className="portal-exit-btn stagger-reveal">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
       </Link>
+      
+      {/* ADMIN PORTAL TRIGGER RING */}
+      <div 
+        className={`admin-portal-ring stagger-reveal ${isAdminLogin ? 'active' : ''}`}
+        onClick={() => setIsAdminLogin(!isAdminLogin)}
+        title={isAdminLogin ? "Return to User Portal" : "Admin Portal"}
+        style={{ top: '90px' }}
+      >
+        <div className="ring-inner">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          </svg>
+        </div>
+        <div className="ring-glow"></div>
+      </div>
 
       <div className="signup-content-wrapper">
         <div className="signup-hero-section">
           <h1 className="hero-signup-title" style={{ fontSize: '5rem' }}>Join the<br />Elite.</h1>
           <p className="hero-signup-desc">
             <Link to="/" className="hero-brand-link">
-              <span style={{ color: role === 'pro' ? '#8B5A2B' : '#7F1D1D', fontWeight: '800' }}>LAWEZY</span>
+              <span className="lawezy-logo tiny" style={{ display: 'inline-flex', color: role === 'pro' ? '#8B5A2B' : '#7F1D1D' }}>LAWEZY<span className="logo-dot">.</span></span>
             </Link> – The high-precision bridge for legal and financial brilliance. 
             A unified ecosystem where discerning clients access elite professional services, 
             and top-tier experts deliver institutional-grade solutions to meet complex 
@@ -107,6 +150,52 @@ const Signup = () => {
 
         <div className="signup-form-section">
           <div className="glass-signup-card">
+            {isAdminLogin ? (
+               <div className="admin-login-container">
+               <div className="admin-header">
+                 <h2 className="admin-title">ADMIN ACCESS</h2>
+                 <p className="admin-subtitle">Secure Institutional Gateway</p>
+               </div>
+               <form className="login-form" onSubmit={async (e) => {
+                 e.preventDefault();
+                 const adminId = e.target.adminId.value.trim();
+                 const key = e.target.adminKey.value;
+                 const loginEmail = adminId.includes('@') ? adminId : `${adminId}@lawezy.com`;
+                 
+                 setLoading(true);
+                 try {
+                   const response = await apiClient.post('/api/auth/login', {
+                     email: loginEmail,
+                     password: key,
+                   });
+                   const { token, firstName, lastName, id, role: serverRole } = response.data;
+                   
+                   // Dynamic import for useAuthStore to avoid circular dependencies in Signup if any
+                   const useAuthStore = (await import('../../../store/useAuthStore')).default;
+                   useAuthStore.getState().setAuth({ id, email: loginEmail, firstName, lastName, role: serverRole }, token);
+                   navigate('/admin');
+                 } catch (err) {
+                   alert('Invalid Institutional Credentials');
+                 } finally {
+                   setLoading(false);
+                 }
+               }}>
+                 <div className="login-group">
+                   <label className="login-label">Admin ID</label>
+                   <input name="adminId" type="text" placeholder="e.g. lawezy95" className="login-input" required disabled={loading} />
+                 </div>
+                 <div className="login-group">
+                   <label className="login-label">Admin Key</label>
+                   <input name="adminKey" type="password" placeholder="••••••••••••" className="login-input" required disabled={loading} />
+                 </div>
+                 <button type="submit" className="btn-login-primary admin-btn" disabled={loading}>
+                   <span>{loading ? 'INITIALIZING...' : 'INITIALIZE ACCESS'}</span>
+                 </button>
+                 <p className="admin-notice">LawEZY Governance Protocol Active.</p>
+               </form>
+             </div>
+            ) : (
+              <>
             {/* ROLE SELECTOR */}
             <div className={`role-selector stagger-reveal delay-1 ${role}`}>
               <div 
@@ -196,6 +285,47 @@ const Signup = () => {
                     </div>
                   </div>
                 </div>
+              <div className="form-row stagger-reveal delay-3">
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label className="signup-label">Verification Code</label>
+                  <div className="input-with-icon">
+                    <input 
+                      type="text" 
+                      className="signup-input" 
+                      placeholder="6-Digit OTP" 
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value)}
+                      required={showOtpField}
+                      disabled={!showOtpField}
+                      maxLength={6}
+                    />
+                    <div className="input-icon">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                    </div>
+                  </div>
+                </div>
+                <div className="form-group" style={{ flex: 0, alignSelf: 'flex-end' }}>
+                  <button 
+                    type="button" 
+                    className={`btn-otp-request ${otpSent ? 'sent' : ''}`} 
+                    onClick={handleRequestOtp}
+                    disabled={otpLoading}
+                    style={{ 
+                      height: '48px', 
+                      whiteSpace: 'nowrap', 
+                      padding: '0 20px', 
+                      borderRadius: '12px',
+                      background: otpSent ? '#059669' : 'rgba(255,255,255,0.05)',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      color: 'white',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease'
+                    }}
+                  >
+                    {otpLoading ? 'SENDING...' : otpSent ? 'RESEND CODE' : 'SEND CODE'}
+                  </button>
+                </div>
               </div>
 
               <div className="signup-row stagger-reveal delay-3">
@@ -236,6 +366,8 @@ const Signup = () => {
                 Existing Member? <Link to="/login" className="signup-link-bold">Secure Login</Link>
               </div>
             </form>
+            </>
+            )}
           </div>
         </div>
       </div>
@@ -244,3 +376,4 @@ const Signup = () => {
 };
 
 export default Signup;
+

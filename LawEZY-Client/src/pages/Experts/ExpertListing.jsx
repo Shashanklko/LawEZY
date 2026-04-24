@@ -27,6 +27,7 @@ const ExpertListing = () => {
   const [selectedDomains, setSelectedDomains] = useState([]);
   const [priceRange, setPriceRange] = useState('Any Price');
   const [experienceRange, setExperienceRange] = useState('All Experience');
+  const [locationFilter, setLocationFilter] = useState('All Locations');
   const [sortBy, setSortBy] = useState('Recommended');
   
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -38,9 +39,14 @@ const ExpertListing = () => {
   const [bookingData, setBookingData] = useState({ date: '', time: '', reason: '', discountPercent: 0 });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleOpenProfile = (id) => {
-    setSelectedExpertId(id);
-    setIsProfileOpen(true);
+  const handleOpenProfile = (expert) => {
+    // Priority: Use the Name-Based Vanity Slug for Elite Branding
+    if (expert.slug) {
+        navigate(`/p/${expert.slug}`);
+    } else {
+        // Fallback: Institutional UID
+        navigate(`/expert/${expert.id}`);
+    }
   };
 
   const handleCloseProfile = () => {
@@ -64,9 +70,9 @@ const ExpertListing = () => {
       setIsSubmitting(true);
       const scheduledAt = `${bookingData.date}T${bookingData.time}`;
       const payload = {
-        clientUid: user.uid || user.id,
-        expertUid: bookingExpert.uid || bookingExpert.id,
-        initiatorUid: user.uid || user.id,
+        clientId: user.id || user.id,
+        expertId: bookingExpert.id || bookingExpert.id,
+        initiatorId: user.id || user.id,
         baseFee: bookingExpert.consultationFee || bookingExpert.price || 499.0,
         scheduledAt: scheduledAt,
         reason: bookingData.reason,
@@ -149,6 +155,56 @@ const ExpertListing = () => {
     fetchExperts();
   }, []);
 
+  // --- AUTOMATIC LOCATION DETECTION ---
+  useEffect(() => {
+    const detectLocation = async () => {
+      // 1. Try Browser Geolocation first
+      if ("geolocation" in navigator) {
+        navigator.geolocation.getCurrentPosition(async (position) => {
+          try {
+            // Reverse geocoding via free Nominatim API
+            const { latitude, longitude } = position.coords;
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=10`);
+            const data = await res.json();
+            const city = data.address.city || data.address.town || data.address.district || data.address.state;
+            
+            if (city) {
+              console.log("[Location] Detected via GPS:", city);
+              autoSelectLocation(city);
+            }
+          } catch (e) {
+            detectByIP();
+          }
+        }, () => detectByIP());
+      } else {
+        detectByIP();
+      }
+    };
+
+    const detectByIP = async () => {
+      try {
+        const res = await fetch('https://ipapi.co/json/');
+        const data = await res.json();
+        if (data.city) {
+          console.log("[Location] Detected via IP:", data.city);
+          autoSelectLocation(data.city);
+        }
+      } catch (e) {
+        console.warn("[Location] Automated detection failed.");
+      }
+    };
+
+    const autoSelectLocation = (detectedCity) => {
+      // Find if we have any expert in this detected city (case-insensitive)
+      const matchedLoc = experts.find(ex => ex.location?.toLowerCase().includes(detectedCity.toLowerCase()))?.location;
+      if (matchedLoc) {
+        setLocationFilter(matchedLoc);
+      }
+    };
+
+    detectLocation();
+  }, [experts.length]); // Run when experts are loaded to ensure we can match the detected city
+
   useEffect(() => {
     if (loading) return;
     
@@ -198,6 +254,11 @@ const ExpertListing = () => {
       });
     }
 
+    // 5.5. Location Filter
+    if (locationFilter !== 'All Locations') {
+      result = result.filter(ex => ex.location === locationFilter);
+    }
+
     // 6. Institutional Sorting
     if (sortBy === 'Rating') {
       result.sort((a, b) => b.rating - a.rating);
@@ -208,7 +269,7 @@ const ExpertListing = () => {
     }
 
     setFilteredExperts(result);
-  }, [category, search, selectedDomains, priceRange, experienceRange, sortBy]);
+  }, [category, search, selectedDomains, priceRange, experienceRange, locationFilter, sortBy]);
 
   const toggleDomain = (domain) => {
     if (selectedDomains.includes(domain)) {
@@ -254,6 +315,20 @@ const ExpertListing = () => {
               <option>0-5 Years</option>
               <option>5-10 Years</option>
               <option>10+ Years</option>
+            </select>
+          </div>
+
+          <div className="filter-group">
+            <h4 className="filter-title">Regional Location</h4>
+            <select 
+              className="filter-select"
+              value={locationFilter}
+              onChange={(e) => setLocationFilter(e.target.value)}
+            >
+              <option>All Locations</option>
+              {[...new Set(experts.map(ex => ex.location).filter(Boolean))].sort().map(loc => (
+                <option key={loc} value={loc}>{loc}</option>
+              ))}
             </select>
           </div>
 
@@ -308,6 +383,33 @@ const ExpertListing = () => {
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
+                <button 
+                  className="location-detect-btn" 
+                  onClick={() => {
+                     // Re-trigger detection logic
+                     const detectLocation = async () => {
+                        if ("geolocation" in navigator) {
+                          navigator.geolocation.getCurrentPosition(async (position) => {
+                            const { latitude, longitude } = position.coords;
+                            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=10`);
+                            const data = await res.json();
+                            const city = data.address.city || data.address.town || data.address.district;
+                            if (city) {
+                               const matched = experts.find(ex => ex.location?.toLowerCase().includes(city.toLowerCase()))?.location;
+                               if (matched) setLocationFilter(matched);
+                               else alert(`Location detected as ${city}, but no specialists are currently online in this district.`);
+                            }
+                          });
+                        }
+                     };
+                     detectLocation();
+                  }}
+                  title="Detect my location"
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--elite-gold)', display: 'flex', alignItems: 'center', padding: '0 10px' }}
+                >
+                  <span style={{ fontSize: '0.7rem', fontWeight: 800, marginRight: '5px' }}>NEAR ME</span>
+                  <span style={{ fontSize: '1rem' }}>📍</span>
+                </button>
               </div>
               
               <div className="sort-dock">
@@ -345,6 +447,7 @@ const ExpertListing = () => {
                   setSelectedDomains([]); 
                   setPriceRange('Any Price');
                   setExperienceRange('All Experience');
+                  setLocationFilter('All Locations');
                 }}>Clear All Filters</button>
               </div>
             )}
@@ -352,9 +455,7 @@ const ExpertListing = () => {
         </main>
       </div>
 
-      <Modal isOpen={isProfileOpen} onClose={handleCloseProfile}>
-        <ExpertProfile expertId={selectedExpertId} isModal={true} />
-      </Modal>
+      {/* Profile Modal removed in favor of direct page navigation for better SEO & deep-linking */}
 
       {/* Direct Booking Modal */}
       {isBookingOpen && bookingExpert && (
@@ -380,7 +481,7 @@ const ExpertListing = () => {
 
               <div className="input-field-group">
                 <label style={{ fontSize: '0.65rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', display: 'block', marginBottom: '6px' }}>Reason for Consultation</label>
-                <textarea required placeholder="Briefly describe your requirement..." value={bookingData.reason} onChange={e => setBookingData({...bookingData, reason: e.target.value})} rows={3} style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.1)', background: '#fff', fontSize: '0.9rem', outline: 'none', resize: 'none' }} />
+                <textarea required placeholder="Briefly describe your requirement..." value={bookingData.reason || ''} onChange={e => setBookingData({...bookingData, reason: e.target.value})} rows={3} style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.1)', background: '#fff', fontSize: '0.9rem', outline: 'none', resize: 'none' }} />
               </div>
 
               <div className="input-field-group" style={{ background: 'rgba(16, 185, 129, 0.05)', padding: '15px', borderRadius: '14px', border: '1px dashed rgba(16, 185, 129, 0.2)' }}>
@@ -406,3 +507,4 @@ const ExpertListing = () => {
 };
 
 export default ExpertListing;
+

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import NotionWorkspace from './NotionWorkspace';
 import ReaderSpace from './ReaderSpace';
 import apiClient from '../../services/apiClient';
@@ -13,6 +13,7 @@ const MOCK_CATEGORIES = [
   { id: 'crim', name: 'Criminal Justice', icon: '⚖️' },
   { id: 'tax', name: 'Taxation & Finance', icon: '📊' },
   { id: 'ip', name: 'Intellectual Property', icon: '💡' },
+  { id: 'other', name: 'Other Contexts', icon: '📁' },
 ];
 
 // Legacy MOCK_RESOURCES removed for institutional live data synchronization.
@@ -42,28 +43,60 @@ const Library = () => {
     category: 'const',
     abstractText: '',
     driveLink: '',
-    coverUrl: ''
+    coverUrl: '',
+    pageCount: ''
   });
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportData, setReportData] = useState({ targetId: '', reason: '', details: '', type: 'REPORT' });
+  const location = useLocation();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const catParam = params.get('category');
+    if (catParam) {
+      setActiveCategory(catParam);
+    }
+  }, [location]);
 
 
-  const handlePublishNew = (title, blocks) => {
-    const newArticle = {
-      id: Date.now(),
-      title: title || 'Untitled Intelligence',
-      author: 'You (Institutionalist)',
-      category: 'ip',
-      cover: 'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=800&auto=format&fit=crop',
-      pages: Math.ceil(blocks.length * 1.5),
-      abstract: blocks.find(b => b.type === 'text')?.content?.substring(0, 150) || 'Drafed in personal workspace...',
-      blocks: blocks
-    };
-    setResources([newArticle, ...resources.filter(r => r.id !== newArticle.id)]);
-    setShowNotion(false);
-    setEditDraft(null);
+  const handlePublishNew = async (title, blocks) => {
+    try {
+      const payload = {
+        title: title || 'Untitled Intelligence',
+        content: JSON.stringify(blocks),
+        category: 'ip', // Default category for notion workspace
+        authorId: user?.id,
+        abstractText: blocks.find(b => b.type === 'text')?.content?.substring(0, 150) || 'Drafted in personal workspace...',
+        coverUrl: 'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=800&auto=format&fit=crop',
+        pageCount: Math.ceil(blocks.length * 1.5) // Estimate pages for Notion content
+      };
+
+      if (editDraft && editDraft.id) {
+        await apiClient.put(`/api/resources/${editDraft.id}`, payload);
+      } else {
+        await apiClient.post('/api/resources', payload);
+      }
+
+      setShowNotion(false);
+      setEditDraft(null);
+      fetchResources();
+    } catch (err) {
+      console.error("Publish failed:", err);
+      alert("Failed to sync with institutional archives.");
+    }
   };
 
-  const handleEdit = (title, blocks) => {
-    setEditDraft({ title, blocks });
+  const handleEdit = (resource) => {
+    let blocks = [];
+    try {
+      blocks = JSON.parse(resource.content);
+    } catch (e) {
+      blocks = [
+        { id: 'b1', type: 'h2', content: resource.title },
+        { id: 'b2', type: 'text', content: resource.abstract }
+      ];
+    }
+    setEditDraft({ ...resource, blocks });
     setShowReader(false);
     setShowNotion(true);
   };
@@ -91,7 +124,7 @@ const Library = () => {
         author: r.authorName || 'Anonymous',
         category: r.category,
         cover: r.coverUrl || 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=800&auto=format&fit=crop',
-        abstract: r.abstractText || 'Expert legal resource from institutional archives.',
+        abstract: r.abstractText || 'Expert legal resource from LawEZY archives.',
         content: r.content,
         driveLink: r.driveLink,
         pages: Math.floor(Math.random() * 800) + 200 // Mock pages for UI since not in backend yet
@@ -127,16 +160,39 @@ const Library = () => {
     try {
       const payload = {
         ...newResource,
-        authorId: user?.id || user?.uid, // Using current user as author
-        content: "Institutional resource attached via external link."
+        authorId: user?.id, 
+        content: "Institutional resource attached via external link.",
+        pageCount: parseInt(newResource.pageCount) || 0
       };
       await apiClient.post('/api/resources', payload);
       setShowAddModal(false);
-      setNewResource({ title: '', category: 'const', abstractText: '', driveLink: '', coverUrl: '' });
+      setNewResource({ title: '', category: 'const', abstractText: '', driveLink: '', coverUrl: '', pageCount: '' });
       fetchResources(); // Refresh list
     } catch (err) {
       console.error("Failed to add resource:", err);
       alert("Could not add resource. Check backend status.");
+    }
+  };
+
+  const handleReportSubmit = async () => {
+    if (!reportData.reason) {
+      alert("Please provide a reason.");
+      return;
+    }
+    try {
+      await apiClient.post('/api/reports', {
+        reporterId: user?.id,
+        targetType: 'RESOURCE',
+        targetId: reportData.targetId,
+        reason: reportData.reason,
+        details: reportData.details,
+        status: 'PENDING'
+      });
+      setShowReportModal(false);
+      setReportData({ targetId: '', reason: '', details: '', type: 'REPORT' });
+      alert("Institutional report filed. Admin has been notified via real-time broadcast.");
+    } catch (err) {
+      console.error("Reporting failed:", err);
     }
   };
 
@@ -210,7 +266,7 @@ const Library = () => {
         initialBlocks={initialBlocks}
         author={activeBook.author}
         onExit={() => setShowReader(false)}
-        onEdit={handleEdit}
+        onEdit={() => handleEdit(activeBook)}
       />
     );
   }
@@ -220,6 +276,10 @@ const Library = () => {
       <div className="library-container-elite animate-reveal">
         <aside className={`library-sidebar ${!isSidebarOpen ? 'collapsed' : ''}`}>
           <div className="sidebar-brand-header">
+            <button className="lib-back-btn" onClick={() => navigate('/dashboard')} title="Return to Dashboard">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+              <span className="back-text">Dashboard</span>
+            </button>
             <button className="sidebar-toggle-trigger" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
               {isSidebarOpen ? '◀' : '▶'}
             </button>
@@ -252,7 +312,7 @@ const Library = () => {
             ))}
 
             <div className="nav-section-label" style={{ marginTop: '25px' }}>My Expert Hub</div>
-            {(user?.role === 'LAWYER' || user?.role === 'CA' || user?.role === 'CFA' || user?.role === 'ADMIN') && (
+            {(user?.role === 'EXPERT' || user?.role === 'ADMIN') && (
               <button 
                 className={`nav-item ${showNotion ? 'active' : ''}`}
                 onClick={() => { setShowNotion(true); setHubFilter(null); }}
@@ -283,13 +343,12 @@ const Library = () => {
           <div className="sidebar-user-footer">
             <div className="user-mini-card">
               <div className="avatar-placeholder-library">
-                {user?.name?.charAt(0) || 'L'}
+                {(user?.name || user?.firstName || 'L').charAt(0)}
               </div>
               <div className="user-text">
-                <h4>{user?.name || 'Guest User'}</h4>
-                <p>{user?.role?.replace('_', ' ') || 'Expert Member'}</p>
+                <h4>{user?.name || (user?.firstName ? `${user.firstName} ${user.lastName || ''}` : 'Guest User')}</h4>
+                <p>{user?.role?.replace('ROLE_', '') || 'SEEKER MODE'}</p>
               </div>
-              <button className="settings-btn" onClick={() => navigate('/profile')}>⚙</button>
             </div>
           </div>
         </aside>
@@ -301,7 +360,7 @@ const Library = () => {
               <p>{filteredResources.length} curated volumes available in this compartment.</p>
             </div>
             <div className="header-actions">
-              {(user?.role === 'LAWYER' || user?.role === 'CA' || user?.role === 'CFA' || user?.role === 'ADMIN') && (
+              {(user?.role === 'EXPERT' || user?.role === 'ADMIN') && (
                 <button className="btn-add-resource-elite" onClick={() => setShowAddModal(true)}>
                   <span>+</span> Add Resource
                 </button>
@@ -348,17 +407,37 @@ const Library = () => {
                   <h3 title={resource.title}>{resource.title}</h3>
                   {resource.author && <p className="author-name">by {resource.author}</p>}
                   <div className="card-meta">
-                    <span className="pages">{resource.pages} pages</span>
+                    <span className="pages">{resource.pageCount || '---'} pages</span>
+                    <span className="type-pill">{resource.driveLink ? 'PDF/Link' : 'Digital'}</span>
                   </div>
                   <div className="card-primary-actions">
                     <button className="btn-read-sm" onClick={() => handleRead(resource)}>Read</button>
-                    {(user?.role === 'LAWYER' || user?.role === 'CA' || user?.role === 'CFA' || user?.role === 'ADMIN') ? (
-                      <button className="btn-delete-sm" onClick={(e) => handleDelete(e, resource.id)}>Remove</button>
-                    ) : (
-                      resource.driveLink && (
-                        <button className="btn-download-sm" onClick={() => window.open(resource.driveLink, '_blank')}>Source</button>
-                      )
+                    {resource.driveLink && (
+                      <button className="btn-download-sm" onClick={() => window.open(resource.driveLink, '_blank')}>Source</button>
                     )}
+                    
+                    <div className="card-more-wrapper">
+                      <button className="btn-more-sm" onClick={(e) => { e.stopPropagation(); setActiveMenuId(activeMenuId === resource.id ? null : resource.id); }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+                      </button>
+                      
+                      {activeMenuId === resource.id && (
+                        <div className="card-more-dropdown glass animate-reveal">
+                          {(user?.role === 'ADMIN' || user?.id === resource.authorId) && (
+                            <>
+                              <button onClick={() => { handleEdit(resource); setActiveMenuId(null); }}>✏️ Edit Content</button>
+                              <button className="danger" onClick={(e) => { handleDelete(e, resource.id); setActiveMenuId(null); }}>🗑️ Decommission</button>
+                            </>
+                          )}
+                          {user && user?.id !== resource.authorId && (
+                            <>
+                              <button onClick={() => { setReportData({ ...reportData, targetId: resource.id, type: 'REPORT' }); setShowReportModal(true); setActiveMenuId(null); }}>🚩 File Report</button>
+                              <button onClick={() => { setReportData({ ...reportData, targetId: resource.id, type: 'SUGGESTION', reason: 'Content Improvement' }); setShowReportModal(true); setActiveMenuId(null); }}>💡 Suggest Edit</button>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                 </div>
@@ -372,7 +451,7 @@ const Library = () => {
         <div className="elite-modal-overlay animate-reveal">
           <div className="elite-modal-content glass">
             <h2>Ingest Expert Resource</h2>
-            <p>Add a new document to the institutional library via external link.</p>
+            <p>Add a new document to the LawEZY library via external link.</p>
             
             <div className="elite-form-group">
               <label>Resource Title</label>
@@ -397,12 +476,12 @@ const Library = () => {
                 </select>
               </div>
               <div className="elite-form-group">
-                <label>Cover Image URL (Optional)</label>
+                <label>Page Count</label>
                 <input 
-                  type="text" 
-                  placeholder="https://images..." 
-                  value={newResource.coverUrl}
-                  onChange={(e) => setNewResource({...newResource, coverUrl: e.target.value})}
+                  type="number" 
+                  placeholder="e.g. 15" 
+                  value={newResource.pageCount}
+                  onChange={(e) => setNewResource({...newResource, pageCount: e.target.value})}
                 />
               </div>
             </div>
@@ -411,13 +490,14 @@ const Library = () => {
               <label>Abstract / Executive Summary</label>
               <textarea 
                 placeholder="Provide a brief summary of the resource..." 
-                value={newResource.abstractText}
+                value={newResource.abstractText || ''}
                 onChange={(e) => setNewResource({...newResource, abstractText: e.target.value})}
+                style={{ minHeight: '80px' }}
               />
             </div>
 
             <div className="elite-form-group">
-              <label>Google Drive / External Source Link</label>
+              <label>External Document Link (Google Drive / PDF)</label>
               <input 
                 type="text" 
                 placeholder="https://drive.google.com/..." 
@@ -433,8 +513,46 @@ const Library = () => {
           </div>
         </div>
       )}
+
+      {/* Report / Suggest Modal */}
+      {showReportModal && (
+        <div className="elite-modal-overlay animate-reveal">
+          <div className="elite-modal-content glass">
+            <h2>{reportData.type === 'SUGGESTION' ? 'Institutional Suggestion' : 'Flag Resource'}</h2>
+            <p>{reportData.type === 'SUGGESTION' ? 'Provide constructive feedback to improve this resource.' : 'Identify policy violations or inaccuracies in this document.'}</p>
+            
+            <div className="elite-form-group">
+              <label>Reason / Subject</label>
+              <input 
+                type="text" 
+                placeholder={reportData.type === 'SUGGESTION' ? 'e.g. Outdated section 4' : 'e.g. Misleading Information'} 
+                value={reportData.reason}
+                onChange={(e) => setReportData({...reportData, reason: e.target.value})}
+              />
+            </div>
+
+            <div className="elite-form-group">
+              <label>Elaborate Details</label>
+              <textarea 
+                placeholder="Provide context for the institutional review board..." 
+                value={reportData.details}
+                onChange={(e) => setReportData({...reportData, details: e.target.value})}
+                style={{ minHeight: '120px' }}
+              />
+            </div>
+
+            <div className="modal-actions-elite">
+              <button className="btn-cancel" onClick={() => setShowReportModal(false)}>Cancel</button>
+              <button className="btn-confirm" onClick={handleReportSubmit}>
+                {reportData.type === 'SUGGESTION' ? 'Submit Suggestion' : 'File Official Report'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 export default Library;
+

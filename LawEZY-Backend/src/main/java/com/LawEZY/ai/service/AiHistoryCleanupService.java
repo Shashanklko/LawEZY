@@ -2,8 +2,7 @@ package com.LawEZY.ai.service;
 
 import com.LawEZY.ai.model.AiChatSession;
 import com.LawEZY.ai.repository.AiChatSessionRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import com.LawEZY.ai.repository.AiChatSessionRepository;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -11,12 +10,17 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
-@Slf4j
 public class AiHistoryCleanupService {
+
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AiHistoryCleanupService.class);
 
     private final AiChatSessionRepository sessionRepository;
     private final AiChatSessionService sessionService;
+
+    public AiHistoryCleanupService(AiChatSessionRepository sessionRepository, AiChatSessionService sessionService) {
+        this.sessionRepository = sessionRepository;
+        this.sessionService = sessionService;
+    }
 
     /**
      * Runs daily at midnight to clean up chat history older than 30 days.

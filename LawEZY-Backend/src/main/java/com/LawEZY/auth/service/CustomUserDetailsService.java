@@ -32,42 +32,15 @@ public class CustomUserDetailsService implements UserDetailsService {
     private com.LawEZY.user.repository.CFAProfileRepository cfaProfileRepository;
 
     @Override
-    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+    public UserDetails loadUserByUsername(String identifier) throws UsernameNotFoundException {
         
-        // 1. Find user in MySQL
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
+        // 🛡️ TRIPLE IDENTITY RESOLUTION: Find user by Email OR Institutional ID OR Custom Login ID
+        User user = userRepository.findByEmailOrIdOrLoginId(identifier, identifier, identifier)
+                .orElseThrow(() -> new UsernameNotFoundException("Identity not found for: " + identifier));
 
-        // 2. Resolve public UID from profile
-        String uid = null;
-        String userId = user.getId();
-        if (userId != null) {
-            if (user.getRole() == Role.CLIENT) {
-                uid = clientProfileRepository.findById(userId).map(p -> p.getUid()).orElse(null);
-            } else {
-                // Priority 1: Check specialized profile tables for active public UID
-                if (user.getRole() == Role.LAWYER) {
-                    uid = lawyerProfileRepository.findById(userId).map(p -> p.getUid()).orElse(null);
-                } else if (user.getRole() == Role.CA) {
-                    uid = caProfileRepository.findById(userId).map(p -> p.getUid()).orElse(null);
-                } else if (user.getRole() == Role.CFA) {
-                    uid = cfaProfileRepository.findById(userId).map(p -> p.getUid()).orElse(null);
-                }
-                
-                // Priority 2: Fallback to base unified professional profile
-                if (uid == null) {
-                    uid = professionalProfileRepository.findById(userId).map(p -> p.getUid()).orElse(null);
-                }
-            }
-        }
-        
-        // Fallback to internal ID if UID not yet generated (should be rare)
-        if (uid == null) uid = user.getId();
-
-        // 3. Wrap in CustomUserDetails to preserve the ID and UID for the JWT layer
+        // 3. Wrap in CustomUserDetails to preserve the ID for the JWT layer
         return new CustomUserDetails(
                 user.getId(),
-                uid,
                 user.getEmail(),
                 user.getPassword(),
                 user.isEnabled(), 

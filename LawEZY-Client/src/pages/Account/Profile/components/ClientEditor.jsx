@@ -11,7 +11,12 @@ const ClientEditor = ({ uid, profile, onUpdate }) => {
         email: profile?.email || '',
         phone: profile?.phoneNumber || '',
         address: profile?.address || '',
-        location: profile?.location || ''
+        location: profile?.location || '',
+        bankName: profile?.bankName || '',
+        accountNumber: profile?.accountNumber || '',
+        ifscCode: profile?.ifscCode || '',
+        accountHolderName: profile?.accountHolderName || '',
+        upiId: profile?.upiId || ''
     });
 
     useEffect(() => {
@@ -21,7 +26,14 @@ const ClientEditor = ({ uid, profile, onUpdate }) => {
                 ...profile,
                 firstname: profile.firstName || prev.firstname,
                 lastname: profile.lastName || prev.lastname,
-                phone: profile.phoneNumber || prev.phone
+                phone: profile.phoneNumber || prev.phone,
+                address: profile.address || '',
+                location: profile.location || '',
+                bankName: profile.bankName || '',
+                accountNumber: profile.accountNumber || '',
+                ifscCode: profile.ifscCode || '',
+                accountHolderName: profile.accountHolderName || '',
+                upiId: profile.upiId || ''
             }));
         }
     }, [profile]);
@@ -86,15 +98,35 @@ const ClientEditor = ({ uid, profile, onUpdate }) => {
                 </div>
             </div>
 
-            <div className="form-section">
-                <h3 className="section-subtitle">Geographical Coordinates</h3>
-                <div className="input-group">
-                    <label>Official Address</label>
-                    <textarea name="address" value={formData.address} onChange={handleChange} rows="3" placeholder="Primary residence or business location" />
+            <div className="form-section highlight-settlement" style={{marginTop: '20px', padding: '20px', border: '1px solid var(--glass-border)', borderRadius: '8px', background: 'rgba(255,255,255,0.02)'}}>
+                <h3 className="section-subtitle">Financial Settlement Coordinates <span className="mandatory-star">*</span></h3>
+                <p className="section-hint-text" style={{fontSize: '0.8rem', opacity: 0.6, marginBottom: '15px'}}>Enter bank details for secure refunds and transaction audits.</p>
+                
+                <div className="form-row" style={{display: 'flex', gap: '15px', marginBottom: '15px'}}>
+                    <div className="input-group" style={{flex: 1}}>
+                        <label>Bank Name <span className="mandatory-star">*</span></label>
+                        <input name="bankName" value={formData.bankName || ''} onChange={handleChange} placeholder="e.g. HDFC Bank" required style={{width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid var(--glass-border)'}} />
+                    </div>
+                    <div className="input-group" style={{flex: 1}}>
+                        <label>Account Holder Name <span className="mandatory-star">*</span></label>
+                        <input name="accountHolderName" value={formData.accountHolderName || ''} onChange={handleChange} placeholder="As per Bank Records" required style={{width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid var(--glass-border)'}} />
+                    </div>
                 </div>
+
+                <div className="form-row" style={{display: 'flex', gap: '15px', marginBottom: '15px'}}>
+                    <div className="input-group" style={{flex: 1}}>
+                        <label>Account Number <span className="mandatory-star">*</span></label>
+                        <input name="accountNumber" value={formData.accountNumber || ''} onChange={handleChange} placeholder="Full Account Number" required style={{width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid var(--glass-border)'}} />
+                    </div>
+                    <div className="input-group" style={{flex: 1}}>
+                        <label>IFSC Code <span className="mandatory-star">*</span></label>
+                        <input name="ifscCode" value={formData.ifscCode || ''} onChange={handleChange} placeholder="e.g. HDFC0001234" required style={{width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid var(--glass-border)'}} />
+                    </div>
+                </div>
+
                 <div className="input-group">
-                    <label>City / State</label>
-                    <input name="location" value={formData.location} onChange={handleChange} placeholder="e.g. Mumbai, Maharashtra" required />
+                    <label>UPI ID <span className="mandatory-star">*</span></label>
+                    <input name="upiId" value={formData.upiId || ''} onChange={handleChange} placeholder="e.g. username@upi" required style={{width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid var(--glass-border)'}} />
                 </div>
             </div>
 
@@ -113,3 +145,4 @@ const ClientEditor = ({ uid, profile, onUpdate }) => {
 };
 
 export default ClientEditor;
+

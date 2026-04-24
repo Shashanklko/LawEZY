@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from 'react'
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, useLocation, Navigate } from 'react-router-dom'
 import ProtectedRoute from './components/ProtectedRoute'
 import MainLayout from './layouts/MainLayout'
 import useAuthStore from './store/useAuthStore'
@@ -9,6 +9,7 @@ const Home = lazy(() => import('./pages/Home/Home'));
 const LawinoAI = lazy(() => import('./pages/LawinoAI/LawinoAI'));
 const Login = lazy(() => import('./pages/Auth/Login/Login'));
 const Signup = lazy(() => import('./pages/Auth/Signup/Signup'));
+const ForgotPassword = lazy(() => import('./pages/Auth/ForgotPassword/ForgotPassword'));
 const ExpertListing = lazy(() => import('./pages/Experts/ExpertListing'));
 const ExpertProfile = lazy(() => import('./pages/Experts/ExpertProfile'));
 const Messages = lazy(() => import('./pages/Messages/Messages'));
@@ -23,23 +24,28 @@ const ExpertDashboard = lazy(() => import('./pages/Account/Dashboard/ExpertDashb
 const ClientDashboard = lazy(() => import('./pages/Account/Dashboard/ClientDashboard'));
 const DocumentAnalyzer = lazy(() => import('./pages/LawinoAI/DocumentAnalyzer'));
 const Notifications = lazy(() => import('./pages/Notifications/Notifications'));
+const JoinNetwork = lazy(() => import('./pages/Institutional/JoinNetwork'));
+const AdminPortal = lazy(() => import('./pages/Admin/AdminPortal'));
+const ExpertAuditLogs = lazy(() => import('./pages/Admin/ExpertAuditLogs'));
+const ExpertAuditProfile = lazy(() => import('./pages/Admin/ExpertAuditProfile'));
+const ClientAuditLogs = lazy(() => import('./pages/Admin/ClientAuditLogs'));
+const ClientAuditProfile = lazy(() => import('./pages/Admin/ClientAuditProfile'));
 
 const DashboardSwitcher = () => {
-  const { user } = useAuthStore();
-  const [viewMode, setViewMode] = React.useState(null);
+  const { user, viewMode, impersonatedUser } = useAuthStore();
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
 
-  // Initialize view mode based on role
-  React.useEffect(() => {
-    if (user && viewMode === null) {
-      setViewMode(user.role === 'CLIENT' ? 'CLIENT' : 'EXPERT');
-    }
-  }, [user, viewMode]);
+  if (!user && !impersonatedUser) return <LoadingFallback />;
+  if (!viewMode) return <LoadingFallback />;
 
-  if (!user || viewMode === null) return <LoadingFallback />;
-
-  return viewMode === 'CLIENT' 
-    ? <ClientDashboard onToggleView={() => setViewMode('EXPERT')} /> 
-    : <ExpertDashboard onToggleView={() => setViewMode('CLIENT')} />;
+  return (
+    <>
+      {viewMode === 'CLIENT'
+        ? <ClientDashboard overrideUser={impersonatedUser} />
+        : <ExpertDashboard overrideUser={impersonatedUser} />}
+    </>
+  );
 };
 
 const LoadingFallback = () => (
@@ -64,8 +70,10 @@ const App = () => {
           />
           <Route path="login" element={<Login />} />
           <Route path="signup" element={<Signup />} />
+          <Route path="forgot-password" element={<ForgotPassword />} />
           <Route path="experts" element={<ExpertListing />} />
           <Route path="expert/:id" element={<ExpertProfile />} />
+          <Route path="p/:slug" element={<ExpertProfile />} />
           <Route 
             path="messages" 
             element={
@@ -91,6 +99,7 @@ const App = () => {
             } 
           />
           <Route path="library" element={<Library />} />
+          <Route path="resources" element={<Navigate to="/library" replace />} />
           <Route path="community" element={<Community />} />
           <Route path="about" element={<About />} />
           <Route 
@@ -103,6 +112,7 @@ const App = () => {
           />
           <Route path="faq" element={<FAQ />} />
           <Route path="contact" element={<Contact />} />
+          <Route path="join-network" element={<JoinNetwork />} />
           <Route 
             path="lawino-ai/analyzer" 
             element={
@@ -122,6 +132,46 @@ const App = () => {
               </ProtectedRoute>
             }
           />
+          <Route 
+            path="admin" 
+            element={
+              <ProtectedRoute>
+                <AdminPortal />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="admin/experts/:id/logs" 
+            element={
+              <ProtectedRoute>
+                <ExpertAuditLogs />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="admin/experts/:id/profile" 
+            element={
+              <ProtectedRoute>
+                <ExpertAuditProfile />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="admin/clients/:id/logs" 
+            element={
+              <ProtectedRoute>
+                <ClientAuditLogs />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="admin/clients/:id/profile" 
+            element={
+              <ProtectedRoute>
+                <ClientAuditProfile />
+              </ProtectedRoute>
+            } 
+          />
         </Route>
       </Routes>
     </Suspense>
@@ -129,3 +179,4 @@ const App = () => {
 }
 
 export default App
+

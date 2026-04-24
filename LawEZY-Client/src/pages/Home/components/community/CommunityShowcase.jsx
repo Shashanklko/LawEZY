@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './CommunityShowcase.css';
 
 const CommunityShowcase = () => {
+  const navigate = useNavigate();
   const [startIndex, setStartIndex] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
   const sectionRef = useRef(null);
@@ -92,7 +94,10 @@ const CommunityShowcase = () => {
             experts serving thousands daily.
           </p>
 
-          <button className="btn-explore-community">
+          <button 
+            className="btn-explore-community"
+            onClick={() => navigate('/community')}
+          >
             Explore Community Network →
           </button>
         </div>
@@ -128,3 +133,4 @@ const CommunityShowcase = () => {
 };
 
 export default CommunityShowcase;
+

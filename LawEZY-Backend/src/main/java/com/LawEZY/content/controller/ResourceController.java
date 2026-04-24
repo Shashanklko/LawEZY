@@ -33,6 +33,11 @@ public class ResourceController {
         return ResponseEntity.ok(resourceService.createResource(request));
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<LegalResource> updateResource(@PathVariable @NonNull String id, @RequestBody @NonNull ResourceRequest request) {
+        return ResponseEntity.ok(resourceService.updateResource(id, request));
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteResource(@PathVariable @NonNull String id) {
         resourceService.deleteResource(id);

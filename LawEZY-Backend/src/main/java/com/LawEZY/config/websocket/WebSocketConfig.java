@@ -31,7 +31,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public void registerStompEndpoints(@org.springframework.lang.NonNull StompEndpointRegistry registry) {
         // The URL where clients connect to the WebSocket server
         registry.addEndpoint("/ws")
-                .setAllowedOrigins(allowedOrigins != null ? allowedOrigins : new String[]{"*"})
+                .setAllowedOriginPatterns("*")
                 .withSockJS();
     }
 

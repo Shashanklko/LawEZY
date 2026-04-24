@@ -4,30 +4,33 @@ import './ExpertCard.css';
 
 const ExpertCard = ({ expert, onViewProfile, onBookAppointment }) => {
   const navigate = useNavigate();
-  const { user } = useAuthStore();
-  // Multi-tier identity check to ensure self-engagement is blocked
-  const isSelf = user?.uid === expert.uid || user?.id === expert.id || user?.uid === expert.id;
+  const { user, viewMode } = useAuthStore();
+  
+  // High-fidelity identity resolution
+  const isSelf = user && (user.id === expert.id);
   
   return (
-    <div className={`expert-card-v2 ${!expert.isVerified ? 'verification-locked' : ''}`} onClick={() => expert.isVerified && onViewProfile(expert.id)}>
+    <div className={`expert-card-v2 ${!expert.isVerified ? 'verification-locked' : ''}`} onClick={() => expert.isVerified && onViewProfile(expert)}>
       {!expert.isVerified && (
         <div className="verification-lock-overlay">
           <div className="lock-content">
-            <div className="lock-icon">🔒</div>
+            <div className="lock-icon">L</div>
             <h4>Audit Pending</h4>
-            <p>This expert dossier is currently undergoing institutional verification.</p>
+            <p>Verification in progress.</p>
           </div>
         </div>
       )}
+      
       <div className="card-header">
         <div className="avatar-wrapper">
           <img src={expert.avatar || 'https://via.placeholder.com/100'} alt={expert.name} />
           {expert.isVerified && (
-            <div className="verified-badge-institutional" title="Institutional Verified Expert">
-              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
+            <div className="verified-badge-institutional" title="Institutional Verified">
+              <span style={{ fontSize: '12px' }}>V</span>
             </div>
           )}
-          </div>
+        </div>
+        
         <div className="expert-meta-header">
           <div className="title-exp-row">
             <span className="expert-title">{expert.title || 'Institutional Advisor'}</span>
@@ -35,10 +38,11 @@ const ExpertCard = ({ expert, onViewProfile, onBookAppointment }) => {
           </div>
           <h3 className="expert-name-institutional">{expert.name}</h3>
           <div className="card-institutional-badges">
-             <span className="institutional-uid-badge">UID: {expert.uid || `LZY-${expert.id.substring(0, 8)}`}</span>
-             {expert.location && <span className="expert-location-chip"><span className="loc-icon">📍</span> {expert.location}</span>}
+             <span className="institutional-uid-badge">ID: {expert.id?.substring ? expert.id.substring(0, 8) : expert.id}</span>
+             {expert.location && <span className="expert-location-chip">📍 {expert.location}</span>}
           </div>
         </div>
+        
         <div className="expert-rating-dock">
           <span className="star">★</span>
           <span className="rating-num">{Number(expert.rating || 0).toFixed(1)}</span>
@@ -46,49 +50,38 @@ const ExpertCard = ({ expert, onViewProfile, onBookAppointment }) => {
       </div>
       
       <div className="card-body">
-        <p className="expert-bio-short">{expert.bioSmall || expert.bio || 'Specialized in multi-jurisdictional compliance and institutional counsel.'}</p>
-        <div className="expert-pedigree-mini">
-            {expert.educationList?.[0] && <span className="pedigree-item">🎓 {expert.educationList[0].degree}</span>}
-        </div>
+        <p className="expert-bio-short">{expert.bioSmall || expert.bio || 'Specialized institutional counsel.'}</p>
         <div className="expert-domains-tags">
           {(expert.domains || []).slice(0, 3).map(domain => (
             <span key={domain} className="domain-chip">{domain}</span>
           ))}
-          {(expert.domains || []).length > 3 && <span className="domain-chip plus">+{(expert.domains || []).length - 3} More</span>}
+          {(expert.domains || []).length > 3 && <span className="domain-chip plus">+{expert.domains.length - 3}</span>}
         </div>
       </div>
 
       <div className="card-footer">
-        <div className="price-info">
-          <span className="price-label">Starts from</span>
-          <span className="price-value">₹{expert.price || '499'} <span>/ session</span></span>
-          <button 
-            className="btn-book-institutional" 
-            disabled={!expert.isVerified || isSelf}
-            onClick={(e) => {
-              e.stopPropagation();
-              onBookAppointment && onBookAppointment(expert);
-            }}
-            title={isSelf ? "You cannot book appointments with yourself" : ""}
-          >
-            {isSelf ? "Self Profile" : "Book 1:1 Appointment"}
-          </button>
-        </div>
-        <div className="expert-card-actions">
-          <button className="btn-connect-expert-small" disabled={!expert.isVerified} onClick={() => onViewProfile(expert.id)}>{isSelf ? "Your Dossier" : "View Profile →"}</button>
-          <button 
-            className="btn-send-message-small"
-            disabled={!expert.isVerified || isSelf}
-            onClick={(e) => {
-              e.stopPropagation();
-              if (expert.isVerified && !isSelf) {
-                navigate(`/messages?expertId=${expert.uid}&expertName=${encodeURIComponent(expert.name)}`);
-              }
-            }}
-            title={isSelf ? "Messaging yourself is disabled" : ""}
-          >
-            Send Message
-          </button>
+        <button 
+          className="btn-book-institutional full-width" 
+          disabled={!expert.isVerified || isSelf}
+          onClick={(e) => {
+            e.stopPropagation();
+            onBookAppointment && onBookAppointment(expert);
+          }}
+        >
+          {isSelf ? "Self Profile" : "Book 1:1 Appointment"}
+        </button>
+        
+        <div className="footer-secondary-actions">
+            <button className="btn-secondary profile-btn" onClick={(e) => { e.stopPropagation(); navigate(`/expert/${expert.id}`); }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4-4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                Profile
+            </button>
+            {!isSelf && viewMode !== 'EXPERT' && (
+                <button className="btn-secondary message-btn" onClick={(e) => { e.stopPropagation(); navigate(`/messages?expertId=${expert.id}&expertName=${encodeURIComponent(expert.firstName || expert.name)}`); }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                    Message
+                </button>
+            )}
         </div>
       </div>
     </div>

@@ -3,7 +3,6 @@ package com.LawEZY.user.controller;
 import com.LawEZY.user.entity.Appointment;
 import com.LawEZY.user.service.AppointmentService;
 import com.LawEZY.auth.dto.CustomUserDetails;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -12,19 +11,21 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/appointments")
-@RequiredArgsConstructor
 public class AppointmentController {
-
     private final AppointmentService appointmentService;
+
+    public AppointmentController(AppointmentService appointmentService) {
+        this.appointmentService = appointmentService;
+    }
 
     @GetMapping("/expert")
     public ResponseEntity<List<Appointment>> getExpertAppointments(@AuthenticationPrincipal CustomUserDetails userDetails) {
-        return ResponseEntity.ok(appointmentService.getAppointmentsForExpert(userDetails.getUid()));
+        return ResponseEntity.ok(appointmentService.getAppointmentsForExpert(userDetails.getId()));
     }
 
     @GetMapping("/client")
     public ResponseEntity<List<Appointment>> getClientAppointments(@AuthenticationPrincipal CustomUserDetails userDetails) {
-        return ResponseEntity.ok(appointmentService.getAppointmentsForClient(userDetails.getUid()));
+        return ResponseEntity.ok(appointmentService.getAppointmentsForClient(userDetails.getId()));
     }
 
     @PostMapping("/propose")
@@ -48,11 +49,12 @@ public class AppointmentController {
     }
 
     @PostMapping("/{id}/counter")
-    public ResponseEntity<Appointment> counterAppointment(@PathVariable Long id, @RequestBody Map<String, String> slots) {
-        java.time.LocalDateTime s1 = java.time.LocalDateTime.parse(slots.get("slot1"));
-        java.time.LocalDateTime s2 = java.time.LocalDateTime.parse(slots.get("slot2"));
-        java.time.LocalDateTime s3 = java.time.LocalDateTime.parse(slots.get("slot3"));
-        return ResponseEntity.ok(appointmentService.counterOffer(id, s1, s2, s3));
+    public ResponseEntity<Appointment> counterAppointment(@PathVariable Long id, @RequestBody Map<String, Object> payload) {
+        java.time.LocalDateTime s1 = java.time.LocalDateTime.parse(payload.get("slot1").toString());
+        java.time.LocalDateTime s2 = java.time.LocalDateTime.parse(payload.get("slot2").toString());
+        java.time.LocalDateTime s3 = java.time.LocalDateTime.parse(payload.get("slot3").toString());
+        Double newBaseFee = payload.containsKey("newBaseFee") ? Double.valueOf(payload.get("newBaseFee").toString()) : null;
+        return ResponseEntity.ok(appointmentService.counterOffer(id, s1, s2, s3, newBaseFee));
     }
 
     @PostMapping("/{id}/finalize")
@@ -71,8 +73,18 @@ public class AppointmentController {
     }
 
     @PatchMapping("/{id}/status")
-    public ResponseEntity<Appointment> updateStatus(@PathVariable Long id, @RequestParam String status) {
-        return ResponseEntity.ok(appointmentService.updateStatus(id, status));
+    public ResponseEntity<Appointment> updateStatus(
+            @PathVariable Long id, 
+            @RequestParam String status,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        // Pass the authenticated user's actual DB User ID to ensure wallet resolution works
+        String callerUserId = userDetails != null ? userDetails.getId() : null;
+        return ResponseEntity.ok(appointmentService.updateStatus(id, status, callerUserId));
+    }
+
+    @PostMapping("/{id}/mark-completed")
+    public ResponseEntity<Appointment> markCompletedByExpert(@PathVariable Long id) {
+        return ResponseEntity.ok(appointmentService.markAsCompletedByExpert(id));
     }
 
     @PostMapping("/review")

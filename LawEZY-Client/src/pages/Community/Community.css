@@ -17,7 +17,7 @@
 /* HERO SECTION */
 .community-hero {
   background: linear-gradient(135deg, #2D0606 0%, #1a0a0a 100%); /* Deep Burgundy base */
-  padding: 25px 2%; /* Reduced side padding for more width */
+  padding: 10px 2%;
   color: white;
   position: relative;
   overflow: hidden;
@@ -735,12 +735,7 @@
   color: var(--elite-gold);
 }
 
-.hero-content h1 {
-  font-size: clamp(1.8rem, 5vw, 3.2rem);
-  font-weight: 900;
-  margin-bottom: 10px;
-  letter-spacing: -1px;
-}
+/* duplicate h1 rule removed - compact rule above takes effect */
 
 .btn-view-all-news {
   width: 100%;

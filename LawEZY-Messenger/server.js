@@ -11,7 +11,14 @@ const axios = require('axios');
 dotenv.config();
 
 const app = express();
-app.use(cors());
+
+// CORS configuration: Restricted to institutional origins
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "http://localhost:5173,http://localhost:8080").split(',');
+app.use(cors({
+    origin: ALLOWED_ORIGINS,
+    credentials: true
+}));
+
 app.use(express.json());
 
 const PORT = process.env.PORT || 8081;
@@ -41,13 +48,16 @@ mongoose.connect(process.env.MONGO_URI)
 const ChatSessionSchema = new mongoose.Schema({
     userId: String,
     professionalId: String,
-    status: { type: String, enum: ['AWAITING_REPLY', 'LOCKED_REPLY', 'ACTIVE', 'ENDED'], default: 'AWAITING_REPLY' },
+    status: { type: String, enum: ['AWAITING_REPLY', 'LOCKED_REPLY', 'ACTIVE', 'ENDED', 'RESOLVED'], default: 'AWAITING_REPLY' },
     tokensGranted: { type: Number, default: 0 },
     tokensConsumed: { type: Number, default: 0 },
     isAppointmentPaid: { type: Boolean, default: false },
-    proUid: String,
+    expiryTime: { type: Date }, // New: Window expiry
+    trialEnded: { type: Boolean, default: false }, // New: Trial tracker
+    textChatFee: { type: Number, default: 100 }, // New: Metadata cache
+    chatDurationMinutes: { type: Number, default: 20 }, // New: Metadata cache
     createdAt: { type: Date, default: Date.now },
-    lastUpdateAt: { type: Date, default: Date.now }
+    lastUpdateAt: { type: Date, default: Date.now, expires: 7776000 } // 90 days auto-purge
 }, { collection: 'chat_sessions' });
 
 const ChatMessageSchema = new mongoose.Schema({
@@ -56,8 +66,16 @@ const ChatMessageSchema = new mongoose.Schema({
     receiverId: String,
     type: { type: String, default: 'TEXT' },
     content: String,
+    fileMetadata: {
+        fileId: String,
+        fileName: String,
+        contentType: String,
+        size: Number,
+        downloadUrl: String
+    },
     isLocked: { type: Boolean, default: false },
-    timestamp: { type: Date, default: Date.now }
+    tempId: String, // High-fidelity reconciliation for Optimistic UI
+    timestamp: { type: Date, default: Date.now, expires: 7776000 } // 90 days auto-purge
 }, { collection: 'chat_messages' });
 
 const ChatSession = mongoose.model('ChatSession', ChatSessionSchema);
@@ -73,8 +91,16 @@ const io = new Server(server, {
     }
 });
 
-// --- INTERNAL BRIDGES ---
+// --- INTERNAL BRIDGES (Protected) ---
 app.post('/api/internal/emit-notification', (req, res) => {
+    const internalSecret = req.headers['x-internal-secret'];
+    const expectedSecret = process.env.INTERNAL_SECRET || 'lawezy-institutional-internal-grid-secret-2025';
+
+    if (internalSecret !== expectedSecret) {
+        console.warn('⚠️ [SECURITY] Unauthorized internal bridge attempt blocked.');
+        return res.status(403).json({ error: 'Forbidden: Invalid Institutional Secret' });
+    }
+
     const { userId, notification } = req.body;
     if (userId && notification) {
         io.to(userId).emit('notification_received', notification);
@@ -100,146 +126,105 @@ io.use((socket, next) => {
 // --- EVENT HANDLERS ---
 
 io.on('connection', (socket) => {
-    // Identity Resolution: Support 'uid' (Public Institutional), 'id' (Hex Storage), and 'sub' (Email)
+    // Identity Resolution: Support 'id' (Hex Storage) and 'sub' (Email)
     const institutionalId = socket.user.id || socket.user.sub;
-    const publicUid = socket.user.uid;
-    console.log(`📡 [HANDSHAKE] Secure connection established: ${socket.id} (Hex ID: ${institutionalId}, Public UID: ${publicUid})`);
+    console.log(`📡 [HANDSHAKE] Secure connection established: ${socket.id} (Institutional ID: ${institutionalId})`);
 
     // 🛡️ Join Global Personal Rooms for discovery/paging/notification delivery
     socket.join(institutionalId);
-    if (publicUid) {
-        socket.join(publicUid);
-    }
 
     socket.on('join_session', (sessionId) => {
         socket.join(sessionId);
-        console.log(`👥 [INTERNAL] Entity ${publicUid || institutionalId} joined session room: ${sessionId}`);
+        console.log(`👥 [INTERNAL] Entity ${institutionalId} joined session room: ${sessionId}`);
     });
 
 
     socket.on('send_message', async (data, callback) => {
-        const { chatSessionId, receiverId, content, type } = data;
-        const senderId = socket.user.id || socket.user.sub || data.senderId;
+        const { chatSessionId, receiverId, content, type, fileMetadata, tempId } = data;
+        const senderId = socket.user.id || socket.user.sub;
 
         try {
-            // 1. Fetch Session from MongoDB
+            // 1. Fetch Session from MongoDB (Critical Path)
             const session = await ChatSession.findById(chatSessionId);
             if (!session) {
-                const err = `Channel logic error: session ${chatSessionId} missing`;
-                if (callback) callback({ success: false, error: err });
+                if (callback) callback({ success: false, error: 'Session not found' });
                 return;
             }
 
-            // 2. Identity Verification
-            const isAuthorized = (senderId === session.userId || senderId === session.professionalId || senderId === socket.user.id);
-            if (!isAuthorized) {
-                console.warn(`⚠️ [SECURITY] Unauthorized send attempt by ${senderId} in session ${chatSessionId}`);
+            // 2. Authorization & Status Check
+            if (session.status === 'RESOLVED' || session.status === 'ENDED') {
+                if (callback) callback({ success: false, error: 'SESSION_CLOSED' });
+                return;
             }
 
-            // 3. AI Safety Guard
-            if (!session.isAppointmentPaid) {
-                try {
-                    const aiResult = await axios.post(`${process.env.AI_SERVICE_URL}/check-safety`, { content }, { timeout: 2000 });
-                    if (aiResult.data.status === 'BLOCKED') {
-                        if (callback) callback({ success: false, error: 'Message blocked: Contact information detected.' });
-                        return;
-                    }
-                } catch (aiErr) { }
+            // 3. Start Parallel Tasks: AI Guard, Message Prep, Session Prep
+            const tasks = [];
+            
+            // Task A: AI Safety Guard (Conditional)
+            let aiCheckPromise = Promise.resolve({ data: { status: 'OK' } });
+            if (!session.isAppointmentPaid && type === 'TEXT' && content && content.trim() !== '') {
+                aiCheckPromise = axios.post(`http://localhost:8001/api/ai/guard`, { query: content }, { timeout: 1500 })
+                    .catch(() => ({ data: { status: 'OK' } })); // Fail-open on timeout
+            }
+            tasks.push(aiCheckPromise);
+
+            // 4. Billing & Status Calculations (Sync)
+            const now = new Date();
+            const rawRole = (socket.user.role || '').toUpperCase();
+            const proRoles = ['LAWYER', 'CA', 'CFA', 'PROFESSIONAL'];
+            const isProfessional = proRoles.some(role => rawRole.includes(role)) || (senderId === session.professionalId);
+
+            // Time-Based Billing Logic
+            if (isProfessional && session.status === 'AWAITING_REPLY' && type === 'TEXT') {
+                session.expiryTime = new Date(now.getTime() + 5 * 60000); // 5 Minutes
+                session.trialEnded = true;
+                session.status = 'ACTIVE';
             }
 
-            // 4. Save Message
+            if (!isProfessional && !session.isAppointmentPaid && session.expiryTime && now > session.expiryTime) {
+                if (callback) callback({ success: false, error: 'SESSION_EXPIRED' });
+                return;
+            }
+
+            // 5. Wait for AI Guard before proceeding to Save/Emit
+            const aiResult = await aiCheckPromise;
+            if (aiResult.data.status === 'BLOCKED') {
+                if (callback) callback({ success: false, error: 'BLOCKED_CONTACT_INFO' });
+                return;
+            }
+
+            // 6. Save Message and Update Session in Parallel
             const newMessage = new ChatMessage({
                 chatSessionId,
                 senderId,
                 receiverId,
                 content,
                 type,
-                timestamp: new Date()
+                fileMetadata,
+                tempId, // Pass back tempId for frontend reconciliation
+                timestamp: now
             });
 
-            await newMessage.save();
-            session.lastUpdateAt = new Date();
-            
-            // 5. Financial Governance (Institutional Quota Ledger)
-            const authId = socket.user.id || socket.user.sub || socket.user.email;
-            
-            if (senderId === authId || senderId === socket.user.id || senderId === socket.user.sub) {
-                // 👨‍⚖️ EXPERT BYPASS [V2.1 - Robust Handshake]
-                const rawRole = (socket.user.role || '').toUpperCase();
-                const proRoles = ['LAWYER', 'CA', 'CFA', 'PROFESSIONAL'];
-                
-                // MULTI-LAYER IDENTITY FAIL-SAFE 
-                const isProfessional = 
-                    proRoles.some(role => rawRole.includes(role)) || 
-                    (senderId === session.professionalId) ||
-                    (['LA', 'CA', 'CF'].some(sfx => senderId.endsWith(sfx))); // Institutional Suffix Backup
-                
-                console.log(`🕵️ [DEBUG] senderId: ${senderId} | proId: ${session.professionalId} | isPro: ${isProfessional} | rawRole: ${rawRole}`);
-
-                if (!isProfessional) {
-                    console.log(`🛡️ [GOVERNANCE] Processing ledger for Client: ${senderId}`);
-                    try {
-                        const [wallets] = await mysqlPool.execute('SELECT * FROM wallets WHERE id = ? OR user_id = ?', [senderId, senderId]);
-                        
-                        if (wallets.length > 0) {
-                            const wallet = wallets[0];
-                            const freeChatTokens = wallet.free_chat_tokens !== undefined ? wallet.free_chat_tokens : (wallet.freeChatTokens || 0);
-                            const tokenBalance = wallet.token_balance !== undefined ? wallet.token_balance : (wallet.tokenBalance || 0);
-                            let isUnlimitedRaw = wallet.is_unlimited !== undefined ? wallet.is_unlimited : wallet.isUnlimited;
-                            let isUnlimited = false;
-                            if (Buffer.isBuffer(isUnlimitedRaw)) {
-                                isUnlimited = isUnlimitedRaw[0] === 1;
-                            } else {
-                                isUnlimited = !!isUnlimitedRaw;
-                            }
-
-                            if (!isUnlimited) {
-                                let quotaDeducted = false;
-                                if (freeChatTokens > 0) {
-                                    const column = wallet.free_chat_tokens !== undefined ? 'free_chat_tokens' : 'freeChatTokens';
-                                    await mysqlPool.execute(`UPDATE wallets SET ${column} = ${column} - 1 WHERE id = ?`, [wallet.id]);
-                                    quotaDeducted = true;
-                                } else if (tokenBalance > 0) {
-                                    const column = wallet.token_balance !== undefined ? 'token_balance' : 'tokenBalance';
-                                    await mysqlPool.execute(`UPDATE wallets SET ${column} = ${column} - 1 WHERE id = ?`, [wallet.id]);
-                                    quotaDeducted = true;
-                                }
-
-                                if (quotaDeducted) {
-                                    session.tokensConsumed += 1;
-                                    const txnRef = `TXN-LZY-${Date.now()}`;
-                                    await mysqlPool.execute(
-                                        'INSERT INTO financial_transactions (id, transaction_id, description, amount, status, timestamp, user_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                                        [txnRef, txnRef, `Messenger Quota: Session ${chatSessionId.substring(0,8)}`, -1.0, 'COMPLETED', new Date(), senderId]
-                                    );
-                                } else {
-                                    console.warn(`🛑 [GOVERNANCE] Quota Exhausted for ${senderId}`);
-                                    await ChatMessage.findByIdAndDelete(newMessage._id);
-                                    io.to(chatSessionId).emit('quota_exhausted_alert', { 
-                                        userId: senderId, 
-                                        message: "Institutional units exhausted. Please refill credits." 
-                                    });
-                                    if (callback) callback({ success: false, error: 'INSTITUTIONAL_QUOTA_EXHAUSTED' });
-                                    return;
-                                }
-                            }
-                        } else {
-                            console.error(`❌ [IDENTITY_LEDGER_MISSING] No wallet entry found for Institutional ID/Email: [${senderId}]. Handshake denied.`);
-                            await ChatMessage.findByIdAndDelete(newMessage._id);
-                            if (callback) callback({ success: false, error: 'IDENTITY_LEDGER_MISSING' });
-                            return;
-                        }
-                    } catch (sqlErr) {
-                        console.error('❌ [SQL ERROR]', sqlErr.message);
-                    }
-                } else {
-                    console.log(`👨‍⚖️ [GOVERNANCE] Expert Bypass [V2.1]: ${senderId} (${rawRole})`);
-                }
+            if (isProfessional && session.status === 'LOCKED_REPLY' && !session.isAppointmentPaid) {
+                newMessage.isLocked = true;
             }
 
-            await session.save();
-            if (callback) callback({ success: true, message: newMessage });
-            io.to(chatSessionId).emit('new_message', newMessage);
+            session.lastUpdateAt = now;
+
+            await Promise.all([
+                newMessage.save(),
+                session.save()
+            ]);
+
+            // 7. Instant Broadcast
+            const broadcastPayload = {
+                ...newMessage.toObject(),
+                id: newMessage._id,
+                tempId: tempId // Explicitly ensure tempId is passed for frontend reconciliation
+            };
+
+            if (callback) callback({ success: true, data: broadcastPayload });
+            io.to(chatSessionId).emit('new_message', broadcastPayload);
             io.to(receiverId).emit('discovery_sync', { chatSessionId });
 
         } catch (err) {
@@ -249,6 +234,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('delete_chat', (sessionId) => {
+
         io.to(sessionId).emit('chat_deleted', sessionId);
     });
 

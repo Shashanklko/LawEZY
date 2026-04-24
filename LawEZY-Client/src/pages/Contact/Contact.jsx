@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import apiClient from '../../services/apiClient';
 import './Contact.css';
 
 const Contact = () => {
@@ -10,9 +11,21 @@ const Contact = () => {
     role: 'Seeker'
   });
 
-  const handleSubmit = (e) => {
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    alert('Institutional message sent. Our support council will respond within 4 hours.');
+    setLoading(true);
+    try {
+      await apiClient.post('/api/contact/submit', formData);
+      setSuccess(true);
+      alert('Institutional message sent. Our support council will respond within 4 hours.');
+    } catch (err) {
+      alert('Failed to dispatch message. Please try again later.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleChange = (e) => {
@@ -59,3 +72,4 @@ const Contact = () => {
 };
 
 export default Contact;
+

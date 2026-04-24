@@ -17,11 +17,14 @@ import com.LawEZY.auth.dto.AuthRequest;
 import com.LawEZY.auth.dto.AuthResponse;
 import com.LawEZY.auth.service.CustomUserDetailsService;
 import com.LawEZY.auth.util.JwtUtil;
+import com.LawEZY.common.response.ApiResponse;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
-@lombok.extern.slf4j.Slf4j
 public class AuthController {
+
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AuthController.class);
 
     @Autowired
     private AuthenticationManager authManager;
@@ -36,20 +39,77 @@ public class AuthController {
     @Autowired
     private com.LawEZY.common.service.AuditLogService auditLogService;
 
+    @Autowired
+    private com.LawEZY.user.service.AdminBroadcastService adminBroadcastService;
+
+    @Autowired
+    private com.LawEZY.common.util.RateLimiter rateLimiter;
+
+    @Autowired
+    private com.LawEZY.auth.service.OtpService otpService;
+
     @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody com.LawEZY.user.dto.UserRequest userRequest) {
+    public ResponseEntity<ApiResponse<com.LawEZY.user.dto.UserResponse>> register(
+            @RequestBody com.LawEZY.user.dto.UserRequest userRequest, 
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String otp,
+            jakarta.servlet.http.HttpServletRequest request) {
+        
+        String ip = request.getRemoteAddr();
+        // Limit: 5 registrations per hour per IP
+        if (!rateLimiter.isAllowed("REG_" + ip, 5, 3600000)) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(ApiResponse.error("Registration threshold exceeded. Please try again later."));
+        }
+        
+        // 🔐 OTP VERIFICATION (Mandatory for Registration)
+        if (otp == null || !otpService.validateOtp(userRequest.getEmail(), otp, "REGISTRATION")) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error("INVALID_OTP: Please provide a valid verification code."));
+        }
+        
         log.info("New registration attempt for email: {}", userRequest.getEmail());
-        return ResponseEntity.ok(userService.createUser(userRequest));
+        com.LawEZY.user.dto.UserResponse response = userService.createUser(userRequest);
+        return ResponseEntity.ok(ApiResponse.success(response, "Registration successful"));
+    }
+
+    @PostMapping("/request-otp")
+    public ResponseEntity<ApiResponse<Void>> requestOtp(@RequestBody Map<String, String> payload, jakarta.servlet.http.HttpServletRequest request) {
+        String email = payload.get("email");
+        String purpose = payload.getOrDefault("purpose", "REGISTRATION");
+        String ip = request.getRemoteAddr();
+
+        if (email == null || email.trim().isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error("Email is required"));
+        }
+
+        // Rate limit OTP requests (3 per 10 mins per IP)
+        if (!rateLimiter.isAllowed("OTP_" + ip, 3, 600000)) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(ApiResponse.error("Too many OTP requests. Please wait."));
+        }
+
+        try {
+            otpService.generateAndSendOtp(email, purpose);
+            return ResponseEntity.ok(ApiResponse.success(null, "Security code dispatched to " + email));
+        } catch (Exception e) {
+            log.error("OTP Dispatch Failed: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.error("Failed to send verification code."));
+        }
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody AuthRequest authRequest, jakarta.servlet.http.HttpServletRequest request){
+    public ResponseEntity<ApiResponse<AuthResponse>> login(@RequestBody AuthRequest authRequest, jakarta.servlet.http.HttpServletRequest request){
         String email = authRequest.getEmail() != null ? authRequest.getEmail().toLowerCase().trim() : null;
         String ip = request.getRemoteAddr();
+
+        // 🛡️ SECURITY GUARD: Rate Limit Login Attempts (10 per 15 mins)
+        if (!rateLimiter.isAllowed("LOGIN_" + ip, 10, 900000)) {
+             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(ApiResponse.error("Too many login attempts. Please wait 15 minutes."));
+        }
         
         try{
             authManager.authenticate(
                 new UsernamePasswordAuthenticationToken(email, authRequest.getPassword()));
+            
+            // On success, reset the limiter for this IP
+            rateLimiter.reset("LOGIN_" + ip);
             
             log.info("Login SUCCESS for email: {} | IP: {}", email, ip);
             
@@ -61,28 +121,93 @@ public class AuthController {
                 throw new RuntimeException("Identity resolution failed for: " + email);
             }
 
-            auditLogService.logAudit("LOGIN_SUCCESS", "User logged in successfully", ip, email, user.getRole().name());
+            try {
+                auditLogService.logAudit("LOGIN_SUCCESS", "User logged in successfully", ip, email, user.getRole().name());
+            } catch (Exception e) {
+                log.warn("Secondary Audit Log Failed: {}", e.getMessage());
+            }
             
-            return ResponseEntity.ok(new AuthResponse(
+            // 🚀 REAL-TIME BROADCAST: Update Admin Portal
+            try {
+                adminBroadcastService.broadcastAdminEvent("LOGIN_SUCCESS", Map.of(
+                    "userId", email,
+                    "summary", "User logged in: " + email,
+                    "ipAddress", ip,
+                    "userRole", user.getRole().name()
+                ));
+            } catch (Exception e) {
+                log.warn("Admin broadcast failed for login: {}", e.getMessage());
+            }
+            
+            // 🛡️ INSTITUTIONAL MFA: Expert and Admin Protection
+            if (user.getRole().name().equals("EXPERT") || user.getRole().name().equals("ADMIN")) {
+                log.info("[MFA] Login successful, but challenge required for {} role: {}", user.getRole(), email);
+                otpService.generateAndSendOtp(email, "LOGIN_MFA");
+                return ResponseEntity.ok(ApiResponse.success(null, "MFA_REQUIRED: A verification code has been sent to your registered email."));
+            }
+
+            AuthResponse authResponse = new AuthResponse(
                 jwt, 
                 "Login successful", 
                 user.getId(),
-                user.getUid(),
                 user.getFirstName(), 
                 user.getLastName(), 
                 user.getRole()
-            ));
+            );
+
+            return ResponseEntity.ok(ApiResponse.success(authResponse, "Login successful"));
             
         } catch(BadCredentialsException e){
             log.warn("Login FAILED for email: {} | IP: {}", email, ip);
-            auditLogService.logSecurityAlert("Login Failed", "Incorrect password attempted", ip, email, "UNDEFINED");
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Incorrect email or password");
+            try {
+                auditLogService.logSecurityAlert("Login Failed", "Incorrect password attempted", ip, email, "UNDEFINED");
+            } catch (Exception ex) {}
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error("Credential incorrect"));
+        } catch(org.springframework.security.core.AuthenticationException e) {
+            log.warn("Login Auth Exception: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error("Credential incorrect"));
         } catch(Exception e) {
             log.error("CRITICAL LOGIN ERROR for email: {} | Cause: {} | Root: {}", email, e.getMessage(), e.getClass().getName());
-            e.printStackTrace(); // This will print directly to the console logs where the user can see it
-            auditLogService.logCriticalError("Login System Error", e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Login failed: " + e.getMessage());
+            try {
+                auditLogService.logCriticalError("Login System Error", e.getMessage());
+            } catch (Exception ex) {}
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.error("An unexpected error occurred. Please try again later."));
         }
     }
-    
+
+    @PostMapping("/mfa-verify")
+    public ResponseEntity<ApiResponse<AuthResponse>> verifyMfa(@RequestBody Map<String, String> payload, jakarta.servlet.http.HttpServletRequest request) {
+        String email = payload.get("email");
+        String code = payload.get("otp");
+        String ip = request.getRemoteAddr();
+
+        if (!otpService.validateOtp(email, code, "LOGIN_MFA")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error("INVALID_OTP: Verification failed."));
+        }
+
+        // OTP Validated: Issue Final JWT
+        UserDetails userDetails = UserDetailsService.loadUserByUsername(email);
+        final String jwt = jwtUtil.generateToken(userDetails);
+        com.LawEZY.user.dto.UserResponse user = userService.getUserByEmail(email);
+
+        auditLogService.logAudit("MFA_SUCCESS", "MFA verification successful", ip, email, user.getRole().name());
+
+        AuthResponse authResponse = new AuthResponse(
+            jwt, "MFA Verified", user.getId(), user.getFirstName(), user.getLastName(), user.getRole()
+        );
+        return ResponseEntity.ok(ApiResponse.success(authResponse, "Access granted."));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<ApiResponse<Void>> resetPassword(@RequestBody com.LawEZY.auth.dto.ResetPasswordRequest resetRequest) {
+        if (!otpService.validateOtp(resetRequest.getEmail(), resetRequest.getOtp(), "FORGOT_PASSWORD")) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error("INVALID_OTP: Password reset failed."));
+        }
+
+        // Logic to update password in UserService
+        userService.updatePassword(resetRequest.getEmail(), resetRequest.getNewPassword());
+        log.info("[AUTH] Password reset successful for: {}", resetRequest.getEmail());
+        
+        return ResponseEntity.ok(ApiResponse.success(null, "Password has been updated successfully."));
+    }
 }

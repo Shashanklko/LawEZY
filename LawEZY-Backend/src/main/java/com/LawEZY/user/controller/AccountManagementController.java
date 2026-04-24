@@ -5,7 +5,6 @@ import com.LawEZY.user.service.FinancialService;
 import com.LawEZY.user.service.AppointmentService;
 import com.LawEZY.user.entity.FinancialTransaction;
 import com.LawEZY.common.entity.AuditLog;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
@@ -14,12 +13,17 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/account")
-@RequiredArgsConstructor
 public class AccountManagementController {
 
     private final AuditLogService auditLogService;
     private final FinancialService financialService;
     private final AppointmentService appointmentService;
+
+    public AccountManagementController(AuditLogService auditLogService, FinancialService financialService, AppointmentService appointmentService) {
+        this.auditLogService = auditLogService;
+        this.financialService = financialService;
+        this.appointmentService = appointmentService;
+    }
 
     @GetMapping("/sessions")
     public ResponseEntity<List<AuditLog>> getMySessions() {
@@ -95,12 +99,12 @@ public class AccountManagementController {
         // Institutional Protocol: Verify sufficient institutional capital before booking
         financialService.validateSufficientFunds(userId, -fee);
         // Register institutional appointment in the official registry
-        appointmentService.createAppointment(com.LawEZY.user.entity.Appointment.builder()
-                .clientUid(userId)
-                .expertUid(expertUid)
-                .fee(fee)
-                .status("PAID")
-                .build());
+        com.LawEZY.user.entity.Appointment appt = new com.LawEZY.user.entity.Appointment();
+        appt.setClientId(userId);
+        appt.setExpertId(expertUid);
+        appt.setFee(fee);
+        appt.setStatus("PAID");
+        appointmentService.createAppointment(appt);
 
         return ResponseEntity.ok(financialService.recordTransaction(userId, "Appointment Booked - Expert UID: " + expertUid, -fee, "COMPLETED", "DEBIT"));
     }

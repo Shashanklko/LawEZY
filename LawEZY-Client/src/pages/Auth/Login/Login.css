@@ -494,6 +494,116 @@
   margin-left: 5px;
 }
 
+/* ADMIN PORTAL RING */
+.admin-portal-ring {
+  position: fixed;
+  top: 90px;
+  right: 30px;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  color: rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  z-index: 1000;
+  backdrop-filter: blur(10px);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  animation-delay: 0.2s;
+}
+
+.ring-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.admin-portal-ring svg {
+  display: block;
+}
+
+.admin-portal-ring:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  transform: scale(1.1);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.admin-portal-ring.active {
+  background: #7F1D1D;
+  color: white;
+  border-color: #991B1B;
+  box-shadow: 0 0 20px rgba(127, 29, 29, 0.4);
+}
+
+.ring-glow {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  border-radius: 50%;
+  border: 2px solid #7F1D1D;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.4s ease;
+}
+
+.admin-portal-ring:hover .ring-glow {
+  transform: scale(1.4);
+  opacity: 0.3;
+}
+
+/* ADMIN FORM STYLES */
+.admin-login-container {
+  animation: fadeIn 0.5s ease forwards;
+}
+
+.admin-header {
+  text-align: center;
+  margin-bottom: 25px;
+}
+
+.admin-title {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 900;
+  font-size: 1.5rem;
+  color: white;
+  letter-spacing: 2px;
+  margin-bottom: 5px;
+}
+
+.admin-subtitle {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #8B5A2B;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.admin-btn {
+  background: #111827 !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  opacity: 0.6;
+}
+
+.admin-notice {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.4);
+  text-align: center;
+  margin-top: 20px;
+  font-style: italic;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 @media (max-width: 1024px) {
   .login-hero-section { display: none; }
   .login-content-wrapper { justify-content: center; }

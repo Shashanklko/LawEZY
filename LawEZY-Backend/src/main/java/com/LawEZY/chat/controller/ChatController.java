@@ -44,9 +44,22 @@ public class ChatController {
     }
 
     @PostMapping("/{sessionId}/unlock")
-    public ResponseEntity<ApiResponse<Void>> unlock(@NonNull @PathVariable String sessionId) {
-        chatService.unlockReply(sessionId);
-        return ResponseEntity.ok(ApiResponse.success(null, "Chat unlocked successfully."));
+    public ResponseEntity<ApiResponse<Void>> unlock(
+            @NonNull @PathVariable String sessionId,
+            @RequestParam(defaultValue = "10") int minutes) {
+        chatService.unlockReply(sessionId, minutes);
+        return ResponseEntity.ok(ApiResponse.success(null, "Chat unlocked for " + minutes + " minutes."));
+    }
+    
+    @PostMapping("/{sessionId}/read")
+    public ResponseEntity<ApiResponse<Void>> markAsRead(@NonNull @PathVariable String sessionId) {
+        chatService.markAsRead(sessionId);
+        return ResponseEntity.ok(ApiResponse.success(null, "Messages marked as read."));
+    }
+    
+    @GetMapping("/unread-count")
+    public ResponseEntity<ApiResponse<Long>> getTotalUnreadCount() {
+        return ResponseEntity.ok(ApiResponse.success(chatService.getTotalUnreadCount(getCurrentId()), "Unread count retrieved."));
     }
 
     @GetMapping("/sessions/user/{userId}")

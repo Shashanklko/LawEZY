@@ -103,7 +103,7 @@ const Notifications = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [markingAll, setMarkingAll] = useState(false);
 
-  const userId = user?.uid || user?.id;
+  const userId = user?.id || user?.id;
 
   // ── Fetch ──────────────────────────────────────────────────────────────────
   const fetchAll = useCallback(async () => {
@@ -189,7 +189,7 @@ const Notifications = () => {
             <h1 className="nh-title">Notification Centre</h1>
             <p className="nh-subtitle">
               {unreadCount > 0
-                ? <><span className="nh-unread-pill">{unreadCount}</span> unread alerts across your institutional account</>
+                ? <><span className="nh-unread-pill">{unreadCount}</span> unread alerts across your account</>
                 : 'You\'re all caught up — no pending alerts'
               }
             </p>
@@ -295,3 +295,4 @@ const Notifications = () => {
 };
 
 export default Notifications;
+

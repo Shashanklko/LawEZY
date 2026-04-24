@@ -8,7 +8,8 @@ import java.util.Optional;
 @Repository
 public interface ProfessionalProfileRepository extends JpaRepository<ProfessionalProfile, String> {
     Optional<ProfessionalProfile> findByUserId(String userId);
-    Optional<ProfessionalProfile> findByUidIgnoreCase(String uid);
     Optional<ProfessionalProfile> findByPhoneNumber(String phoneNumber);
+    Optional<ProfessionalProfile> findBySlug(String slug);
+    void deleteByUserId(String userId);
 }
 

@@ -10,8 +10,6 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 @Configuration
 @EnableJpaRepositories(basePackages = {
     "com.LawEZY.user.repository",
-    "com.LawEZY.blog.repository",
-    "com.LawEZY.content.repository",
     "com.LawEZY.common.repository"
 })
 public class MySQLConfig {

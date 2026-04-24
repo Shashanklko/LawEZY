@@ -11,6 +11,10 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  const [isAdminLogin, setIsAdminLogin] = useState(false);
+  const [showMfa, setShowMfa] = useState(false);
+  const [mfaOtp, setMfaOtp] = useState('');
+  const [mfaEmail, setMfaEmail] = useState('');
   const navigate = useNavigate();
   const setAuth = useAuthStore((state) => state.setAuth);
 
@@ -25,19 +29,27 @@ const Login = () => {
         password,
       });
 
-      const { token, firstName, lastName, id, publicUid: uid, role: serverRole, message } = response.data;
+      const apiResponse = response.data;
+
+      if (apiResponse.message && apiResponse.message.startsWith("MFA_REQUIRED")) {
+        setMfaEmail(email);
+        setShowMfa(true);
+        setLoading(false);
+        return;
+      }
+
+      const { token, firstName, lastName, id, role: serverRole } = apiResponse.data;
       
       // Persist full institutional identity directly into the Auth Store
       setAuth({ 
-        id, // Internal Database ID (CRITICAL for handshakes)
+        id, // Institutional Primary Identifier
         email, 
         firstName, 
         lastName, 
-        uid, // Institutional Public Identifier
         role: serverRole 
       }, token);
       
-      console.log('Login successful:', message);
+      console.log('Login successful:', apiResponse.message);
       navigate('/');
     } catch (err) {
       console.error('Login error details:', err.response?.data);
@@ -54,6 +66,32 @@ const Login = () => {
     }
   };
 
+  const handleMfaVerify = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await apiClient.post('/api/auth/mfa-verify', {
+        email: mfaEmail,
+        otp: mfaOtp
+      });
+
+      const { token, firstName, lastName, id, role: serverRole } = response.data.data;
+      setAuth({ id, email: mfaEmail, firstName, lastName, role: serverRole }, token);
+      
+      if (serverRole === 'ADMIN') {
+        navigate('/admin');
+      } else {
+        navigate('/');
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Invalid MFA code.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="login-page">
       <div className="login-overlay"></div>
@@ -62,7 +100,7 @@ const Login = () => {
       <div className="login-portal-header stagger-reveal">
         <Link to="/" className="portal-brand-link-wrapper">
           <div className="portal-brand-block">
-            <span className="portal-brand-name">LAWEZY</span>
+            <span className="lawezy-logo medium">LAWEZY<span className="logo-dot">.</span></span>
             <div className="portal-brand-divider"></div>
             <div className="portal-ai-brand">
               <span className="portal-ai-name">LawinoAI</span>
@@ -83,6 +121,20 @@ const Login = () => {
       <Link to="/" className="portal-exit-btn stagger-reveal">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
       </Link>
+      
+      {/* ADMIN PORTAL TRIGGER RING */}
+      <div 
+        className={`admin-portal-ring stagger-reveal ${isAdminLogin ? 'active' : ''}`}
+        onClick={() => setIsAdminLogin(!isAdminLogin)}
+        title={isAdminLogin ? "Return to User Portal" : "Admin Portal"}
+      >
+        <div className="ring-inner">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          </svg>
+        </div>
+        <div className="ring-glow"></div>
+      </div>
 
       <div className="login-content-wrapper">
         {/* LEFT SIDE: HERO CONTENT */}
@@ -90,7 +142,7 @@ const Login = () => {
           <h1 className="hero-login-title" style={{ fontSize: '5.5rem', marginBottom: '16px' }}>Welcome<br />Back.</h1>
           <p className="hero-login-desc" style={{ fontSize: '1.25rem', opacity: '0.9', fontWeight: '500', lineHeight: '1.6', maxWidth: '500px' }}>
             <Link to="/" className="hero-brand-link">
-              <span style={{ color: role === 'pro' ? '#8B5A2B' : '#7F1D1D', fontWeight: '800' }}>LAWEZY</span>
+              <span className="lawezy-logo tiny" style={{ display: 'inline-flex', color: role === 'pro' ? '#8B5A2B' : '#7F1D1D' }}>LAWEZY<span className="logo-dot">.</span></span>
             </Link> provide you platform to find expert to help you,
             and for professionals to reach the clients who need them.
           </p>
@@ -99,78 +151,163 @@ const Login = () => {
         {/* RIGHT SIDE: GLASS FORM */}
         <div className="login-form-section">
           <div className="glass-login-card">
-            {/* ROLE SELECTOR */}
-            <div className={`role-selector stagger-reveal delay-1 ${role}`}>
-              <div 
-                className={`role-option ${role === 'client' ? 'active' : ''}`} 
-                onClick={() => setRole('client')}
-              >
-                Clients
-              </div>
-              <div 
-                className={`role-option ${role === 'pro' ? 'active' : ''}`} 
-                onClick={() => setRole('pro')}
-              >
-                Professionals
-              </div>
-              <div className="role-pill"></div>
-            </div>
-
-            <form className="login-form" onSubmit={handleSubmit}>
-              {error && <div className="login-error-message">{error}</div>}
-              
-              <div className="login-group stagger-reveal delay-2">
-                <label className="login-label">Email or Phone Number</label>
-                <div className="input-with-icon">
-                  <input 
-                    type="email" 
-                    className="login-input" 
-                    placeholder="Enter your email" 
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required 
-                  />
-                  <div className="input-icon">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            {showMfa ? (
+              <div className="mfa-container stagger-reveal">
+                <div className="admin-header">
+                  <h2 className="admin-title">MFA CHALLENGE</h2>
+                  <p className="admin-subtitle">Verification code sent to {mfaEmail}</p>
+                </div>
+                <form className="login-form" onSubmit={handleMfaVerify}>
+                  <div className="login-group">
+                    <label className="login-label">Verification Code</label>
+                    <input 
+                      type="text" 
+                      placeholder="6-Digit OTP" 
+                      className="login-input" 
+                      value={mfaOtp}
+                      onChange={(e) => setMfaOtp(e.target.value)}
+                      required 
+                      disabled={loading} 
+                    />
                   </div>
-                </div>
+                  <button type="submit" className="btn-login-primary" disabled={loading}>
+                    <span>{loading ? 'VERIFYING...' : 'CONFIRM IDENTITY'}</span>
+                  </button>
+                  <button 
+                    type="button" 
+                    className="login-link-subtle" 
+                    onClick={() => setShowMfa(false)}
+                    style={{ background: 'none', border: 'none', marginTop: '16px', cursor: 'pointer' }}
+                  >
+                    Back to Login
+                  </button>
+                </form>
               </div>
+            ) : isAdminLogin ? (
+              <div className="admin-login-container">
+                <div className="admin-header">
+                  <h2 className="admin-title">ADMIN ACCESS</h2>
+                  <p className="admin-subtitle">Secure Institutional Gateway</p>
+                </div>
+                <form className="login-form" onSubmit={async (e) => {
+                  e.preventDefault();
+                  const adminId = e.target.adminId.value.trim();
+                  const key = e.target.adminKey.value;
+                  const loginEmail = adminId.includes('@') ? adminId : `${adminId}@lawezy.com`;
+                  
+                  setLoading(true);
+                  try {
+                    const response = await apiClient.post('/api/auth/login', {
+                      email: loginEmail,
+                      password: key,
+                    });
+                    const apiResponse = response.data;
+                    
+                    if (apiResponse.message && apiResponse.message.startsWith("MFA_REQUIRED")) {
+                      setMfaEmail(loginEmail);
+                      setShowMfa(true);
+                      setLoading(false);
+                      return;
+                    }
 
-              <div className="login-group stagger-reveal delay-2">
-                <label className="login-label">Password</label>
-                <div className="input-with-icon">
-                  <input 
-                    type="password" 
-                    className="login-input" 
-                    placeholder="••••••••••••" 
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required 
-                  />
-                  <div className="input-icon">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                    const { token, firstName, lastName, id, role: serverRole } = apiResponse.data;
+                    setAuth({ id, email: loginEmail, firstName, lastName, role: serverRole }, token);
+                    navigate('/admin');
+                  } catch (err) {
+                    alert('Invalid Institutional Credentials');
+                  } finally {
+                    setLoading(false);
+                  }
+                }}>
+                  <div className="login-group">
+                    <label className="login-label">Admin ID</label>
+                    <input name="adminId" type="text" placeholder="e.g. lawezy95" className="login-input" required disabled={loading} />
                   </div>
-                </div>
+                  <div className="login-group">
+                    <label className="login-label">Admin Key</label>
+                    <input name="adminKey" type="password" placeholder="••••••••••••" className="login-input" required disabled={loading} />
+                  </div>
+                  <button type="submit" className="btn-login-primary admin-btn" disabled={loading}>
+                    <span>{loading ? 'INITIALIZING...' : 'INITIALIZE ACCESS'}</span>
+                  </button>
+                  <p className="admin-notice">LawEZY Governance Protocol Active.</p>
+                </form>
               </div>
-
-              <div className="login-forgot stagger-reveal delay-3">
-                <Link to="/forgot-password" title="Recover your access" className="login-link-subtle">Forgot password?</Link>
-              </div>
-
-              <button type="submit" className="btn-login-primary stagger-reveal delay-4" disabled={loading}>
-                <div className="btn-content">
-                  <span>{loading ? 'Logging in...' : 'Login'}</span>
-                  {!loading && (
-                    <svg className="btn-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
-                  )}
+            ) : (
+              <>
+                <div className={`role-selector stagger-reveal delay-1 ${role}`}>
+                  <div 
+                    className={`role-option ${role === 'client' ? 'active' : ''}`} 
+                    onClick={() => setRole('client')}
+                  >
+                    Clients
+                  </div>
+                  <div 
+                    className={`role-option ${role === 'pro' ? 'active' : ''}`} 
+                    onClick={() => setRole('pro')}
+                  >
+                    Professionals
+                  </div>
+                  <div className="role-pill"></div>
                 </div>
-              </button>
 
-              <p className="login-footer stagger-reveal delay-5">
-                Are you new?
-                <Link to="/signup" className="login-link-bold">Create an Account</Link>
-              </p>
-            </form>
+                <form className="login-form" onSubmit={handleSubmit}>
+                  {error && <div className="login-error-message">{error}</div>}
+                  
+                  <div className="login-group stagger-reveal delay-2">
+                    <label className="login-label">Email Address</label>
+                    <div className="input-with-icon">
+                      <input 
+                        type="email" 
+                        className="login-input" 
+                        placeholder="Enter your email" 
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required 
+                      />
+                      <div className="input-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="login-group stagger-reveal delay-2">
+                    <label className="login-label">Password</label>
+                    <div className="input-with-icon">
+                      <input 
+                        type="password" 
+                        className="login-input" 
+                        placeholder="••••••••••••" 
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required 
+                      />
+                      <div className="input-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="login-forgot stagger-reveal delay-3">
+                    <Link to="/forgot-password" title="Recover your access" className="login-link-subtle">Forgot password?</Link>
+                  </div>
+
+                  <button type="submit" className="btn-login-primary stagger-reveal delay-4" disabled={loading}>
+                    <div className="btn-content">
+                      <span>{loading ? 'Logging in...' : 'Login'}</span>
+                      {!loading && (
+                        <svg className="btn-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                      )}
+                    </div>
+                  </button>
+
+                  <p className="login-footer stagger-reveal delay-5">
+                    Are you new?
+                    <Link to="/signup" className="login-link-bold">Create an Account</Link>
+                  </p>
+                </form>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -179,3 +316,4 @@ const Login = () => {
 };
 
 export default Login;
+

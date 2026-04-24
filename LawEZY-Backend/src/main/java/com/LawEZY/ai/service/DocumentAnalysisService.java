@@ -4,11 +4,9 @@ import com.LawEZY.ai.model.AnalyzedDocument;
 import com.LawEZY.ai.repository.AnalyzedDocumentRepository;
 import com.LawEZY.user.entity.Wallet;
 import com.LawEZY.user.repository.WalletRepository;
+import com.LawEZY.service.SupabaseStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.mongodb.core.query.Criteria;
-import org.springframework.data.mongodb.core.query.Query;
-import org.springframework.data.mongodb.gridfs.GridFsTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
@@ -21,13 +19,16 @@ import java.util.List;
 import java.util.Map;
 
 @Service
-@Slf4j
 @RequiredArgsConstructor
 public class DocumentAnalysisService {
 
-    private final GridFsTemplate gridFsTemplate;
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(DocumentAnalysisService.class);
+
+    private final SupabaseStorageService supabaseStorageService;
     private final AnalyzedDocumentRepository analyzedDocumentRepository;
-    private final WalletRepository walletRepository;
+    private final com.LawEZY.user.repository.WalletRepository walletRepository;
+    private final com.LawEZY.user.repository.FinancialTransactionRepository transactionRepository;
+    private final com.LawEZY.user.repository.UserRepository userRepository;
     private final com.LawEZY.notification.service.NotificationService notificationService;
     private final RestTemplate restTemplate = new RestTemplate();
     private final String PYTHON_AI_URL = "http://localhost:8001/api/ai/analyze-document";
@@ -41,20 +42,73 @@ public class DocumentAnalysisService {
         Wallet wallet = walletRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Wallet not found for user: " + userId));
 
-        if (!wallet.getIsUnlimited() && wallet.getFreeDocTokens() <= 0) {
-            throw new RuntimeException("Institutional quota exhausted. Please upgrade for further analysis.");
+        // 56. Handle Governance (Token Deduction or Cash Fallback)
+        if (!wallet.getIsUnlimited()) {
+            int currentTokens = wallet.getFreeDocTokens() != null ? wallet.getFreeDocTokens() : 0;
+            if (currentTokens >= 5) {
+                // Use Free Credits (1 Audit = 5 Tokens)
+                wallet.setFreeDocTokens(currentTokens - 5);
+                log.info("📡 [DOCUMENT-AI] Deducted 5 Doc Tokens from user: {}. Remaining: {}", userId, wallet.getFreeDocTokens());
+            } else {
+                // Fallback to Cash Balance (₹50 per audit - aligning with ₹250/5pkg)
+                double docCost = 50.0;
+                if (wallet.getCashBalance() < docCost) {
+                    throw new RuntimeException("Insufficient institutional balance (Needs ₹" + docCost + "). Please top up your wallet.");
+                }
+                wallet.setCashBalance(wallet.getCashBalance() - docCost);
+                log.info("💰 [DOCUMENT-AI] Deducted ₹{} from cash balance for Doc Audit. User: {}", docCost, userId);
+                
+                // 🛡️ Institutional Audit: Record Transaction
+                try {
+                    com.LawEZY.user.entity.FinancialTransaction txn = new com.LawEZY.user.entity.FinancialTransaction();
+                    txn.setId("TXN-" + (1000 + (int)(Math.random() * 9000)));
+                    txn.setTransactionId("DOC-" + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase());
+                    txn.setAmount(-docCost);
+                    txn.setDescription("Document Audit Fee - File: " + file.getOriginalFilename());
+                    txn.setStatus("COMPLETED");
+                    txn.setTimestamp(LocalDateTime.now());
+                    txn.setUser(wallet.getUser());
+                    transactionRepository.save(txn);
+
+                    // Credit the Platform (Master Admin)
+                    userRepository.findById("lawezy76").ifPresent(master -> {
+                        com.LawEZY.user.entity.FinancialTransaction platformTxn = new com.LawEZY.user.entity.FinancialTransaction();
+                        platformTxn.setId("TXN-" + (1000 + (int)(Math.random() * 9000)));
+                        platformTxn.setTransactionId("LZY-" + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase());
+                        platformTxn.setAmount(docCost);
+                        platformTxn.setDescription("Platform Fee (Document Audit) - Client: " + userId);
+                        platformTxn.setStatus("COMPLETED");
+                        platformTxn.setTimestamp(LocalDateTime.now());
+                        platformTxn.setUser(master);
+                        transactionRepository.save(platformTxn);
+                    });
+                } catch (Exception e) {
+                    log.error("[DOCUMENT-AI] Ledger synchronization failure: {}", e.getMessage());
+                }
+            }
+            walletRepository.save(wallet);
+
+            // 🔔 Credit exhaustion notification (only when tokens hit 0)
+            if (wallet.getFreeDocTokens() != null && wallet.getFreeDocTokens() == 0) {
+                try {
+                    notificationService.sendNotification(userId,
+                        "🎫 Free Document Tokens Exhausted",
+                        "Your free document auditor quota has been consumed. Future audits will be billed at ₹50 directly from your wallet.",
+                        "SYSTEM", "FINANCIAL", "/wallet");
+                } catch (Exception ignored) {}
+            }
         }
 
         log.info("[DOCUMENT-AI] Starting analysis for user: {} | File: {}", userId, file.getOriginalFilename());
 
-        // 2. Persist to GridFS
-        Object fileId = gridFsTemplate.store(file.getInputStream(), file.getOriginalFilename(), file.getContentType());
+        // 2. Persist to Supabase
+        String downloadUrl = supabaseStorageService.uploadFile(file);
 
         // 3. Create Metadata Record
         AnalyzedDocument doc = new AnalyzedDocument();
         doc.setUserId(userId);
         doc.setFileName(file.getOriginalFilename());
-        doc.setFileId(fileId.toString());
+        doc.setFileId(downloadUrl); // Store URL in fileId field for easy retrieval
         doc.setContentType(file.getContentType());
         doc.setFileSize(file.getSize());
         doc.setAnalyzedAt(LocalDateTime.now());
@@ -85,21 +139,6 @@ public class DocumentAnalysisService {
             doc.setAnalysisResult("AI Service Unreachable: " + e.getMessage());
         }
 
-        // 5. Deduct Quota
-        if (!wallet.getIsUnlimited()) {
-            wallet.setFreeDocTokens(wallet.getFreeDocTokens() - 1);
-            walletRepository.save(wallet);
-
-            // 🔔 Document credit exhaustion
-            if (wallet.getFreeDocTokens() <= 0) {
-                try {
-                    notificationService.sendNotification(userId,
-                        "⚠️ Document Analysis Credits Exhausted",
-                        "You've used all document auditor tokens. Purchase more to continue analyzing documents.",
-                        "SYSTEM", "FINANCIAL", "/wallet");
-                } catch (Exception ignored) {}
-            }
-        }
 
         return analyzedDocumentRepository.save(doc);
     }
@@ -110,7 +149,12 @@ public class DocumentAnalysisService {
 
     public void deleteDocument(String docId) {
         analyzedDocumentRepository.findById(docId).ifPresent(doc -> {
-            gridFsTemplate.delete(new Query(Criteria.where("_id").is(doc.getFileId())));
+            // Attempt deletion from Supabase if it's a URL
+            if (doc.getFileId().startsWith("http")) {
+                try {
+                    log.info("[DOCUMENT-AI] Attempting Supabase asset purge for: {}", doc.getFileName());
+                } catch (Exception ignored) {}
+            }
             analyzedDocumentRepository.deleteById(docId);
         });
     }

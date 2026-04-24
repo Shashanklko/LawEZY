@@ -2,20 +2,26 @@ package com.LawEZY.common.service;
 
 import com.LawEZY.common.entity.AuditLog;
 import com.LawEZY.common.repository.AuditLogRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 @Service
-@Slf4j
-@RequiredArgsConstructor
 public class AuditLogService {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AuditLogService.class);
 
     private final AuditLogRepository auditLogRepository;
+    
+    // In-Memory Queue for Fault-Tolerant Logging
+    private final ConcurrentLinkedQueue<AuditLog> retryQueue = new ConcurrentLinkedQueue<>();
+
+    public AuditLogService(AuditLogRepository auditLogRepository) {
+        this.auditLogRepository = auditLogRepository;
+    }
 
     /**
      * Store a security-related alert in the database.
@@ -54,20 +60,51 @@ public class AuditLogService {
     }
 
     private void saveLog(String type, String summary, String details, String ipAddress, String userId, String userRole) {
+        AuditLog auditLog = new AuditLog();
+        auditLog.setTimestamp(LocalDateTime.now());
+        auditLog.setEventType(type);
+        auditLog.setSummary(summary);
+        auditLog.setDetails(details);
+        auditLog.setIpAddress(ipAddress);
+        auditLog.setUserId(userId);
+        auditLog.setUserRole(userRole);
+
         try {
-            AuditLog auditLog = AuditLog.builder()
-                    .timestamp(LocalDateTime.now())
-                    .eventType(type)
-                    .summary(summary)
-                    .details(details)
-                    .ipAddress(ipAddress)
-                    .userId(userId)
-                    .userRole(userRole)
-                    .build();
             auditLogRepository.save(auditLog);
         } catch (Exception e) {
-            // We use log.error here for the terminal, but failing to save a log shouldn't crash the main app flow
-            log.error("Failed to save Audit Log to database: {}", e.getMessage());
+            log.error("MongoDB Offline: Queueing audit log for retry... [{}]", summary);
+            retryQueue.add(auditLog);
+        }
+    }
+
+    /**
+     * Background Flush: Periodically attempts to save queued logs once MongoDB is back.
+     */
+    @Scheduled(fixedDelay = 60000) // Every 1 minute
+    public void flushRetryQueue() {
+        if (retryQueue.isEmpty()) return;
+
+        log.info("Audit Sync: Attempting to flush {} queued logs to MongoDB...", retryQueue.size());
+        
+        int successCount = 0;
+        int initialSize = retryQueue.size();
+
+        for (int i = 0; i < initialSize; i++) {
+            AuditLog logToRetry = retryQueue.peek();
+            if (logToRetry == null) break;
+
+            try {
+                auditLogRepository.save(logToRetry);
+                retryQueue.poll(); // Remove if successful
+                successCount++;
+            } catch (Exception e) {
+                log.warn("Audit Sync: MongoDB still offline. Retaining queue.");
+                break; // Stop trying if connection is still down
+            }
+        }
+
+        if (successCount > 0) {
+            log.info("Audit Sync: Successfully synchronized {} logs with MongoDB.", successCount);
         }
     }
 

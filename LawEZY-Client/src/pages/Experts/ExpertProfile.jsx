@@ -5,12 +5,14 @@ import useAuthStore from '../../store/useAuthStore';
 import './ExpertProfile.css';
 
 const ExpertProfile = ({ expertId, isModal }) => {
-  const { id: paramId } = useParams();
+  const { id: paramId, slug } = useParams();
   const id = expertId || paramId;
   const navigate = useNavigate();
-  const { user } = useAuthStore();
+  const { user, viewMode } = useAuthStore();
   const [expert, setExpert] = useState(null);
-  const isSelf = user?.uid === expert?.uid;
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const isSelf = user?.id === expert?.id;
   const [activeTab, setActiveTab] = useState('summary');
   const heroRef = useRef(null);
   const [showStickyBar, setShowStickyBar] = useState(false);
@@ -23,6 +25,7 @@ const ExpertProfile = ({ expertId, isModal }) => {
     reason: '',
     discountPercent: 0
   });
+
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -32,18 +35,48 @@ const ExpertProfile = ({ expertId, isModal }) => {
     
     const fetchExpert = async () => {
       try {
-        const response = await apiClient.get(`/api/professionals/${id}`);
+        setLoading(true);
+        setError(null);
+        // Institutional Logic: Use public endpoint for slugs, private for internal IDs
+        const endpoint = slug ? `/api/public/p/${slug}` : `/api/professionals/${id}`;
+        const response = await apiClient.get(endpoint);
         setExpert(response.data);
       } catch (err) {
         console.error('Error fetching expert profile:', err);
-        if (!isModal) navigate('/experts');
+        setError("Institutional Handshake Failed: Dossier not found or unauthorized.");
+        if (!isModal) {
+            setTimeout(() => navigate('/experts'), 3000);
+        }
+      } finally {
+        setLoading(false);
       }
     };
 
-    if (id) {
+    if (id || slug) {
       fetchExpert();
     }
-  }, [id, navigate, isModal]);
+  }, [id, slug, navigate, isModal]);
+
+  useEffect(() => {
+    if (expert) {
+        const originalTitle = document.title;
+        document.title = `${expert.name} | ${expert.category} Professional | LawEZY Elite Dossier`;
+        
+        // Institutional Vanity Redirect: If we arrived via UID but have a slug, switch to Name-URL
+        if (expert.slug && !slug) {
+            navigate(`/p/${expert.slug}`, { replace: true });
+        }
+        
+        return () => { document.title = originalTitle; };
+    }
+  }, [expert, slug, navigate]);
+
+  const handleShare = () => {
+    // Priority: Copy the current URL (which is now auto-redirected to the Name-Based vanity path)
+    const url = window.location.href;
+    navigator.clipboard.writeText(url);
+    alert("Institutional Dossier Link Copied to Clipboard! You can now share this on LinkedIn or professional networks.");
+  };
 
   const handleBookingSubmit = async (e) => {
     e.preventDefault();
@@ -58,9 +91,9 @@ const ExpertProfile = ({ expertId, isModal }) => {
       const scheduledAt = `${bookingData.date}T${bookingData.time}`;
       
       const payload = {
-        clientUid: user.uid || user.id,
-        expertUid: expert.uid || expert.id,
-        initiatorUid: user.uid || user.id,
+        clientId: user.id || user.id,
+        expertId: expert.id || expert.id,
+        initiatorId: user.id || user.id,
         baseFee: expert.consultationFee || 499.0,
         scheduledAt: scheduledAt,
         reason: bookingData.reason,
@@ -79,6 +112,8 @@ const ExpertProfile = ({ expertId, isModal }) => {
     }
   };
 
+
+
   useEffect(() => {
     if (!heroRef.current) return;
     
@@ -94,10 +129,21 @@ const ExpertProfile = ({ expertId, isModal }) => {
     return () => observer.disconnect();
   }, [expert]);
 
-  if (!expert) return (
+  if (loading) return (
     <div className="loading-state">
       <div className="loader-institutional"></div>
       Initializing Institutional Profile...
+    </div>
+  );
+
+  if (error || !expert) return (
+    <div className="error-state-elite" style={{ padding: '100px 20px', textAlign: 'center', background: 'var(--heritage-parchment)', minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+       <div style={{ fontSize: '3rem', marginBottom: '20px' }}>⚠️</div>
+       <h2 style={{ fontFamily: 'Spectral', fontSize: '2rem', marginBottom: '10px' }}>Dossier Unavailable</h2>
+       <p style={{ opacity: 0.7, marginBottom: '30px', maxWidth: '400px' }}>{error || "The professional dossier you are attempting to access could not be retrieved from the institutional archives."}</p>
+       <button onClick={() => isModal ? window.location.reload() : navigate('/experts')} className="btn-secondary-msg">
+         {isModal ? "Retry Handshake" : "Return to Expert Network"}
+       </button>
     </div>
   );
 
@@ -129,7 +175,7 @@ const ExpertProfile = ({ expertId, isModal }) => {
               <p className="expert-designation">{expert.title || 'Institutional Advisor'} • {expert.experience || 'New'} Experience</p>
               
               <div className="expert-meta-markers">
-                <span className="marker-item">🆔 {expert.uid || `LZY-${expert.id.substring(0, 8)}`}</span>
+                <span className="marker-item">🆔 {expert.id || `LZY-${expert.id.substring(0, 8)}`}</span>
                 <span className="marker-divider">|</span>
                 <span className="marker-item">📍 {(expert.location || 'India').split(',')[0]}</span>
                 {expert.isVerified ? (
@@ -160,7 +206,7 @@ const ExpertProfile = ({ expertId, isModal }) => {
                 </div>
               )}
 
-              <div className="profile-actions">
+              <div className="profile-actions-container">
                 {isSelf ? (
                    <div className="self-view-actions-banner animate-reveal">
                       <div className="preview-indicator">
@@ -171,20 +217,51 @@ const ExpertProfile = ({ expertId, isModal }) => {
                       </button>
                    </div>
                 ) : (
-                  <>
-                    <div className="booking-fee-badge animate-reveal">
-                        <span className="fee-label">TOTAL CONSULTATION FEE:</span>
-                        <span className="fee-amount">₹{(expert.consultationFee || 499) + 100}</span>
-                        <small>(Expert Fee: ₹{expert.consultationFee || 499} + ₹100 Platform Service)</small>
+                  <div className="institutional-action-grid animate-reveal">
+                    <div className="booking-fee-card">
+                        <span className="fee-label">CONSULTATION FEE</span>
+                        <div className="fee-value-row">
+                          <span className="fee-amount">₹{Math.round((expert.consultationFee || 499) * 1.2 + 50)}</span>
+                          <span className="fee-tag">ALL INCL.</span>
+                        </div>
+                        <span className="fee-breakdown">₹{expert.consultationFee || 499} Expert + Governance Charges</span>
                     </div>
-                    <button className="btn-primary-consult" onClick={() => setShowBookingModal(true)}>Book 1:1 Consultation →</button>
-                    <button className="btn-secondary-msg" onClick={() => navigate(`/messages?expertId=${expert.uid}&expertName=${encodeURIComponent(expert.name)}`)}>Send Message</button>
-                  </>
-                )}
-              </div>
+
+                    <div className="booking-fee-card text-fee-card">
+                        <span className="fee-label">TEXT MESSAGE</span>
+                        <div className="fee-value-row">
+                          <span className="fee-amount small-fee">₹{expert.textChatFee || 100}</span>
+                          <span className="fee-tag">/ 10m</span>
+                        </div>
+                        <span className="fee-breakdown trial-tag">🎁 5-MIN FREE TRIAL</span>
+                    </div>
+
+
+
+                    <div className="action-buttons-group">
+                      <button className="btn-primary-consult" onClick={() => setShowBookingModal(true)}>
+                        Book 1:1 Consultation
+                        <span className="btn-arrow">→</span>
+                      </button>
+                      
+                    <div className="secondary-actions-row">
+                      {viewMode === 'CLIENT' && !isSelf && (
+                        <button className="btn-secondary-msg" onClick={() => navigate(`/messages?expertId=${expert.id}&expertName=${encodeURIComponent(expert.name)}`)}>
+                          Send Message
+                        </button>
+                      )}
+                    </div>
+                    
+                    <button className="btn-share-dossier" onClick={handleShare} title="Copy Public Dossier Link" style={{ width: '100%', marginTop: '10px' }}>
+                      <span className="icon">🔗</span> Share Public Dossier
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
+      </div>
       </div>
 
       <div className="profile-body-container">
@@ -354,7 +431,9 @@ const ExpertProfile = ({ expertId, isModal }) => {
                  <button className="btn-primary-consult" onClick={() => navigate('/profile')}>Edit My Profile</button>
               ) : (
                 <>
-                  <button className="btn-secondary-msg" onClick={() => navigate(`/messages?expertId=${expert.id}&expertName=${encodeURIComponent(expert.name)}`)}>Message</button>
+                  {viewMode !== 'EXPERT' && (
+                    <button className="btn-secondary-msg" onClick={() => navigate(`/messages?expertId=${expert.id}&expertName=${encodeURIComponent(expert.name)}`)}>Message</button>
+                  )}
                   <button className="btn-primary-consult" onClick={() => setShowBookingModal(true)}>Book Consultation →</button>
                 </>
               )}
@@ -362,6 +441,7 @@ const ExpertProfile = ({ expertId, isModal }) => {
           </div>
         </div>
       )}
+
 
       {/* Booking Modal */}
       {showBookingModal && (
@@ -403,7 +483,7 @@ const ExpertProfile = ({ expertId, isModal }) => {
                 <textarea 
                   required 
                   placeholder="Briefly describe your legal or financial requirement..."
-                  value={bookingData.reason}
+                  value={bookingData.reason || ''}
                   onChange={e => setBookingData({...bookingData, reason: e.target.value})}
                   rows={3}
                   style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.1)', background: '#fff', fontSize: '0.9rem', outline: 'none', resize: 'none' }}
@@ -437,9 +517,12 @@ const ExpertProfile = ({ expertId, isModal }) => {
           </div>
         </div>
       )}
+
+
       
     </div>
   );
 };
 
 export default ExpertProfile;
+

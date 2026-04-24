@@ -7,21 +7,35 @@ import com.LawEZY.user.repository.WalletRepository;
 import com.LawEZY.user.entity.User;
 import com.LawEZY.user.entity.Wallet;
 import com.LawEZY.common.exception.ResourceNotFoundException;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
-@RequiredArgsConstructor
 public class FinancialService {
 
     private final FinancialTransactionRepository transactionRepository;
     private final UserRepository userRepository;
     private final WalletRepository walletRepository;
     private final WalletService walletService;
+    private final AdminBroadcastService adminBroadcastService;
+
+    public FinancialService(
+            FinancialTransactionRepository transactionRepository,
+            UserRepository userRepository,
+            WalletRepository walletRepository,
+            WalletService walletService,
+            AdminBroadcastService adminBroadcastService
+    ) {
+        this.transactionRepository = transactionRepository;
+        this.userRepository = userRepository;
+        this.walletRepository = walletRepository;
+        this.walletService = walletService;
+        this.adminBroadcastService = adminBroadcastService;
+    }
 
     @Transactional(readOnly = true)
     public List<FinancialTransaction> getTransactionsByUserId(String userId) {
@@ -38,22 +52,31 @@ public class FinancialService {
         String refId = "TXN-" + (1000 + (int)(Math.random() * 9000));
         String tid = "LZY-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase() + "-" + (1000 + (int)(Math.random() * 9000));
 
-        FinancialTransaction txn = FinancialTransaction.builder()
-                .id(refId)
-                .transactionId(tid)
-                .timestamp(LocalDateTime.now())
-                .description("Withdrawal Request")
-                .amount(-Math.abs(amount))
-                .status("PENDING")
-                .user(user)
-                .build();
+        FinancialTransaction txn = new FinancialTransaction(
+                refId,
+                tid,
+                LocalDateTime.now(),
+                "Withdrawal Request",
+                -Math.abs(amount),
+                "PENDING",
+                user
+        );
         
         // Update Actual Wallet Reserves
         Wallet wallet = walletService.getWalletByUserId(user.getId());
         wallet.setEarnedBalance(wallet.getEarnedBalance() - Math.abs(amount));
         walletRepository.save(wallet);
 
-        return transactionRepository.save(txn);
+        FinancialTransaction saved = transactionRepository.save(txn);
+        
+        // 🚀 REAL-TIME BROADCAST: Financial Alert
+        adminBroadcastService.broadcastAdminEvent("WITHDRAWAL_REQUEST", Map.of(
+            "userId", user.getId(),
+            "amount", amount,
+            "transactionId", saved.getId()
+        ));
+
+        return saved;
     }
 
     public void validateSufficientFunds(String userId, Double amountRequired) {
@@ -99,6 +122,12 @@ public class FinancialService {
         // 3. Quota Refill
         wallet.setTokenBalance(wallet.getTokenBalance() + tokenCount);
         
+        // Institutional Sync: Ensure AI/Doc limits reflect new capacity for 20/20 display
+        wallet.setAiTokenLimit(wallet.getTokenBalance());
+        wallet.setFreeAiTokens(wallet.getTokenBalance());
+        wallet.setDocTokenLimit(wallet.getTokenBalance());
+        wallet.setFreeDocTokens(wallet.getTokenBalance());
+        
         // 4. Ledger Entry
         recordTransaction(userId, "Institutional Token Purchase: " + tokenCount + " Credits", -cost, "COMPLETED", "DEBIT");
         
@@ -112,15 +141,15 @@ public class FinancialService {
         String refId = "TXN-" + (1000 + (int)(Math.random() * 9000));
         String tid = "LZY-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase() + "-" + (1000 + (int)(Math.random() * 9000));
 
-        FinancialTransaction txn = FinancialTransaction.builder()
-                .id(refId)
-                .transactionId(tid)
-                .timestamp(LocalDateTime.now())
-                .description(description)
-                .amount(amount)
-                .status(status)
-                .user(user)
-                .build();
+        FinancialTransaction txn = new FinancialTransaction(
+                refId,
+                tid,
+                LocalDateTime.now(),
+                description,
+                amount,
+                status,
+                user
+        );
 
         // Perform Ledger Synchronization if transaction is finalized
         if ("COMPLETED".equalsIgnoreCase(status) || "PAID".equalsIgnoreCase(status)) {
@@ -131,9 +160,9 @@ public class FinancialService {
 
             Wallet wallet = walletService.getWalletByUserId(user.getId());
             if (amount < 0) {
-                // Client deduction (Institutional Tokens)
-                if (description.contains("Appointment") || description.contains("Session")) {
-                    // Actual cash deduction for appointments
+                // Client deduction (Institutional Cash vs Tokens)
+                if (description.contains("Appointment") || description.contains("Session") || description.contains("Chat")) {
+                    // Actual cash deduction for appointments and chat extensions
                     wallet.setCashBalance(wallet.getCashBalance() - Math.abs(amount));
                 } else {
                     wallet.setTokenBalance(wallet.getTokenBalance() - (int)Math.abs(amount));
@@ -154,7 +183,17 @@ public class FinancialService {
             walletRepository.save(wallet);
         }
 
-        return transactionRepository.save(txn);
+        FinancialTransaction saved = transactionRepository.save(txn);
+
+        // 🚀 REAL-TIME BROADCAST: Ledger Update
+        adminBroadcastService.broadcastAdminEvent("NEW_TRANSACTION", Map.of(
+            "userId", user.getId(),
+            "amount", amount,
+            "description", description,
+            "status", status
+        ));
+
+        return saved;
     }
 
     private User findUserByIdentifier(String identifier) {

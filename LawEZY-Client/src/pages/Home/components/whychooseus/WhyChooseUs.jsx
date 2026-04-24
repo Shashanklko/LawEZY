@@ -43,39 +43,43 @@ const WhyChooseUs = () => {
     },
     {
       id: "03",
-      title: "Seamless Booking",
+      title: "Seamless Appointment",
       description: "Real-time, effortless scheduling with elite professionals at your absolute convenience.",
-      linkText: "Make your Consulations",
+      linkText: "Make your consultations",
+      path: "/dashboard?tab=appointments"
     },
     {
       id: "04",
       title: "LawinoAI Copilot",
       description: "Your 24/7 autonomous intelligence core for instant legal clarity and complex document analysis.",
-      linkText: "Ask your Query",
-      isFeatured: true
+      linkText: "Ask your query",
+      path: "/lawino-ai"
     },
     {
       id: "05",
-      title: "Secure Digital Vault",
-      description: "A centralized, high-security archive for all your critical legal and financial documentation.",
-      linkText: "Secure your Document",
+      title: "Institutional Dashboard",
+      description: "A centralized command center to track your case history, documents, and professional engagements.",
+      linkText: "Go to Dashboard",
+      path: "/dashboard"
     },
     {
       id: "06",
       title: "Institutional Education",
       description: "Curated resources and professional masterclasses to empower your legal and financial literacy.",
       linkText: "Explore E-Resource",
+      path: "/library"
     },
     {
       id: "07",
-      title: "Expert Network",
-      description: "An exclusive ecosystem for practitioners to scale their firms and collaborate with global talent.",
-      linkText: "Join the network",
+      title: "Real-time Messaging",
+      description: "Secure, encrypted communication channels for instant collaboration with your legal advisors.",
+      linkText: "Start Messaging",
+      path: "/messages"
     },
     {
       id: "08",
       title: "Community & Newsroom",
-      description: "A collaborative dialogue for case studies, professional blogs, and legal problems. Real-time newsroom and peer engagement.",
+      description: "A collaborative dialogue for case studies, professional blogs, and legal problems. Real-time newsroom.",
       linkText: "Join the dialogue",
       path: "/community"
     }
@@ -115,3 +119,4 @@ const WhyChooseUs = () => {
 };
 
 export default WhyChooseUs;
+

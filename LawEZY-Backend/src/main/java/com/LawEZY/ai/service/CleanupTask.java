@@ -14,9 +14,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Component
-@Slf4j
 @RequiredArgsConstructor
 public class CleanupTask {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(CleanupTask.class);
 
     private final AnalyzedDocumentRepository analyzedDocumentRepository;
     private final GridFsTemplate gridFsTemplate;
@@ -36,9 +36,15 @@ public class CleanupTask {
 
         for (AnalyzedDocument doc : expiredDocs) {
             try {
-                // Delete from GridFS
-                gridFsTemplate.delete(new Query(Criteria.where("_id").is(doc.getFileId())));
-                // Delete Metadata
+                // Handle Legacy GridFS Purge
+                if (!doc.getFileId().startsWith("http")) {
+                    gridFsTemplate.delete(new Query(Criteria.where("_id").is(doc.getFileId())));
+                } else {
+                    // For Supabase, we let the cloud handle the asset or manually delete via API
+                    log.info("[CLEANUP] Supabase asset metadata expired: {}", doc.getFileName());
+                }
+                
+                // Delete Metadata from MongoDB
                 analyzedDocumentRepository.delete(doc);
                 log.info("[CLEANUP] Purged document: {} (ID: {})", doc.getFileName(), doc.getId());
             } catch (Exception e) {
@@ -47,5 +53,28 @@ public class CleanupTask {
         }
         
         log.info("[CLEANUP] Institutional purge complete. {} documents removed.", expiredDocs.size());
+    }
+
+    /**
+     * Legacy Storage Governance: Purges ALL GridFS assets older than 7 days.
+     * This ensures the 500MB Atlas tactical limit is reclaimed from old files.
+     */
+    @Scheduled(cron = "0 30 2 * * *") // Run at 2:30 AM
+    public void purgeLegacyAssets() {
+        log.info("[GOVERNANCE] Commencing legacy GridFS purge...");
+        
+        java.util.Date cutoff = java.util.Date.from(
+            LocalDateTime.now().minusDays(7)
+                .atZone(java.time.ZoneId.systemDefault())
+                .toInstant()
+        );
+
+        try {
+            // Delete files where uploadDate < 7 days ago
+            gridFsTemplate.delete(new Query(Criteria.where("uploadDate").lt(cutoff)));
+            log.info("[GOVERNANCE] Asset cleanup successful. Tactical storage window synchronized.");
+        } catch (Exception e) {
+            log.error("[GOVERNANCE] Asset purge failed: {}", e.getMessage());
+        }
     }
 }

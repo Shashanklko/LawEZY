@@ -49,6 +49,12 @@ class ChatServiceTest {
     private com.LawEZY.user.repository.LawyerProfileRepository lawyerProfileRepository;
 
     @Mock
+    private com.LawEZY.user.repository.CAProfileRepository caProfileRepository;
+
+    @Mock
+    private com.LawEZY.user.repository.CFAProfileRepository cfaProfileRepository;
+
+    @Mock
     private com.LawEZY.user.service.UserService userService;
 
     @Mock
@@ -59,6 +65,12 @@ class ChatServiceTest {
 
     @Mock
     private com.LawEZY.ai.service.AiService aiService;
+
+    @Mock
+    private com.LawEZY.user.service.WalletService walletService;
+
+    @Mock
+    private com.LawEZY.notification.service.NotificationService notificationService;
 
     @InjectMocks
     private ChatServiceImp chatService;
@@ -106,12 +118,18 @@ class ChatServiceTest {
         profile.setChatUnlockFee(100.0);
 
         when(chatSessionRepository.findById(sessionId)).thenReturn(Optional.of(session));
-        when(walletRepository.findById(professionalUserId)).thenReturn(Optional.of(wallet));
-        when(professionalProfileRepository.findById(professionalUserId)).thenReturn(Optional.of(profile));
+        when(walletService.getWalletByUserId(professionalUserId)).thenReturn(wallet);
+        when(walletService.getWalletByUserId(customUserDetails.getId())).thenReturn(wallet); 
+        
+        com.LawEZY.user.dto.ProfessionalProfileDTO profDTO = new com.LawEZY.user.dto.ProfessionalProfileDTO();
+        profDTO.setId(professionalUserId);
+        profDTO.setName("Expert Lawyer");
+        when(userService.getProfessionalById(professionalUserId)).thenReturn(profDTO);
+        
         when(chatSessionRepository.save(any(ChatSession.class))).thenReturn(session);
         when(customUserDetails.getId()).thenReturn(professionalUserId);
 
-        chatService.unlockReply(sessionId);
+        chatService.unlockReply(sessionId, 10);
 
         assertEquals(ChatStatus.ACTIVE, session.getStatus());
         assertEquals(180.0, wallet.getEarnedBalance()); // 100 + (100 * 0.8)

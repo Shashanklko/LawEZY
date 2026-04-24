@@ -288,7 +288,7 @@ const Community = () => {
                           {post.poll.options.map(opt => {
                             const totalVotes = post.poll.options.reduce((sum, o) => sum + (o.votes || 0), 0);
                             const percentage = totalVotes > 0 ? ((opt.votes || 0) / totalVotes) * 100 : 0;
-                            const hasVoted = post.poll.votedUserIds?.includes(user?.uid);
+                            const hasVoted = post.poll.votedUserIds?.includes(user?.id);
                             
                             return (
                               <button 
@@ -337,7 +337,7 @@ const Community = () => {
                         <span className="stat-item" onClick={(e) => handleShare(post, e)}>
                           🔗
                         </span>
-                        {user?.uid === post.authorId && (
+                        {(user?.id === post.authorId || user?.role === 'ADMIN') && (
                           <>
                             <span className="stat-item edit-action" onClick={(e) => handleEditClick(post, e)}>✏️</span>
                             <span className="stat-item delete-action" onClick={(e) => handleDeletePost(post.id, e)}>🗑️</span>
@@ -434,7 +434,7 @@ const Community = () => {
               />
               <textarea
                 placeholder="Expand on your legal premise..."
-                value={newPost.content}
+                value={newPost.content || ''}
                 onChange={e => setNewPost({ ...newPost, content: e.target.value })}
                 style={{minHeight: '200px'}}
               />
@@ -454,3 +454,4 @@ const Community = () => {
 };
 
 export default Community;
+

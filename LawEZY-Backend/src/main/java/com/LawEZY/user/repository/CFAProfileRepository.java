@@ -8,5 +8,7 @@ import java.util.Optional;
 @Repository
 public interface CFAProfileRepository extends JpaRepository<CFAProfile, String> {
     Optional<CFAProfile> findByUserId(String userId);
-    Optional<CFAProfile> findByUidIgnoreCase(String uid);
+    Optional<CFAProfile> findBySlug(String slug);
+    Optional<CFAProfile> findByPhoneNumber(String phoneNumber);
+    void deleteByUserId(String userId);
 }

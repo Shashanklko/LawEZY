@@ -20,9 +20,11 @@ public interface ChatService {
     public List<ChatMessageResponse> getChatHistory(@NonNull String chatSessionId);
     void endChatByUser(@NonNull String sessionId);
     void endChatByProfessional(@NonNull String sessionId);
-    void unlockReply(@NonNull String sessionId);
+    void unlockReply(@NonNull String sessionId, int minutes);
     List<ChatSessionResponse> getUserSessions(@NonNull String userId);
     List<ChatSessionResponse> getProfessionalSessions(@NonNull String professionalId);
     void deleteSession(@NonNull String sessionId);
     void resolveSession(@NonNull String sessionId);
+    void markAsRead(@NonNull String sessionId);
+    long getTotalUnreadCount(@NonNull String userId);
 }

@@ -26,6 +26,7 @@ import com.LawEZY.user.repository.CAProfileRepository;
 import com.LawEZY.user.repository.CFAProfileRepository;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
+import java.util.Map;
 import java.util.Arrays;
 import java.util.stream.Collectors;
 import java.util.Optional;
@@ -34,8 +35,9 @@ import java.util.Optional;
 // @Service tells Spring: "This is a special class that holds business logic." 
 // Spring will automatically create an object of this class when the app starts.
 @Service
-@lombok.extern.slf4j.Slf4j
 public class UserServiceImp implements UserService {
+
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(UserServiceImp.class);
 
     // @Autowired tells Spring: "Look for a UserRepository bean and plug it in here automatically."
     // This connects our Service layer to the Database layer without needing 'new UserRepository()'.
@@ -59,6 +61,8 @@ public class UserServiceImp implements UserService {
     private com.fasterxml.jackson.databind.ObjectMapper objectMapper;
     @Autowired 
     private com.LawEZY.user.repository.ReviewRepository reviewRepository;
+    @Autowired
+    private AdminBroadcastService adminBroadcastService;
 
     
     @jakarta.annotation.PostConstruct
@@ -107,7 +111,9 @@ public class UserServiceImp implements UserService {
         wallet.setUser(savedAuth);
         wallet.setFreeAiTokens(5); // Tiered Free AI Quota
         wallet.setFreeChatTokens(5); // Tiered Free Chat Quota
-        wallet.setFreeDocTokens(2); // 2 Free Institutional Document Analysis Units
+        wallet.setFreeDocTokens(5); // 5 Free Institutional Document Analysis Units
+        wallet.setAiTokenLimit(5);
+        wallet.setDocTokenLimit(5);
         
         // Institutional Unlimited Flag for Testing Accounts
         if (institutionalId.equals("11SS01CL")) {
@@ -127,6 +133,18 @@ public class UserServiceImp implements UserService {
         
         log.info("Industrial Registration SUCCESS: {} (ID: {})", savedAuth.getEmail(), savedAuth.getId());
         
+        // 🚀 REAL-TIME BROADCAST: Update Admin Portal
+        try {
+            adminBroadcastService.broadcastAdminEvent("NEW_USER", Map.of(
+                "userId", savedAuth.getId(),
+                "email", savedAuth.getEmail(),
+                "role", savedAuth.getRole().name(),
+                "name", savedAuth.getFirstName() + " " + savedAuth.getLastName()
+            ));
+        } catch (Exception e) {
+            log.warn("Institutional Broadcast failed for new user: {}", e.getMessage());
+        }
+
         return mapToResponse(savedAuth, userRequest.getFirstName(), userRequest.getLastName()); 
     }
 
@@ -167,32 +185,7 @@ public class UserServiceImp implements UserService {
         profile.setUser(user);
         profile.setFirstName(request.getFirstName());
         profile.setLastName(request.getLastName());
-        
-        // Generate and Persist the public Institutional UID
-        profile.setUid(generatePublicUid(user, request.getFirstName(), request.getLastName()));
-        
         clientProfileRepository.save(profile);
-    }
-
-    private String generatePublicUid(User user, String firstName, String lastName) {
-        String month = java.time.LocalDate.now().getMonth().toString().substring(0, 2).toUpperCase();
-        
-        // Institutional logic: Use first initial of First Name and first initial of Last Name
-        // Fallback to "US" if names are insufficient
-        String f = (firstName != null && !firstName.isEmpty()) ? firstName.substring(0, 1).toUpperCase() : "";
-        String l = (lastName != null && !lastName.isEmpty()) ? lastName.substring(0, 1).toUpperCase() : "";
-        
-        String initials = (f + l).length() >= 2 ? (f + l) : (f.length() == 1 ? f + "S" : "US");
-        
-        String suffix = "CL";
-        if (user.getRole() == Role.LAWYER) suffix = "LW";
-        else if (user.getRole() == Role.CA) suffix = "CA";
-        else if (user.getRole() == Role.CFA) suffix = "CF";
-        
-        // Use part of the institutional ID as a random-like seed for uniqueness
-        String seed = user.getId().substring(user.getId().length() - 2);
-        
-        return month + seed + initials + suffix;
     }
 
     private void createProfessionalProfile(User user, UserRequest request) {
@@ -211,7 +204,7 @@ public class UserServiceImp implements UserService {
         profile.setDomains(user.getRole() == Role.LAWYER ? "Legal Advice" : "Financial Planning");
         
         // Generate and Persist the public Institutional UID
-        profile.setUid(generatePublicUid(user, request.getFirstName(), request.getLastName()));
+        profile.setSlug(generateSlug(request.getFirstName(), request.getLastName(), user.getRole()));
         
         professionalProfileRepository.save(profile);
     }
@@ -261,7 +254,6 @@ public class UserServiceImp implements UserService {
             cp.setUser(existingUser);
             cp.setFirstName(userRequest.getFirstName());
             cp.setLastName(userRequest.getLastName());
-            if (cp.getUid() == null) cp.setUid(generatePublicUid(existingUser, userRequest.getFirstName(), userRequest.getLastName()));
             clientProfileRepository.save(cp);
         } else {
             ProfessionalProfile pp = professionalProfileRepository.findById(id).orElse(new ProfessionalProfile());
@@ -269,7 +261,8 @@ public class UserServiceImp implements UserService {
             pp.setUser(existingUser);
             pp.setFirstName(userRequest.getFirstName());
             pp.setLastName(userRequest.getLastName());
-            if (pp.getUid() == null) pp.setUid(generatePublicUid(existingUser, userRequest.getFirstName(), userRequest.getLastName()));
+            pp.setCategory(existingUser.getRole());
+            if (pp.getSlug() == null) pp.setSlug(generateSlug(userRequest.getFirstName(), userRequest.getLastName(), existingUser.getRole()));
             professionalProfileRepository.save(pp);
         }
 
@@ -339,8 +332,21 @@ public class UserServiceImp implements UserService {
             }
 
             if (profile == null) return null;
+            BaseProfile bp = (BaseProfile) profile;
+
+            // JIT Batch Identity Hydration: Ensure slugs exist for all listing items
+            if (bp.getSlug() == null || bp.getSlug().isEmpty()) {
+                String newSlug = generateSlug(user.getFirstName(), user.getLastName(), user.getRole());
+                bp.setSlug(newSlug);
+                // Background persistence
+                if (bp instanceof LawyerProfile) lawyerProfileRepository.save((LawyerProfile) bp);
+                else if (bp instanceof CAProfile) caProfileRepository.save((CAProfile) bp);
+                else if (bp instanceof CFAProfile) cfaProfileRepository.save((CFAProfile) bp);
+                else if (bp instanceof ProfessionalProfile) professionalProfileRepository.save((ProfessionalProfile) bp);
+            }
+
             // Optimised: Skip expensive enrichment for list view
-            return mapAnyProfileToProfessionalDTO(user, (BaseProfile) profile, false); 
+            return mapAnyProfileToProfessionalDTO(user, bp, false); 
         })
         .filter(java.util.Objects::nonNull)
         .collect(Collectors.toList());
@@ -359,8 +365,18 @@ public class UserServiceImp implements UserService {
             dto.setTitle(bp.getTitle());
             dto.setLocation(bp.getLocation());
             dto.setBio(bp.getBio());
+            dto.setPhoneNumber(bp.getPhoneNumber());
             dto.setBioSmall(bp.getBio() != null && bp.getBio().length() > 100 ? bp.getBio().substring(0, 97) + "..." : bp.getBio());
-            dto.setUid(bp.getUid());
+            // UID is now deprecated in favor of primary ID
+            dto.setSlug(bp.getSlug());
+            dto.setTextChatFee(bp.getTextChatFee());
+            dto.setChatDurationMinutes(bp.getChatDurationMinutes());
+            dto.setCustomGreeting(bp.getCustomGreeting());
+            dto.setBankName(bp.getBankName());
+            dto.setAccountNumber(bp.getAccountNumber());
+            dto.setIfscCode(bp.getIfscCode());
+            dto.setAccountHolderName(bp.getAccountHolderName());
+            dto.setUpiId(bp.getUpiId());
         }
 
         if (p instanceof com.LawEZY.user.entity.LawyerProfile) {
@@ -373,6 +389,7 @@ public class UserServiceImp implements UserService {
             dto.setExperienceList(parseJsonAnyList(lp.getExperienceHistory()));
             dto.setSnapshots(parseJsonAnyList(lp.getExperienceSnapshots()));
             dto.setLicenseNo(lp.getBarLicenseNumber());
+            dto.setLicenseDriveLink(lp.getLicenseDriveLink());
             dto.setIsVerified(lp.isVerified());
         } else if (p instanceof com.LawEZY.user.entity.CAProfile) {
             com.LawEZY.user.entity.CAProfile cp = (com.LawEZY.user.entity.CAProfile) p;
@@ -384,6 +401,7 @@ public class UserServiceImp implements UserService {
             dto.setExperienceList(parseJsonAnyList(cp.getExperienceHistory()));
             dto.setSnapshots(parseJsonAnyList(cp.getExperienceSnapshots()));
             dto.setLicenseNo(cp.getMembershipNumber());
+            dto.setLicenseDriveLink(cp.getLicenseDriveLink());
             dto.setIsVerified(cp.isVerified());
         } else if (p instanceof com.LawEZY.user.entity.CFAProfile) {
             com.LawEZY.user.entity.CFAProfile cp = (com.LawEZY.user.entity.CFAProfile) p;
@@ -395,6 +413,7 @@ public class UserServiceImp implements UserService {
             dto.setExperienceList(parseJsonAnyList(cp.getExperienceHistory()));
             dto.setSnapshots(parseJsonAnyList(cp.getExperienceSnapshots()));
             dto.setLicenseNo(cp.getCharterNumber());
+            dto.setLicenseDriveLink(cp.getLicenseDriveLink());
             dto.setIsVerified(cp.isVerified());
         } else if (p instanceof com.LawEZY.user.entity.ProfessionalProfile) {
             com.LawEZY.user.entity.ProfessionalProfile pp = (com.LawEZY.user.entity.ProfessionalProfile) p;
@@ -414,8 +433,8 @@ public class UserServiceImp implements UserService {
             });
 
             // Review enrichment
-            if (dto.getUid() != null) {
-                dto.setTestimonials(fetchSanitizedReviews(dto.getUid()));
+            if (user.getId() != null) {
+                dto.setTestimonials(fetchSanitizedReviews(user.getId()));
             }
         }
 
@@ -451,8 +470,8 @@ public class UserServiceImp implements UserService {
         return dto;
     }
 
-    private List<com.LawEZY.user.dto.ReviewDTO> fetchSanitizedReviews(String expertUid) {
-        return reviewRepository.findByExpertUidOrderByCreatedAtDesc(expertUid).stream()
+    private List<com.LawEZY.user.dto.ReviewDTO> fetchSanitizedReviews(String expertId) {
+        return reviewRepository.findByExpert_IdOrderByCreatedAtDesc(expertId).stream()
             .map(r -> {
                 com.LawEZY.user.dto.ReviewDTO rdto = new com.LawEZY.user.dto.ReviewDTO();
                 rdto.setAppointmentId(r.getAppointmentId());
@@ -466,7 +485,7 @@ public class UserServiceImp implements UserService {
                     rdto.setClientName("Anonymous Professional Client");
                 } else {
                     // Try to fetch real name from Client Profile
-                    clientProfileRepository.findByUidIgnoreCase(r.getClientUid()).ifPresent(p -> {
+                    clientProfileRepository.findById(r.getClient().getId()).ifPresent(p -> {
                         rdto.setClientName(p.getFirstName() + " " + p.getLastName());
                     });
                     if (rdto.getClientName() == null) rdto.setClientName("Verified LawEZY Client");
@@ -486,59 +505,35 @@ public class UserServiceImp implements UserService {
     }
 
     @Override
+    @org.springframework.transaction.annotation.Transactional
     public ProfessionalProfileDTO getProfessionalById(String id) {
         User user = userRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Expert not found"));
-        Object profile = null;
+        BaseProfile profile = null;
+        
         if (user.getRole() == Role.LAWYER) profile = lawyerProfileRepository.findById(id).orElse(null);
         else if (user.getRole() == Role.CA) profile = caProfileRepository.findById(id).orElse(null);
         else if (user.getRole() == Role.CFA) profile = cfaProfileRepository.findById(id).orElse(null);
         
-        ProfessionalProfile pp = professionalProfileRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Profile not found"));
-        return mapAnyProfileToProfessionalDTO(user, (BaseProfile) pp, true);
-    }
-
-    @Override
-    public ProfessionalProfileDTO getProfessionalByUid(String uid) {
-        // SEARCH ALL PROFILE TABLES - Lawyer, CA, CFA, and base Professional
-        BaseProfile profile = null;
-        User user = null;
-
-        // Priority 1: Lawyer profile
-        if (lawyerProfileRepository != null) {
-            Optional<LawyerProfile> lp = lawyerProfileRepository.findByUidIgnoreCase(uid);
-            if (lp.isPresent()) { profile = lp.get(); }
-        }
-
-        // Priority 2: Generic Professional profile
         if (profile == null) {
-            Optional<ProfessionalProfile> pp = professionalProfileRepository.findByUidIgnoreCase(uid);
-            if (pp.isPresent()) { profile = pp.get(); }
+            profile = professionalProfileRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Profile not found for ID: " + id));
         }
 
-        // Priority 3: CA profile
-        if (profile == null && caProfileRepository != null) {
-            Optional<CAProfile> cp = caProfileRepository.findByUidIgnoreCase(uid);
-            if (cp.isPresent()) { profile = cp.get(); }
+        // JIT Slug Generation: Ensure Name-URLs work for existing experts
+        if (profile.getSlug() == null || profile.getSlug().isEmpty()) {
+            String newSlug = generateSlug(user.getFirstName(), user.getLastName(), user.getRole());
+            profile.setSlug(newSlug);
+            // Persist based on entity type
+            if (profile instanceof LawyerProfile) lawyerProfileRepository.save((LawyerProfile) profile);
+            else if (profile instanceof CAProfile) caProfileRepository.save((CAProfile) profile);
+            else if (profile instanceof CFAProfile) cfaProfileRepository.save((CFAProfile) profile);
+            else if (profile instanceof ProfessionalProfile) professionalProfileRepository.save((ProfessionalProfile) profile);
+            log.info("[IDENTITY] JIT Slug Generated and Persisted: {} -> {}", id, newSlug);
         }
-
-        // Priority 4: CFA profile
-        if (profile == null && cfaProfileRepository != null) {
-            Optional<CFAProfile> cfap = cfaProfileRepository.findByUidIgnoreCase(uid);
-            if (cfap.isPresent()) { profile = cfap.get(); }
-        }
-
-        if (profile == null) {
-            throw new ResourceNotFoundException("Expert profile not found for UID: " + uid);
-        }
-
-        final String finalProfileId = profile.getId();
-        if (finalProfileId == null) throw new ResourceNotFoundException("Profile has no associated ID for UID: " + uid);
         
-        user = userRepository.findById(finalProfileId)
-            .orElseThrow(() -> new ResourceNotFoundException("Associated expert user not found for profile: " + finalProfileId));
-
         return mapAnyProfileToProfessionalDTO(user, profile, true);
     }
+
+
 
     // ==========================================
     // --- HELPER TRANSLATION (MAPPING) METHODS ---
@@ -553,27 +548,21 @@ public class UserServiceImp implements UserService {
         response.setRole(user.getRole());
         response.setFirstName(first);
         response.setLastName(last);
+        response.setEnabled(user.isEnabled());
         
-        // Fetch UID for Privacy-First Secure Logic - PREVENT 11SS01LA LEAKAGE
-        String publicUid = null;
-        if (user.getRole() == Role.CLIENT) {
-            publicUid = clientProfileRepository.findById(user.getId()).map(p -> p.getUid()).orElse(null);
-        } else {
-            publicUid = professionalProfileRepository.findById(user.getId()).map(p -> p.getUid()).orElse(null);
-        }
-        
-        // Reliability Shield: Generate if missing to avoid exposing Internal ID
-        if (publicUid == null) {
-            publicUid = generatePublicUid(user, first, last);
-        }
-        
-        response.setUid(publicUid);
-
         // EXPERT LATCH: Fetch Wallet Data for Frontend Visualization
         walletRepository.findById(user.getId()).ifPresent(wallet -> {
             response.setFreeAiTokens(wallet.getFreeAiTokens());
             response.setFreeChatTokens(wallet.getFreeChatTokens());
             response.setFreeDocTokens(wallet.getFreeDocTokens());
+            
+            // Self-healing logic for existing users who purchased credits before limit tracking
+            int aiLimit = wallet.getAiTokenLimit() != null ? wallet.getAiTokenLimit() : 5;
+            response.setAiLimit(Math.max(wallet.getFreeAiTokens(), aiLimit));
+            
+            int docLimit = wallet.getDocTokenLimit() != null ? wallet.getDocTokenLimit() : 5;
+            response.setDocLimit(Math.max(wallet.getFreeDocTokens(), docLimit));
+            
             response.setTokenBalance(wallet.getTokenBalance());
             response.setIsUnlimited(wallet.getIsUnlimited());
         });
@@ -619,35 +608,109 @@ public class UserServiceImp implements UserService {
 
     @Override
     @Transactional
-    public void updateProfessionalStatus(String uid, boolean online) {
-        log.info("[GOVERNANCE] Commencing Multi-Dossier Status Sync for UID: {} -> {}", uid, online ? "ONLINE" : "OFFLINE");
+    public void updateProfessionalStatus(String id, boolean online) {
+        log.info("[GOVERNANCE] Commencing Multi-Dossier Status Sync for ID: {} -> {}", id, online ? "ONLINE" : "OFFLINE");
         
-        // 1. Update Lawyer Dossiers
-        lawyerProfileRepository.findByUidIgnoreCase(uid).ifPresent(p -> {
+        lawyerProfileRepository.findById(id).ifPresent(p -> {
             p.setOnline(online);
             lawyerProfileRepository.save(p);
-            log.info("[GOVERNANCE] Lawyer Ledger Synchronized.");
         });
 
-        // 2. Update CA Dossiers
-        caProfileRepository.findByUidIgnoreCase(uid).ifPresent(p -> {
+        caProfileRepository.findById(id).ifPresent(p -> {
             p.setOnline(online);
             caProfileRepository.save(p);
-            log.info("[GOVERNANCE] CA Ledger Synchronized.");
         });
 
-        // 3. Update CFA Dossiers
-        cfaProfileRepository.findByUidIgnoreCase(uid).ifPresent(p -> {
+        cfaProfileRepository.findById(id).ifPresent(p -> {
             p.setOnline(online);
             cfaProfileRepository.save(p);
-            log.info("[GOVERNANCE] CFA Ledger Synchronized.");
         });
 
-        // 4. Update Base Professional Dossiers
-        professionalProfileRepository.findByUidIgnoreCase(uid).ifPresent(p -> {
+        professionalProfileRepository.findById(id).ifPresent(p -> {
             p.setOnline(online);
             professionalProfileRepository.save(p);
-            log.info("[GOVERNANCE] Base Professional Ledger Synchronized.");
         });
+    }
+
+    @Override
+    @Transactional
+    public void verifyExpert(String id) {
+        log.info("[GOVERNANCE] Commencing Institutional Verification for ID: {}", id);
+        
+        lawyerProfileRepository.findById(id).ifPresent(p -> {
+            p.setVerified(true);
+            lawyerProfileRepository.save(p);
+        });
+
+        caProfileRepository.findById(id).ifPresent(p -> {
+            p.setVerified(true);
+            caProfileRepository.save(p);
+        });
+
+        cfaProfileRepository.findById(id).ifPresent(p -> {
+            p.setVerified(true);
+            cfaProfileRepository.save(p);
+        });
+    }
+
+    @Override
+    public ProfessionalProfileDTO getProfessionalBySlug(String slug) {
+        BaseProfile profile = null;
+
+        if (lawyerProfileRepository != null) {
+            profile = lawyerProfileRepository.findBySlug(slug).orElse(null);
+        }
+        if (profile == null) {
+            profile = professionalProfileRepository.findBySlug(slug).orElse(null);
+        }
+        if (profile == null && caProfileRepository != null) {
+            profile = caProfileRepository.findBySlug(slug).orElse(null);
+        }
+        if (profile == null && cfaProfileRepository != null) {
+            profile = cfaProfileRepository.findBySlug(slug).orElse(null);
+        }
+
+        if (profile == null) {
+            throw new ResourceNotFoundException("Expert dossier not found for slug: " + slug);
+        }
+
+        final BaseProfile finalProfile = profile;
+        User user = userRepository.findById(finalProfile.getId())
+            .orElseThrow(() -> new ResourceNotFoundException("Institutional user record missing for dossier: " + finalProfile.getId()));
+
+        return mapAnyProfileToProfessionalDTO(user, finalProfile, true);
+    }
+
+    private String generateSlug(String firstName, String lastName, Role role) {
+        String roleStr = role != null ? role.name() : "expert";
+        String base = (firstName + "-" + lastName + "-" + roleStr).toLowerCase()
+                .replaceAll("[^a-z0-9]", "-")
+                .replaceAll("-+", "-")
+                .replaceAll("^-|-$", "");
+                
+        String slug = base;
+        int count = 1;
+        while (slugExists(slug)) {
+            slug = base + "-" + count++;
+        }
+        return slug;
+    }
+
+    private boolean slugExists(String slug) {
+        boolean exists = professionalProfileRepository.findBySlug(slug).isPresent();
+        if (!exists && lawyerProfileRepository != null) exists = lawyerProfileRepository.findBySlug(slug).isPresent();
+        if (!exists && caProfileRepository != null) exists = caProfileRepository.findBySlug(slug).isPresent();
+        if (!exists && cfaProfileRepository != null) exists = cfaProfileRepository.findBySlug(slug).isPresent();
+        return exists;
+    }
+
+    @Override
+    @Transactional
+    public void updatePassword(String email, String newPassword) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+        log.info("[AUTH] Password successfully updated for: {}", email);
     }
 }

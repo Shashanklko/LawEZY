@@ -56,7 +56,7 @@ const FinancialActivity = ({ profile }) => {
         }
     };
 
-    const walletBalance = profile?.walletBalance || user?.tokenBalance || 0.00;
+    const walletBalance = profile?.cashBalance || user?.cashBalance || 0.00;
     const aiTokens = user?.freeAiTokens ?? 0;
     const chatTokens = user?.freeChatTokens ?? 0;
     const isUnlimited = user?.isUnlimited ?? false;
@@ -87,45 +87,6 @@ const FinancialActivity = ({ profile }) => {
                     }}>💳</div>
                 </div>
 
-                {/* AI TOKENS */}
-                <div className="asset-card" style={{
-                    background: isUnlimited ? 'linear-gradient(135deg, #1E1B4B 0%, #312E81 100%)' : '#0F172A', 
-                    borderRadius: '8px', 
-                    padding: '15px', 
-                    border: isUnlimited ? '1px solid #6366F1' : '1px solid rgba(255,255,255,0.05)',
-                    position: 'relative'
-                }}>
-                    <div style={{fontSize: '0.6rem', color: isUnlimited ? '#C7D2FE' : '#94A3B8', textTransform: 'uppercase', marginBottom: '10px'}}>AI Console Access</div>
-                    <div style={{fontSize: '1.4rem', fontWeight: 900, color: '#FDE68A'}}>
-                        {isUnlimited ? '∞ UNLIMITED' : `${aiTokens} Sessions`}
-                    </div>
-                    <div style={{fontSize: '0.55rem', color: '#C7D2FE', marginTop: '5px'}}>
-                        {isUnlimited ? 'Institutional Unlimited Pass' : 'Tiered Free Quota'}
-                    </div>
-                    <div style={{
-                        position: 'absolute', right: '5px', top: '5px', opacity: 0.1, fontSize: '1.5rem'
-                    }}>🤖</div>
-                </div>
-
-                {/* CHAT TOKENS */}
-                <div className="asset-card" style={{
-                    background: isUnlimited ? 'linear-gradient(135deg, #1E1B4B 0%, #312E81 100%)' : '#0F172A', 
-                    borderRadius: '8px', 
-                    padding: '15px', 
-                    border: isUnlimited ? '1px solid #6366F1' : '1px solid rgba(255,255,255,0.05)',
-                    position: 'relative'
-                }}>
-                    <div style={{fontSize: '0.6rem', color: isUnlimited ? '#C7D2FE' : '#94A3B8', textTransform: 'uppercase', marginBottom: '10px'}}>Chat Credits</div>
-                    <div style={{fontSize: '1.4rem', fontWeight: 900, color: '#FDE68A'}}>
-                        {isUnlimited ? '∞ UNLIMITED' : `${chatTokens} Sessions`}
-                    </div>
-                    <div style={{fontSize: '0.55rem', color: '#C7D2FE', marginTop: '5px'}}>
-                        {isUnlimited ? 'Active Engagement Pass' : 'Tiered Free Quota'}
-                    </div>
-                    <div style={{
-                        position: 'absolute', right: '5px', top: '5px', opacity: 0.1, fontSize: '1.5rem'
-                    }}>💬</div>
-                </div>
             </div>
 
             {/* FUNDING ACTIONS */}
@@ -229,3 +190,4 @@ const FinancialActivity = ({ profile }) => {
 };
 
 export default FinancialActivity;
+

@@ -11,21 +11,15 @@ import java.util.Collection;
  */
 public class CustomUserDetails extends User {
     private final String id;
-    private final String uid;
 
-    public CustomUserDetails(String id, String uid, String email, String password, boolean enabled, 
+    public CustomUserDetails(String id, String email, String password, boolean enabled, 
                              boolean accountNonExpired, boolean credentialsNonExpired, 
                              boolean accountNonLocked, Collection<? extends GrantedAuthority> authorities) {
         super(email, password, enabled, accountNonExpired, credentialsNonExpired, accountNonLocked, authorities);
         this.id = id;
-        this.uid = uid;
     }
 
     public String getId() {
         return id;
-    }
-
-    public String getUid() {
-        return uid;
     }
 }

@@ -78,8 +78,8 @@ public class JwtRequestFilter extends OncePerRequestFilter {
     
                     // Reconstruct CustomUserDetails for institutional context
                     com.LawEZY.auth.dto.CustomUserDetails userDetails = new com.LawEZY.auth.dto.CustomUserDetails(
-                        id, uid, username, "PROTECTED", true, true, true, true,
-                        java.util.Collections.singletonList(new org.springframework.security.core.authority.SimpleGrantedAuthority(role))
+                        id, username, "PROTECTED", true, true, true, true,
+                        java.util.Collections.singletonList(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_" + role))
                     );
 
                     // STAMP THEIR HAND! (Log them in automatically with full identity context)

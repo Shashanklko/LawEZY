@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0a0a0a; color: #ffffff; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 20px auto; background-color: #111111; border: 1px solid #333; border-radius: 12px; overflow: hidden; }
+        .header { background: linear-gradient(135deg, #7F1D1D 0%, #8B5A2B 100%); padding: 30px; text-align: center; }
+        .header h1 { color: #ffffff; margin: 0; font-size: 24px; letter-spacing: 2px; }
+        .content { padding: 40px; text-align: center; }
+        .status-badge { display: inline-block; padding: 8px 16px; background-color: #8B5A2B; color: #ffffff; border-radius: 20px; font-weight: bold; font-size: 14px; margin-bottom: 20px; }
+        .details-box { background: #0a0a0a; border: 1px solid #222; border-radius: 8px; padding: 20px; text-align: left; margin-bottom: 30px; }
+        .detail-row { margin-bottom: 10px; display: flex; justify-content: space-between; border-bottom: 1px solid #1a1a1a; padding-bottom: 5px; }
+        .label { color: #888; font-size: 12px; text-transform: uppercase; }
+        .value { color: #fff; font-weight: 600; }
+        .footer { padding: 20px; text-align: center; font-size: 12px; color: #666; background-color: #0a0a0a; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 th:text="${title}">APPOINTMENT BOOKED</h1>
+        </div>
+        <div class="content">
+            <div class="status-badge" th:text="${status}">CONFIRMED</div>
+            <p th:text="${greeting}">Hello Shekhar, your appointment with an expert is scheduled.</p>
+            
+            <div class="details-box">
+                <div class="detail-row">
+                    <span class="label">Expert</span>
+                    <span class="value" th:text="${expertName}">Adv. Aryan Singh</span>
+                </div>
+                <div class="detail-row">
+                    <span class="label">Date</span>
+                    <span class="value" th:text="${date}">25th April 2026</span>
+                </div>
+                <div class="detail-row">
+                    <span class="label">Time</span>
+                    <span class="value" th:text="${time}">10:30 AM</span>
+                </div>
+                <div class="detail-row">
+                    <span class="label">Duration</span>
+                    <span class="value" th:text="${duration}">30 Minutes</span>
+                </div>
+                <div class="detail-row">
+                    <span class="label">Amount</span>
+                    <span class="value" th:text="${amount}">₹0.00</span>
+                </div>
+            </div>
+
+            <p style="font-size: 14px; color: #888;">Please ensure you are online 5 minutes before the scheduled time.</p>
+        </div>
+        <div class="footer">
+            &copy; 2026 LawEZY Institutional Platform. All rights reserved.
+        </div>
+    </div>
+</body>
+</html>

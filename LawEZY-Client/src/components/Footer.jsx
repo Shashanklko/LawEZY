@@ -28,44 +28,32 @@ const Footer = () => {
       <div className={`footer-container ${isVisible ? 'reveal-active' : 'reveal-hidden'}`}>
         <div className="footer-grid">
           <div className="footer-brand">
-            <h3 className="f-logo">LAWEZY<span className="f-dot">.</span></h3>
-            <p className="f-tagline">Architecting the future of global legal and financial advisory through elite intelligence.</p>
-            <div className="f-trust-row">
-               <span className="trust-badge">AI SECURE</span>
-               <span className="trust-badge">ISO 27001</span>
-               <span className="trust-badge">GDPR COMPLIANT</span>
-            </div>
+            <h3 className="lawezy-logo medium" style={{ color: 'white' }}>LAWEZY<span className="logo-dot">.</span></h3>
+            <p className="f-tagline">Architecting the future of global legal and financial advisory through advanced cognitive technology.</p>
+
           </div>
 
           <div className="f-column">
             <h4>Ecosystem</h4>
-            <a href="#lex">LawinoAI</a>
-            <a href="#experts">Expert Network</a>
-            <a href="#resources">E-Resources</a>
-            <a href="#community">Community</a>
+            <a href="/lawino-ai">LawinoAI</a>
+            <a href="/experts">Expert Network</a>
+            <a href="/library">E-Resources</a>
+            <a href="/community">Community</a>
           </div>
 
           <div className="f-column">
             <h4>Institutional</h4>
-            <a href="#about">About LawEZY</a>
-            <a href="#security">Global Security</a>
-            <a href="#partner">Partner Program</a>
-            <a href="#careers">Join the Network</a>
+            <a href="/about">About LawEZY</a>
+            <a href="/join-network">Join the Network</a>
           </div>
 
-          <div className="f-column">
-            <h4>Global Hubs</h4>
-            <p>• London, Canary Wharf</p>
-            <p>• Dubai, DIFC</p>
-            <p>• Mumbai, BKC</p>
-            <p>• New York, Wall Street</p>
-          </div>
+
 
           <div className="f-column">
             <h4>Help & Support</h4>
             <a href="/faq">FAQ</a>
             <a href="/contact">Contact Us</a>
-            <a href="#support">Institutional Support</a>
+
           </div>
         </div>
         
@@ -113,14 +101,8 @@ const Footer = () => {
         .footer-grid {
           display: grid;
           grid-template-columns: 1.5fr 1fr 1fr 1fr;
-          gap: 60px;
+          gap: 40px;
           margin-bottom: 60px;
-        }
-        .f-logo {
-          font-size: 2rem;
-          font-weight: 900;
-          letter-spacing: -1px;
-          margin-bottom: 20px;
         }
         .f-dot { color: var(--accent-gold); }
         .f-tagline {
@@ -183,3 +165,4 @@ const Footer = () => {
 };
 
 export default Footer;
+

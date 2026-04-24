@@ -3,8 +3,6 @@ package com.LawEZY.scheduler;
 import com.LawEZY.notification.service.NotificationService;
 import com.LawEZY.user.entity.Appointment;
 import com.LawEZY.user.repository.AppointmentRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -25,12 +23,21 @@ import java.util.List;
  * (If you add 100+ appointments per minute you should add that flag — see note below.)
  */
 @Component
-@RequiredArgsConstructor
-@Slf4j
 public class AppointmentReminderScheduler {
+
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AppointmentReminderScheduler.class);
 
     private final AppointmentRepository appointmentRepository;
     private final NotificationService   notificationService;
+    private final com.LawEZY.user.service.AppointmentService appointmentService;
+
+    public AppointmentReminderScheduler(AppointmentRepository appointmentRepository, 
+                                      NotificationService notificationService,
+                                      com.LawEZY.user.service.AppointmentService appointmentService) {
+        this.appointmentRepository = appointmentRepository;
+        this.notificationService = notificationService;
+        this.appointmentService = appointmentService;
+    }
 
     private static final DateTimeFormatter TIME_FMT =
             DateTimeFormatter.ofPattern("hh:mm a");
@@ -57,8 +64,9 @@ public class AppointmentReminderScheduler {
                     : "soon";
 
             // ── Client reminder ──────────────────────────────────────────────
+            String clientUid = appt.getClient() != null ? appt.getClient().getId() : null;
             safeNotify(
-                appt.getClientUid(),
+                clientUid,
                 "📅 Session Starting in 30 Minutes",
                 String.format("Your consultation is scheduled at %s. Please be ready to join the session.", timeLabel),
                 "APPOINTMENT",
@@ -67,8 +75,9 @@ public class AppointmentReminderScheduler {
             );
 
             // ── Expert reminder ──────────────────────────────────────────────
+            String expertUid = appt.getExpert() != null ? appt.getExpert().getId() : null;
             safeNotify(
-                appt.getExpertUid(),
+                expertUid,
                 "📅 Upcoming Session in 30 Minutes",
                 String.format("You have a client consultation at %s. Ensure your environment is prepared.", timeLabel),
                 "APPOINTMENT",
@@ -98,9 +107,11 @@ public class AppointmentReminderScheduler {
             String timeLabel = appt.getScheduledAt() != null
                     ? appt.getScheduledAt().format(TIME_FMT)
                     : "soon";
-            safeNotify(appt.getClientUid(), "⚡ Session Reminder (Recovered)",
+            String clientUid = appt.getClient() != null ? appt.getClient().getId() : null;
+            String expertUid = appt.getExpert() != null ? appt.getExpert().getId() : null;
+            safeNotify(clientUid, "⚡ Session Reminder (Recovered)",
                     "Your consultation begins at " + timeLabel + ". Join on time.", "APPOINTMENT", "ENGAGEMENT", "/dashboard");
-            safeNotify(appt.getExpertUid(), "⚡ Session Reminder (Recovered)",
+            safeNotify(expertUid, "⚡ Session Reminder (Recovered)",
                     "Your upcoming session is at " + timeLabel + ". Please be ready.", "APPOINTMENT", "ENGAGEMENT", "/dashboard");
         }
     }
@@ -127,16 +138,30 @@ public class AppointmentReminderScheduler {
                     ? appt.getScheduledAt().format(DateTimeFormatter.ofPattern("dd MMM, hh:mm a"))
                     : "upcoming";
 
-            safeNotify(appt.getClientUid(),
+            String clientUid = appt.getClient() != null ? appt.getClient().getId() : null;
+            String expertUid = appt.getExpert() != null ? appt.getExpert().getId() : null;
+
+            safeNotify(clientUid,
                 "🗓️ Session Tomorrow",
                 String.format("Reminder: Your consultation is confirmed for %s. You'll receive a 30-min alert before it begins.", timeLabel),
                 "APPOINTMENT", "ENGAGEMENT", "/dashboard");
 
-            safeNotify(appt.getExpertUid(),
+            safeNotify(expertUid,
                 "🗓️ Session Tomorrow",
                 String.format("You have a client session scheduled for %s. Review the case notes beforehand.", timeLabel),
                 "APPOINTMENT", "ENGAGEMENT", "/dashboard");
         }
+    }
+
+    /**
+     * Governance: Auto-release payouts for sessions marked completed by experts 
+     * but not confirmed by clients within 48 hours.
+     * Fires every hour.
+     */
+    @Scheduled(cron = "0 0 * * * *")
+    public void executeAutoPayoutGovernance() {
+        log.info("⚖️ [GOVERNANCE] Executing 48h Auto-Release check for pending vault payouts...");
+        appointmentService.processAutoReleases();
     }
 
     // ── Helper ──────────────────────────────────────────────────────────────
