@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './HeroCarousel.css';
 
 const images = [
@@ -7,28 +8,44 @@ const images = [
     url: '/src/assets/homepage/family-lawyer.png',
     title: 'Modern Advice for Your Life & Business',
     body: 'LawEZY brings expert legal and financial help to everyone. Whether you are starting a business or protecting your family, we provide clear, honest advice to help you move forward with confidence.',
-    cta: 'See how we can help'
+    cta: 'See how we can help',
+    path: '#why-choose-us'
   },
   {
     id: "02",
     url: '/src/assets/homepage/Lawyer-meeting.png',
     title: 'Easy Solutions for Every Growth Stage',
     body: 'Empowering individuals and growing startups with the same tools used by big firms. We make professional expertise simple, affordable, and accessible for your unique journey.',
-    cta: 'Explore our services'
+    cta: 'Explore our services',
+    path: '/experts'
   },
   {
     id: "03",
     url: '/src/assets/homepage/CA_meeting.png',
     title: 'The Perfect Partner for Your Ambition',
     body: 'Where your goals meet the experts who can make them happen. Our technology connects you with the right professionals instantly, giving you a real advantage in every decision.',
-    cta: 'Discover LawinoAI'
+    cta: 'Discover LawinoAI',
+    path: '/lawino-ai'
   }
 ];
 
 const HeroCarousel = () => {
+  const navigate = useNavigate();
   const [current, setCurrent] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
   const sectionRef = useRef(null);
+
+  const handleCtaClick = () => {
+    const targetPath = images[current].path;
+    if (targetPath.startsWith('#')) {
+      const element = document.getElementById(targetPath.substring(1));
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
+    } else {
+      navigate(targetPath);
+    }
+  };
 
   const nextSlide = () => {
     setCurrent((prev) => (prev === images.length - 1 ? 0 : prev + 1));
@@ -95,7 +112,7 @@ const HeroCarousel = () => {
 
           {/* Unified Action Nexus (OUTSIDE the content map to prevent overflow) */}
           <div className="editorial-actions-row">
-            <button className="btn-pill-premium">
+            <button className="btn-pill-premium" onClick={handleCtaClick}>
               {images[current].cta} <span className="btn-arrow">→</span>
             </button>
           </div>
