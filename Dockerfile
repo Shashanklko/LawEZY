@@ -26,6 +26,7 @@ RUN apt-get update && apt-get install -y \
 # Copy built artifacts
 COPY --from=backend-build /app/backend/target/*.jar /app/backend/app.jar
 COPY --from=messenger-build /app/messenger /app/messenger
+COPY LawEZY-Client/public/favicon.svg /app/favicon.svg
 
 # Copy configurations
 COPY nginx.conf /etc/nginx/sites-available/default
