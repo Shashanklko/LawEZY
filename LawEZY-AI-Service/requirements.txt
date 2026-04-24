@@ -4,4 +4,6 @@ google-generativeai
 python-dotenv
 pydantic
 pymongo
+motor
+dnspython
 PyJWT
