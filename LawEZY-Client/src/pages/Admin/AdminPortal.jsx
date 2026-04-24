@@ -218,7 +218,9 @@ const AdminPortal = () => {
 
   // 🚀 REAL-TIME COMMAND CENTER: Socket Listener
   useEffect(() => {
-    const socket = new SockJS('http://localhost:8080/ws');
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+    const wsUrl = apiUrl.replace('/api', '') + '/ws';
+    const socket = new SockJS(wsUrl);
     const stompClient = Stomp.over(socket);
     stompClient.debug = null;
 

@@ -31,7 +31,9 @@ const MainLayout = () => {
     }).catch(err => console.error("Failed to sync system mode"));
 
     // 🚀 REAL-TIME SYSTEM SYNC: Listen for Global Status Changes
-    const socket = new SockJS('http://localhost:8080/ws');
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+    const wsUrl = apiUrl.replace('/api', '') + '/ws';
+    const socket = new SockJS(wsUrl);
     const stompClient = Stomp.over(socket);
     stompClient.debug = null; // Disable logging to keep console clean
 
