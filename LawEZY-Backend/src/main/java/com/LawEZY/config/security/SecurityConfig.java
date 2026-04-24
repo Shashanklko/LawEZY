@@ -32,7 +32,7 @@ public class SecurityConfig {
     @Autowired
     private CustomUserDetailsService userDetailsService;
 
-    @org.springframework.beans.factory.annotation.Value("${app.cors.allowed-origins:http://localhost:5173,https://lawezy.onrender.com}")
+    @org.springframework.beans.factory.annotation.Value("${app.cors.allowed-origins:http://localhost:5173,https://lawezy.onrender.com,https://lawezy-sigma.vercel.app}")
     private String allowedOrigins;
 
     // The Password scrambler we made in Step 2!
