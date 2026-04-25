@@ -18,6 +18,7 @@ import com.LawEZY.auth.dto.AuthResponse;
 import com.LawEZY.auth.service.CustomUserDetailsService;
 import com.LawEZY.auth.util.JwtUtil;
 import com.LawEZY.common.response.ApiResponse;
+import com.LawEZY.user.enums.Role;
 import java.util.Map;
 
 @RestController
