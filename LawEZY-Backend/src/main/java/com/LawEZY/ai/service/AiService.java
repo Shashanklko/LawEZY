@@ -13,7 +13,7 @@ public class AiService {
     private final RestTemplate restTemplate = new RestTemplate();
     private final String PYTHON_SERVICE_URL = "http://localhost:8001/api/ai/copilot";
     
-    @org.springframework.beans.factory.annotation.Value("${app.internal.secret}")
+    @org.springframework.beans.factory.annotation.Value("${app.internal.secret:internal-secret}")
     private String internalSecret;
 
     private final com.LawEZY.common.repository.AuditLogRepository auditLogRepository;
