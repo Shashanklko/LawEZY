@@ -76,10 +76,13 @@ public class JwtRequestFilter extends OncePerRequestFilter {
                     String id = jwtUtil.extractClaim(jwt, "id", String.class);
                     String uid = jwtUtil.extractClaim(jwt, "uid", String.class);
     
+                    // 🛡️ INSTITUTIONAL ROLE BRIDGE: Ensure we don't double-prefix the role
+                    String springRole = role.startsWith("ROLE_") ? role : "ROLE_" + role;
+                    
                     // Reconstruct CustomUserDetails for institutional context
                     com.LawEZY.auth.dto.CustomUserDetails userDetails = new com.LawEZY.auth.dto.CustomUserDetails(
                         id, username, "PROTECTED", true, true, true, true,
-                        java.util.Collections.singletonList(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_" + role))
+                        java.util.Collections.singletonList(new org.springframework.security.core.authority.SimpleGrantedAuthority(springRole))
                     );
 
                     // STAMP THEIR HAND! (Log them in automatically with full identity context)

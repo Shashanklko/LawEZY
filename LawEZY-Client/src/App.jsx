@@ -39,6 +39,10 @@ const DashboardSwitcher = () => {
   if (!user && !impersonatedUser) return <LoadingFallback />;
   if (!viewMode) return <LoadingFallback />;
 
+  if (viewMode === 'ADMIN') {
+    return <Navigate to="/admin" replace />;
+  }
+
   return (
     <>
       {viewMode === 'CLIENT'

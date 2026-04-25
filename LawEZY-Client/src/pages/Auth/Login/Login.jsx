@@ -57,7 +57,12 @@ const Login = () => {
       }, token);
       
       console.log('Login successful:', apiResponse.message);
-      navigate('/');
+      
+      if (serverRole === 'ADMIN' || serverRole === 'MASTER_ADMIN') {
+        navigate('/admin');
+      } else {
+        navigate('/');
+      }
     } catch (err) {
       console.error('Login error details:', err.response?.data);
       
@@ -87,7 +92,7 @@ const Login = () => {
       const { token, firstName, lastName, id, role: serverRole } = response.data.data;
       setAuth({ id, email: mfaEmail, firstName, lastName, role: serverRole }, token);
       
-      if (serverRole === 'ADMIN') {
+      if (serverRole === 'ADMIN' || serverRole === 'MASTER_ADMIN') {
         navigate('/admin');
       } else {
         navigate('/');

@@ -29,11 +29,19 @@ const useAuthStore = create(
       setAuth: (user, token) => {
         localStorage.setItem('lawezy_token', token);
         const roleStr = String(user?.role || '').toUpperCase();
-        const isExpert = ['LAWYER', 'CA', 'CFA', 'PRO', 'EXPERT', 'PROFESSIONAL'].some(r => 
-          roleStr.includes(r)
-        );
-        const initialViewMode = isExpert ? 'EXPERT' : 'CLIENT';
+        
+        let initialViewMode = 'CLIENT';
+        if (roleStr === 'ADMIN' || roleStr === 'MASTER_ADMIN') {
+          initialViewMode = 'ADMIN';
+        } else {
+          const isExpert = ['LAWYER', 'CA', 'CFA', 'PRO', 'EXPERT', 'PROFESSIONAL'].some(r => 
+            roleStr.includes(r)
+          );
+          initialViewMode = isExpert ? 'EXPERT' : 'CLIENT';
+        }
+        
         set({ user, token, isAuthenticated: true, viewMode: initialViewMode, impersonatedUser: null });
+        set({ lastSeen: Date.now() }); // Refresh activity timer on login
       },
 
       logout: () => {
