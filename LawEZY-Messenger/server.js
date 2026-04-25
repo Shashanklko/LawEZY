@@ -163,7 +163,8 @@ io.on('connection', (socket) => {
             // Task A: AI Safety Guard (Conditional)
             let aiCheckPromise = Promise.resolve({ data: { status: 'OK' } });
             if (!session.isAppointmentPaid && type === 'TEXT' && content && content.trim() !== '') {
-                aiCheckPromise = axios.post(`http://localhost:8001/api/ai/guard`, { query: content }, { timeout: 1500 })
+                const aiUrl = process.env.PYTHON_SERVICE_URL || 'http://localhost:8001';
+                aiCheckPromise = axios.post(`${aiUrl}/api/ai/guard`, { query: content }, { timeout: 1500 })
                     .catch(() => ({ data: { status: 'OK' } })); // Fail-open on timeout
             }
             tasks.push(aiCheckPromise);

@@ -11,7 +11,8 @@ public class AiService {
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AiService.class);
 
     private final RestTemplate restTemplate = new RestTemplate();
-    private final String PYTHON_SERVICE_URL = "http://localhost:8001/api/ai/copilot";
+    @org.springframework.beans.factory.annotation.Value("${app.ai.python-url:http://localhost:8001}")
+    private String pythonServiceUrl;
     
     @org.springframework.beans.factory.annotation.Value("${app.internal.secret:internal-secret}")
     private String internalSecret;
@@ -46,7 +47,7 @@ public class AiService {
             org.springframework.http.HttpEntity<Map<String, String>> entity = new org.springframework.http.HttpEntity<>(request, headers);
             
             @SuppressWarnings("unchecked")
-            Map<String, Object> response = restTemplate.postForObject(PYTHON_SERVICE_URL, entity, Map.class);
+            Map<String, Object> response = restTemplate.postForObject(pythonServiceUrl + "/api/ai/copilot", entity, Map.class);
             
             if (response != null && response.containsKey("response")) {
                 return (String) response.get("response");
@@ -69,7 +70,7 @@ public class AiService {
             org.springframework.http.HttpEntity<Map<String, String>> entity = new org.springframework.http.HttpEntity<>(request, headers);
             
             @SuppressWarnings("unchecked")
-            Map<String, String> response = restTemplate.postForObject("http://localhost:8001/api/ai/guard", entity, Map.class);
+            Map<String, String> response = restTemplate.postForObject(pythonServiceUrl + "/api/ai/guard", entity, Map.class);
             
             return (response != null && response.containsKey("status")) ? response.get("status") : "SAFE";
         } catch (Exception e) {
