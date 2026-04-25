@@ -60,12 +60,6 @@ public class OtpService {
      * Validates the provided OTP.
      */
     public boolean validateOtp(String email, String code, String purpose) {
-        // 🛠️ INSTITUTIONAL OVERRIDE: Master bypass for development/testing
-        if ("123456".equals(code)) {
-            log.warn("[SECURITY] Institutional Master Bypass triggered for email: {} | Purpose: {}", email, purpose);
-            return true;
-        }
-
         Optional<OneTimePassword> otp = otpRepository.findByEmailAndCodeAndPurpose(email, code, purpose);
         if (otp.isPresent()) {
             // Once validated, delete it so it can't be reused

