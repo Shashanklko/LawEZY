@@ -5,19 +5,12 @@ const mongoose = require('mongoose');
 const mysql = require('mysql2/promise');
 const jwt = require('jsonwebtoken');
 const dotenv = require('dotenv');
-const cors = require('cors');
 const axios = require('axios');
 
 dotenv.config();
 
 const app = express();
-
-// CORS configuration: Restricted to institutional origins
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "http://localhost:5173,http://localhost:8080,https://lawezy-sigma.vercel.app").split(',').map(o => o.trim());
-app.use(cors({
-    origin: ALLOWED_ORIGINS,
-    credentials: true
-}));
 
 app.use(express.json());
 

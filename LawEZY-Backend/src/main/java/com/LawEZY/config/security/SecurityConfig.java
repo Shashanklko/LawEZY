@@ -60,7 +60,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            .cors(AbstractHttpConfigurer::disable)
             .csrf(AbstractHttpConfigurer::disable) // Disable CSRF since we are using JWT tokens
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()         // ALLOW anyone to hit login/register
@@ -96,26 +96,4 @@ public class SecurityConfig {
         return http.build();
     }
 
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        
-        // Defensive check for allowedOrigins string
-        String originsStr = (allowedOrigins != null && !allowedOrigins.trim().isEmpty()) ? allowedOrigins : "http://localhost:5173,https://lawezy-sigma.vercel.app";
-        
-        configuration.setAllowedOriginPatterns(Arrays.stream(originsStr.split(","))
-                .map(String::trim)
-                .filter(o -> !o.isEmpty())
-                .collect(java.util.stream.Collectors.toList()));
-                
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers"));
-        configuration.setExposedHeaders(Arrays.asList("Authorization"));
-        configuration.setAllowCredentials(true);
-        configuration.setMaxAge(3600L);
-
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
-    }
 }
