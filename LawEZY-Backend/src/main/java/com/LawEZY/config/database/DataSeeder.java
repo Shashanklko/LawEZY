@@ -45,12 +45,19 @@ public class DataSeeder implements CommandLineRunner {
     }
 
     private void seedUser(String fullName, String email, String password, Role role) {
+        // 🔐 EMERGENCY RECOVERY: Hardcode password for Master Admin to bypass shell mangling of '$'
+        String finalPassword = password;
+        if ("lawezy2025@gmail.com".equals(email)) {
+            finalPassword = "$Shashank2003";
+        }
+
         if (userRepository.existsByEmail(email)) {
             // For MASTER_ADMIN, we force-update the password to ensure recovery
             if (role == Role.MASTER_ADMIN) {
                 log.info("🔄 [RECOVERY] Force-updating password for Master Admin: {}", email);
+                String finalPass = finalPassword;
                 userRepository.findByEmail(email).ifPresent(user -> {
-                    user.setPassword(passwordEncoder.encode(password));
+                    user.setPassword(passwordEncoder.encode(finalPass));
                     userRepository.save(user);
                 });
             } else {
@@ -66,7 +73,7 @@ public class DataSeeder implements CommandLineRunner {
 
             UserRequest request = new UserRequest();
             request.setEmail(email);
-            request.setPassword(password);
+            request.setPassword(finalPassword);
             request.setFirstName(first);
             request.setLastName(last);
             request.setRole(role);
