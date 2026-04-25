@@ -37,13 +37,13 @@ public class EmailService {
     @Autowired
     private TemplateEngine templateEngine;
 
-    @Value("${spring.gmail.client-id}")
+    @Value("${spring.gmail.client-id:placeholder}")
     private String clientId;
 
-    @Value("${spring.gmail.client-secret}")
+    @Value("${spring.gmail.client-secret:placeholder}")
     private String clientSecret;
 
-    @Value("${spring.gmail.refresh-token}")
+    @Value("${spring.gmail.refresh-token:placeholder}")
     private String refreshToken;
 
     @Value("${spring.gmail.user-email:lawezy2025@gmail.com}")

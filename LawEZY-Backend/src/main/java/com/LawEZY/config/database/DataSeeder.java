@@ -22,13 +22,13 @@ public class DataSeeder implements CommandLineRunner {
     @Autowired
     private UserRepository userRepository;
 
-    @Value("${app.seed.admin-password}")
+    @Value("${app.seed.admin-password:admin123}")
     private String adminPass;
 
-    @Value("${app.seed.expert-password}")
+    @Value("${app.seed.expert-password:expert123}")
     private String expertPass;
 
-    @Value("${app.seed.client-password}")
+    @Value("${app.seed.client-password:client123}")
     private String clientPass;
 
     @Override

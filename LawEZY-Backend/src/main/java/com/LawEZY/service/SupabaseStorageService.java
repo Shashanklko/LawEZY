@@ -14,10 +14,10 @@ import java.util.UUID;
 @Slf4j
 public class SupabaseStorageService {
 
-    @Value("${supabase.url}")
+    @Value("${supabase.url:https://placeholder.supabase.co}")
     private String supabaseUrl;
 
-    @Value("${supabase.key}")
+    @Value("${supabase.key:placeholder-key}")
     private String supabaseKey;
 
     @Value("${supabase.bucket:legal-docs}")

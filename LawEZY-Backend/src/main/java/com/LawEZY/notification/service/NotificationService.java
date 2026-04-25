@@ -23,10 +23,10 @@ public class NotificationService {
     }
     private final RestTemplate restTemplate = new RestTemplate();
 
-    @Value("${app.messenger.url}")
+    @Value("${app.messenger.url:http://127.0.0.1:8081}")
     private String messengerUrl;
 
-    @Value("${app.internal.secret}")
+    @Value("${app.internal.secret:internal-secret}")
     private String internalSecret;
 
     public Notification sendNotification(String userId, String title, String message, String type, String category, String actionLink) {

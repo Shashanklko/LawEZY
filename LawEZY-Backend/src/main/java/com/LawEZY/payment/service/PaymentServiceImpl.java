@@ -23,10 +23,10 @@ public class PaymentServiceImpl implements PaymentService {
         this.walletService = walletService;
     }
 
-    @Value("${razorpay.key.id}")
+    @Value("${razorpay.key.id:placeholder}")
     private String razorpayKeyId;
 
-    @Value("${razorpay.key.secret}")
+    @Value("${razorpay.key.secret:placeholder}")
     private String razorpayKeySecret;
 
     private RazorpayClient razorpayClient;
