@@ -100,16 +100,19 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         
-        // Use patterns for better flexibility with Credentials
-        configuration.setAllowedOriginPatterns(Arrays.stream(allowedOrigins.split(","))
+        // Defensive check for allowedOrigins string
+        String originsStr = (allowedOrigins != null && !allowedOrigins.trim().isEmpty()) ? allowedOrigins : "http://localhost:5173,https://lawezy-sigma.vercel.app";
+        
+        configuration.setAllowedOriginPatterns(Arrays.stream(originsStr.split(","))
                 .map(String::trim)
+                .filter(o -> !o.isEmpty())
                 .collect(java.util.stream.Collectors.toList()));
                 
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers"));
-        configuration.setExposedHeaders(Arrays.asList("Authorization", "Access-Control-Allow-Origin", "Access-Control-Allow-Credentials"));
+        configuration.setExposedHeaders(Arrays.asList("Authorization"));
         configuration.setAllowCredentials(true);
-        configuration.setMaxAge(3600L); // 1 hour preflight cache
+        configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

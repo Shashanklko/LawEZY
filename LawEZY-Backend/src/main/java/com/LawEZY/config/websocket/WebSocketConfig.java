@@ -29,9 +29,12 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(@org.springframework.lang.NonNull StompEndpointRegistry registry) {
+        // Defensive check for allowed origins
+        String[] origins = (allowedOrigins != null && allowedOrigins.length > 0) ? allowedOrigins : new String[]{"http://localhost:5173", "https://lawezy-sigma.vercel.app"};
+        
         // The URL where clients connect to the WebSocket server
         registry.addEndpoint("/ws")
-                .setAllowedOriginPatterns(allowedOrigins)
+                .setAllowedOriginPatterns(origins)
                 .withSockJS();
     }
 
