@@ -39,7 +39,6 @@ import com.LawEZY.user.dto.ProfessionalProfileDTO;
 
 @RestController
 @RequestMapping("/api/admin")
-@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:8080"})
 public class AdminController {
 
     private final UserRepository userRepository;

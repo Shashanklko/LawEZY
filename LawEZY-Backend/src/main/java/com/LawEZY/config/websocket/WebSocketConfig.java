@@ -15,7 +15,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Autowired
     private ChatChannelInterceptor chatChannelInterceptor;
 
-    @org.springframework.beans.factory.annotation.Value("${app.cors.allowed-origins}")
+    @org.springframework.beans.factory.annotation.Value("${app.cors.allowed-origins:http://localhost:5173,https://lawezy.onrender.com,https://lawezy-sigma.vercel.app}")
     private String[] allowedOrigins;
 
     @Override
@@ -31,7 +31,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public void registerStompEndpoints(@org.springframework.lang.NonNull StompEndpointRegistry registry) {
         // The URL where clients connect to the WebSocket server
         registry.addEndpoint("/ws")
-                .setAllowedOriginPatterns("*")
+                .setAllowedOriginPatterns(allowedOrigins)
                 .withSockJS();
     }
 

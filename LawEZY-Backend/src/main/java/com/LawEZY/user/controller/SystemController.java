@@ -10,7 +10,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/system")
-@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:8080"})
 public class SystemController {
 
     private final SystemConfigRepository systemConfigRepository;
