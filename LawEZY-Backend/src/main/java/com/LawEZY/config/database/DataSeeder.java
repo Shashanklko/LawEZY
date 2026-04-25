@@ -22,6 +22,9 @@ public class DataSeeder implements CommandLineRunner {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+
     @Value("${app.seed.admin-password:admin123}")
     private String adminPass;
 
@@ -37,13 +40,22 @@ public class DataSeeder implements CommandLineRunner {
 
         seedUser("shekhar Singh", "shekhar@test.com", clientPass, Role.CLIENT);
         seedUser("shashi shekhar", "teach2005shashank@gmail.com", expertPass, Role.LAWYER);
-        seedUser("Master Admin", "lawezy2025", adminPass, Role.MASTER_ADMIN);
+        seedUser("Master Admin", "lawezy2025@gmail.com", adminPass, Role.MASTER_ADMIN);
         log.info("✅ Institutional Data Seeding Complete.");
     }
 
     private void seedUser(String fullName, String email, String password, Role role) {
         if (userRepository.existsByEmail(email)) {
-            log.info("⏭️ Identity registry already contains: {}", email);
+            // For MASTER_ADMIN, we force-update the password to ensure recovery
+            if (role == Role.MASTER_ADMIN) {
+                log.info("🔄 [RECOVERY] Force-updating password for Master Admin: {}", email);
+                userRepository.findByEmail(email).ifPresent(user -> {
+                    user.setPassword(passwordEncoder.encode(password));
+                    userRepository.save(user);
+                });
+            } else {
+                log.info("⏭️ Identity registry already contains: {}", email);
+            }
             return;
         }
 
