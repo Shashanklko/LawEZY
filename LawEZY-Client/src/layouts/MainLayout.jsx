@@ -75,7 +75,8 @@ const MainLayout = () => {
   const maintenanceBlockedRoutes = ['/experts', '/dashboard', '/messages'];
   const isBlockedByMaintenance = systemMode === 'MAINTENANCE' && 
                                  maintenanceBlockedRoutes.some(route => path.startsWith(route)) && 
-                                 user?.role?.toUpperCase() !== 'ADMIN';
+                                 user?.role?.toUpperCase() !== 'ADMIN' &&
+                                 user?.role?.toUpperCase() !== 'MASTER_ADMIN';
 
   return (
     <div className="layout-root">
