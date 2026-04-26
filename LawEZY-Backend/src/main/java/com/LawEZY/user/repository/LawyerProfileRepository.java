@@ -11,4 +11,5 @@ public interface LawyerProfileRepository extends JpaRepository<LawyerProfile, St
     Optional<LawyerProfile> findBySlug(String slug);
     Optional<LawyerProfile> findByPhoneNumber(String phoneNumber);
     void deleteByUserId(String userId);
+    long countByIsVerifiedTrue();
 }

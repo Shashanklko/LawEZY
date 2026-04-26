@@ -67,6 +67,7 @@ const AdminPortal = () => {
   const [contentView, setContentView] = useState('resources');
 
   const [experts, setExperts] = useState([]);
+  const [testEdit, setTestEdit] = useState(true);
   const [clients, setClients] = useState([]);
   const [appointments, setAppointments] = useState([]);
   const [complaints, setComplaints] = useState([]);
@@ -82,10 +83,26 @@ const AdminPortal = () => {
   const [ledger, setLedger] = useState([]);
   const [alertMessage, setAlertMessage] = useState('');
   const [alertLevel, setAlertLevel] = useState('INFO');
-  const [purging, setPurging] = useState(null); // null, '2_WEEKS', or '1_MONTH'
-  const [logFilter, setLogFilter] = useState('ALL'); // 'ALL', 'SECURITY_ALERT', 'SYSTEM_ERROR', etc.
+  const [purging, setPurging] = useState(null); 
+  const [logFilter, setLogFilter] = useState('ALL'); 
   const [expertSearch, setExpertSearch] = useState('');
   const [adminAlert, setAdminAlert] = useState(null);
+
+  // 📖 Institutional Pagination State
+  const [pages, setPages] = useState({
+    experts: { current: 0, total: 0 },
+    clients: { current: 0, total: 0 },
+    complaints: { current: 0, total: 0 },
+    finance: { current: 0, total: 0 },
+    logs: { current: 0, total: 0 }
+  });
+  
+  const updatePage = (tab, current, total) => {
+    setPages(prev => ({
+      ...prev,
+      [tab]: { current, total }
+    }));
+  };
   
   // Master Management State
   const [masterOtp, setMasterOtp] = useState('');
@@ -156,65 +173,111 @@ const AdminPortal = () => {
     navigate(`/admin/experts/${id}/logs`);
   };
 
+  const PaginationControls = ({ tab }) => {
+    const { current, total } = pages[tab];
+    if (total <= 1) return null;
+
+    return (
+      <div className="pagination-controls glass">
+        <button 
+          disabled={current === 0} 
+          onClick={() => fetchTabDetail(tab, current - 1)}
+          className="btn-pagination"
+        >
+          ← Previous
+        </button>
+        <span className="page-indicator">
+          Page <strong>{current + 1}</strong> of <strong>{total}</strong>
+        </span>
+        <button 
+          disabled={current >= total - 1} 
+          onClick={() => fetchTabDetail(tab, current + 1)}
+          className="btn-pagination"
+        >
+          Next →
+        </button>
+      </div>
+    );
+  };
+
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchAdminData();
+    fetchInitialData();
   }, []);
 
-  const fetchAdminData = async () => {
+  const fetchInitialData = async () => {
     setLoading(true);
     try {
-      const [expRes, clientsRes, compRes, walletRes, ledgerRes, logsRes, statsRes, adminRes, actionsRes] = await Promise.all([
-        apiClient.get('/api/professionals').catch(() => ({ data: [] })),
-        apiClient.get('/api/admin/clients').catch(() => ({ data: [] })),
-        apiClient.get('/api/admin/complaints').catch(() => ({ data: [] })),
-        apiClient.get('/api/admin/wallets').catch(() => ({ data: [] })),
-        apiClient.get('/api/admin/ledger').catch(() => ({ data: [] })),
-        apiClient.get('/api/admin/logs').catch(() => ({ data: [] })),
-        apiClient.get('/api/admin/dashboard-stats').catch(() => ({ data: {} })),
-        apiClient.get('/api/admin/administrators').catch(() => ({ data: [] })),
-        apiClient.get('/api/admin/admin-actions').catch(() => ({ data: [] }))
-      ]);
-
-      setExperts(expRes.data);
-      setClients(clientsRes.data);
-      setComplaints(compRes.data);
-      setWallets(walletRes.data);
-      setLedger(ledgerRes.data);
-      setLogs(logsRes.data);
-      setAdmins(adminRes.data);
-      setAdminActions(actionsRes.data);
+      const statsRes = await apiClient.get('/api/admin/dashboard-stats');
       if (statsRes.data) {
-        setStats({
-          totalUsers: statsRes.data.totalUsers || 0,
-          activeExperts: statsRes.data.activeExperts || 0,
-          pendingComplaints: statsRes.data.pendingComplaints || 0,
-          totalAppointments: statsRes.data.totalAppointments || 0,
-          platformRevenue: statsRes.data.platformRevenue || 0,
-          systemUptime: statsRes.data.systemUptime || "100%",
-          totalResources: statsRes.data.totalResources || 0,
-          totalPosts: statsRes.data.totalPosts || 0,
-          verifiedExperts: statsRes.data.verifiedExperts || 0,
-          unverifiedExperts: statsRes.data.unverifiedExperts || 0,
-          totalExperts: statsRes.data.totalExperts || 0,
-          totalClients: statsRes.data.totalClients || 0,
-          subAdmins: statsRes.data.subAdmins || 0,
-          masterAdmins: statsRes.data.masterAdmins || 0,
-          aiRevenue: statsRes.data.aiRevenue || 0,
-          chatRevenue: statsRes.data.chatRevenue || 0,
-          appointmentRevenue: statsRes.data.appointmentRevenue || 0
-        });
+        setStats(statsRes.data);
         if (statsRes.data.systemMode) {
           setSystemMode(statsRes.data.systemMode);
         }
       }
     } catch (err) {
-      console.error('Admin data sync failure:', err);
+      console.error('Core admin sync failure:', err);
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (activeTab === 'experts' && experts.length === 0) fetchTabDetail('experts');
+    if (activeTab === 'clients' && clients.length === 0) fetchTabDetail('clients');
+    if (activeTab === 'complaints' && complaints.length === 0) fetchTabDetail('complaints');
+    if (activeTab === 'finance' && ledger.length === 0) fetchTabDetail('finance');
+    if (activeTab === 'logs' && logs.length === 0) fetchTabDetail('logs');
+    if (activeTab === 'master' && admins.length === 0) fetchTabDetail('master');
+  }, [activeTab]);
+
+  const fetchTabDetail = async (tab, page = 0) => {
+    try {
+      if (tab === 'experts') {
+        // Note: Professionals endpoint currently returns a flat list, 
+        // but for institutional consistency we wrap it.
+        const res = await apiClient.get(`/api/professionals?page=${page}&size=20`);
+        if (res.data.content) {
+          setExperts(res.data.content);
+          updatePage('experts', res.data.number, res.data.totalPages);
+        } else {
+          setExperts(res.data);
+          updatePage('experts', 0, 1);
+        }
+      } else if (tab === 'clients') {
+        const res = await apiClient.get(`/api/admin/clients?page=${page}&size=20`);
+        setClients(res.data.content || []);
+        updatePage('clients', res.data.number, res.data.totalPages);
+      } else if (tab === 'complaints') {
+        const res = await apiClient.get('/api/admin/complaints');
+        setComplaints(res.data);
+      } else if (tab === 'finance') {
+        const [walletRes, ledgerRes] = await Promise.all([
+          apiClient.get('/api/admin/wallets'),
+          apiClient.get(`/api/admin/ledger?page=${page}&size=50`)
+        ]);
+        setWallets(walletRes.data);
+        setLedger(ledgerRes.data.content || []);
+        updatePage('finance', ledgerRes.data.number, ledgerRes.data.totalPages);
+      } else if (tab === 'logs') {
+        const res = await apiClient.get(`/api/admin/logs?page=${page}&size=50`);
+        setLogs(res.data.content || []);
+        updatePage('logs', res.data.number, res.data.totalPages);
+      } else if (tab === 'master') {
+        const [adminRes, actionsRes] = await Promise.all([
+          apiClient.get('/api/admin/administrators'),
+          apiClient.get('/api/admin/admin-actions')
+        ]);
+        setAdmins(adminRes.data);
+        setAdminActions(actionsRes.data);
+      }
+    } catch (err) {
+      console.error(`Institutional relay error for tab ${tab}:`, err);
+    }
+  };
+
+  const fetchAdminData = () => fetchInitialData();
 
   // 🚀 REAL-TIME COMMAND CENTER: Socket Listener
   useEffect(() => {
@@ -726,7 +789,7 @@ const AdminPortal = () => {
             </div>
           )}
 
-          {activeTab === 'experts' && (
+          {activeTab === 'experts' && ( /* Institutional Pagination Active */
             <div className="admin-list-container animate-slide-up">
               <div className="list-header">
                 <h3>⚖️ Legal & Financial Expert Audit</h3>
@@ -1493,7 +1556,7 @@ const AdminPortal = () => {
                               </span>
                             </td>
                             <td style={{ padding: '15px 12px' }}>
-                              {adm.id !== 'lawezy76' && adm.id !== '21LZ76AD' && (
+                              {adm.id !== 'lawezy76' && (
                                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                                   <select 
                                     value={adm.permissions || 'READ-ONLY'}

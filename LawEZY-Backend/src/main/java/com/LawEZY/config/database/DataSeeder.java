@@ -40,7 +40,6 @@ public class DataSeeder implements CommandLineRunner {
 
         seedUser("shekhar Singh", "shekhar@test.com", clientPass, Role.CLIENT);
         seedUser("shashi shekhar", "teach2005shashank@gmail.com", expertPass, Role.LAWYER);
-        seedUser("Master Admin", "lawezy2025@gmail.com", adminPass, Role.MASTER_ADMIN);
         log.info("✅ Institutional Data Seeding Complete.");
     }
 

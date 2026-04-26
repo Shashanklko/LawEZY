@@ -680,10 +680,13 @@ public class ChatServiceImp implements ChatService {
                         if (userCache != null) userCache.put(session.getUserId(), client);
                     }
                     
-                    String name = (client.getFirstName() != null ? client.getFirstName() : "Client") + 
-                                  (client.getLastName() != null ? " " + client.getLastName() : "");
-                    res.setOtherPartyName(name);
-                    res.setOtherPartyAvatar("https://ui-avatars.com/api/?name=" + name.charAt(0) + "&background=0D1B2A&color=E0C389&bold=true");
+                    String fName = client.getFirstName() != null ? client.getFirstName().trim() : "";
+                    String lName = client.getLastName() != null ? client.getLastName().trim() : "";
+                    String fullName = (fName + " " + lName).trim();
+                    if (fullName.isEmpty()) fullName = "Institutional Client";
+                    
+                    res.setOtherPartyName(fullName);
+                    res.setOtherPartyAvatar("https://ui-avatars.com/api/?name=" + fullName.charAt(0) + "&background=0D1B2A&color=E0C389&bold=true");
                     res.setIsOtherPartyEnabled(client.getEnabled());
                 }
             } catch (Exception e) {
@@ -704,7 +707,13 @@ public class ChatServiceImp implements ChatService {
                 }
                 
                 res.setOtherPartyName(profDTO.getName());
-                res.setOtherPartyAvatar(profDTO.getAvatar());
+                
+                String avatar = profDTO.getAvatar();
+                if (avatar == null || avatar.trim().isEmpty() || avatar.equals("null")) {
+                    String nameForAvatar = profDTO.getName() != null ? profDTO.getName() : "Expert";
+                    avatar = "https://ui-avatars.com/api/?name=" + nameForAvatar.charAt(0) + "&background=0D1B2A&color=E0C389&bold=true";
+                }
+                res.setOtherPartyAvatar(avatar);
                 
                 // Fetch user to check enabled status
                 userRepository.findById(targetId).ifPresent(u -> res.setIsOtherPartyEnabled(u.isEnabled()));

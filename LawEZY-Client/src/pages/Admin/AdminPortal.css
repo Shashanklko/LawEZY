@@ -3166,3 +3166,52 @@
   color: #ff4d4d;
 }
 
+
+/* 📖 INSTITUTIONAL PAGINATION */
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 25px;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.02);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.btn-pagination {
+  background: rgba(224, 195, 137, 0.05);
+  border: 1px solid rgba(224, 195, 137, 0.1);
+  color: var(--elite-gold);
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.btn-pagination:hover:not(:disabled) {
+  background: var(--elite-gold);
+  color: #000;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(224, 195, 137, 0.2);
+}
+
+.btn-pagination:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  filter: grayscale(1);
+}
+
+.page-indicator {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 400;
+}
+
+.page-indicator strong {
+  color: #fff;
+  margin: 0 4px;
+}

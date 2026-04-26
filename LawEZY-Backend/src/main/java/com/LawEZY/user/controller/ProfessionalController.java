@@ -19,8 +19,11 @@ public class ProfessionalController {
     private UserService userService;
 
     @GetMapping
-    public ResponseEntity<List<ProfessionalProfileDTO>> getAllProfessionals() {
-        return ResponseEntity.ok(userService.getAllProfessionals());
+    public ResponseEntity<?> getAllProfessionals(
+            @org.springframework.data.web.PageableDefault(size = 20) org.springframework.data.domain.Pageable pageable) {
+        // Institutional Check: If page/size params are missing, Spring might still provide a default Pageable.
+        // We only trigger pagination if explicitly requested or to optimize large lists.
+        return ResponseEntity.ok(userService.getAllProfessionalsPaginated(pageable));
     }
 
     @GetMapping("/{id}")

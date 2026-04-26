@@ -14,6 +14,11 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     // Aggregate queries for rating calculations
     long countByExpert_Id(String expertId);
 
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
     void deleteByExpert_Id(String expertId);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
     void deleteByClient_Id(String clientId);
 }

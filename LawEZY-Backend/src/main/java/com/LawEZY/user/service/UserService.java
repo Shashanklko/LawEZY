@@ -15,6 +15,7 @@ public interface UserService {
     void changePassword(String userId, String currentPassword, String newPassword);
     void disableUser(String userId);
     List<ProfessionalProfileDTO> getAllProfessionals();
+    org.springframework.data.domain.Page<ProfessionalProfileDTO> getAllProfessionalsPaginated(org.springframework.data.domain.Pageable pageable);
     ProfessionalProfileDTO getProfessionalById(String id);
     ProfessionalProfileDTO getProfessionalBySlug(String slug);
     void updateProfessionalStatus(String id, boolean online);

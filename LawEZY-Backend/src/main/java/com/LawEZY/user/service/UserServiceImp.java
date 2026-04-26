@@ -325,36 +325,45 @@ public class UserServiceImp implements UserService {
     public List<ProfessionalProfileDTO> getAllProfessionals() {
         List<User> proUsers = userRepository.findByRoleIn(Arrays.asList(Role.LAWYER, Role.CA, Role.CFA));
         
-        return proUsers.stream().map(user -> {
-            Object profile = null;
-            if (user.getRole() == Role.LAWYER) profile = lawyerProfileRepository.findById(user.getId()).orElse(null);
-            else if (user.getRole() == Role.CA) profile = caProfileRepository.findById(user.getId()).orElse(null);
-            else if (user.getRole() == Role.CFA) profile = cfaProfileRepository.findById(user.getId()).orElse(null);
-            
-            // Fallback to legacy if specialized not found
-            if (profile == null) {
-                profile = professionalProfileRepository.findById(user.getId()).orElse(null);
-            }
-
-            if (profile == null) return null;
-            BaseProfile bp = (BaseProfile) profile;
-
-            // JIT Batch Identity Hydration: Ensure slugs exist for all listing items
-            if (bp.getSlug() == null || bp.getSlug().isEmpty()) {
-                String newSlug = generateSlug(user.getFirstName(), user.getLastName(), user.getRole());
-                bp.setSlug(newSlug);
-                // Background persistence
-                if (bp instanceof LawyerProfile) lawyerProfileRepository.save((LawyerProfile) bp);
-                else if (bp instanceof CAProfile) caProfileRepository.save((CAProfile) bp);
-                else if (bp instanceof CFAProfile) cfaProfileRepository.save((CFAProfile) bp);
-                else if (bp instanceof ProfessionalProfile) professionalProfileRepository.save((ProfessionalProfile) bp);
-            }
-
-            // Optimised: Skip expensive enrichment for list view
-            return mapAnyProfileToProfessionalDTO(user, bp, false); 
-        })
+        return proUsers.stream().map(this::mapUserToProfessionalDTO)
         .filter(java.util.Objects::nonNull)
         .collect(Collectors.toList());
+    }
+
+    @Override
+    public Page<ProfessionalProfileDTO> getAllProfessionalsPaginated(Pageable pageable) {
+        Page<User> proUsers = userRepository.findByRoleIn(Arrays.asList(Role.LAWYER, Role.CA, Role.CFA), pageable);
+        
+        List<ProfessionalProfileDTO> dtos = proUsers.getContent().stream().map(this::mapUserToProfessionalDTO)
+        .filter(java.util.Objects::nonNull)
+        .collect(Collectors.toList());
+
+        return new org.springframework.data.domain.PageImpl<>(dtos, pageable, proUsers.getTotalElements());
+    }
+
+    private ProfessionalProfileDTO mapUserToProfessionalDTO(User user) {
+        Object profile = null;
+        if (user.getRole() == Role.LAWYER) profile = lawyerProfileRepository.findById(user.getId()).orElse(null);
+        else if (user.getRole() == Role.CA) profile = caProfileRepository.findById(user.getId()).orElse(null);
+        else if (user.getRole() == Role.CFA) profile = cfaProfileRepository.findById(user.getId()).orElse(null);
+        
+        if (profile == null) {
+            profile = professionalProfileRepository.findById(user.getId()).orElse(null);
+        }
+
+        if (profile == null) return null;
+        BaseProfile bp = (BaseProfile) profile;
+
+        if (bp.getSlug() == null || bp.getSlug().isEmpty()) {
+            String newSlug = generateSlug(user.getFirstName(), user.getLastName(), user.getRole());
+            bp.setSlug(newSlug);
+            if (bp instanceof LawyerProfile) lawyerProfileRepository.save((LawyerProfile) bp);
+            else if (bp instanceof CAProfile) caProfileRepository.save((CAProfile) bp);
+            else if (bp instanceof CFAProfile) cfaProfileRepository.save((CFAProfile) bp);
+            else if (bp instanceof ProfessionalProfile) professionalProfileRepository.save((ProfessionalProfile) bp);
+        }
+
+        return mapAnyProfileToProfessionalDTO(user, bp, false);
     }
 
     private ProfessionalProfileDTO mapAnyProfileToProfessionalDTO(User user, BaseProfile p, boolean fullEnrichment) {
@@ -366,12 +375,21 @@ public class UserServiceImp implements UserService {
         
         if (p instanceof com.LawEZY.user.entity.BaseProfile) {
             com.LawEZY.user.entity.BaseProfile bp = (com.LawEZY.user.entity.BaseProfile) p;
-            dto.setName(bp.getFirstName() + " " + bp.getLastName());
+            
+            // Robust Name Hydration
+            String fName = bp.getFirstName() != null ? bp.getFirstName().trim() : "";
+            String lName = bp.getLastName() != null ? bp.getLastName().trim() : "";
+            String fullName = (fName + " " + lName).trim();
+            dto.setName(fullName.isEmpty() ? "Expert Counsel" : fullName);
+            
             dto.setTitle(bp.getTitle());
             dto.setLocation(bp.getLocation());
             dto.setBio(bp.getBio());
             dto.setPhoneNumber(bp.getPhoneNumber());
-            dto.setBioSmall(bp.getBio() != null && bp.getBio().length() > 100 ? bp.getBio().substring(0, 97) + "..." : bp.getBio());
+            dto.setAvatar(bp.getAvatar());
+            
+            String bio = bp.getBio();
+            dto.setBioSmall(bio != null && bio.length() > 100 ? bio.substring(0, 97) + "..." : bio);
             // UID is now deprecated in favor of primary ID
             dto.setSlug(bp.getSlug());
             dto.setTextChatFee(bp.getTextChatFee());

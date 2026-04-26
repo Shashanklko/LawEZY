@@ -11,4 +11,5 @@ public interface CFAProfileRepository extends JpaRepository<CFAProfile, String> 
     Optional<CFAProfile> findBySlug(String slug);
     Optional<CFAProfile> findByPhoneNumber(String phoneNumber);
     void deleteByUserId(String userId);
+    long countByIsVerifiedTrue();
 }

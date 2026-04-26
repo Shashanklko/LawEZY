@@ -130,6 +130,7 @@ public class AdminController {
 
     @GetMapping("/dashboard-stats")
     public ResponseEntity<Map<String, Object>> getDashboardStats() {
+        validatePermission("VIEW_DASHBOARD"); // Added missing security check
         Map<String, Object> stats = new HashMap<>();
 
         long totalUsers = userRepository.count();
@@ -139,12 +140,10 @@ public class AdminController {
         long subAdmins = userRepository.countByRoleIn(Arrays.asList(Role.ADMIN));
         long masterAdmins = userRepository.countByRoleIn(Arrays.asList(Role.MASTER_ADMIN));
 
-        // Calculate verified vs unverified experts
-        long verifiedLawyers = lawyerProfileRepository.findAll().stream().filter(com.LawEZY.user.entity.LawyerProfile::isVerified).count();
-        long verifiedCAs = caProfileRepository.findAll().stream().filter(com.LawEZY.user.entity.CAProfile::isVerified).count();
-        long verifiedCFAs = cfaProfileRepository.findAll().stream().filter(com.LawEZY.user.entity.CFAProfile::isVerified).count();
-        
-        long totalVerified = verifiedLawyers + verifiedCAs + verifiedCFAs;
+        // Calculate verified vs unverified experts using fast repository counts
+        long totalVerified = lawyerProfileRepository.countByIsVerifiedTrue() + 
+                             caProfileRepository.countByIsVerifiedTrue() + 
+                             cfaProfileRepository.countByIsVerifiedTrue();
         long totalUnverified = totalExperts - totalVerified;
 
         long pendingComplaints = reportRepository.countByStatus("PENDING");
@@ -152,58 +151,21 @@ public class AdminController {
         long totalResources = resourceRepository.count();
         long totalPosts = postRepository.count();
 
-        // Calculate platform revenue (sum of all commissions/fees/AI tokens)
+        // Calculate platform revenue using HIGH-PERFORMANCE NATIVE SQL
+        double platformRevenue = financialTransactionRepository.sumTotalPlatformRevenue();
+        double aiRevenue = financialTransactionRepository.sumAmountByDescriptionKeyword("AI") + 
+                          financialTransactionRepository.sumAmountByDescriptionKeyword("Audit");
+        double chatRevenue = financialTransactionRepository.sumAmountByDescriptionKeyword("Chat");
+        double appointmentRevenue = financialTransactionRepository.sumAmountByDescriptionKeyword("Appointment") + 
+                                   financialTransactionRepository.sumAmountByDescriptionKeyword("LZY-");
+
         LocalDateTime now = LocalDateTime.now();
-        LocalDateTime todayStart = now.toLocalDate().atStartOfDay();
-        LocalDateTime weekStart = now.minusDays(7);
-        LocalDateTime monthStart = now.minusDays(30);
+        double platformDaily = financialTransactionRepository.sumPlatformRevenueSince(now.toLocalDate().atStartOfDay());
+        double platformWeekly = financialTransactionRepository.sumPlatformRevenueSince(now.minusDays(7));
+        double platformMonthly = financialTransactionRepository.sumPlatformRevenueSince(now.minusDays(30));
 
-        List<FinancialTransaction> allTransactions = financialTransactionRepository.findAll();
-        
-        double platformRevenue = allTransactions.stream()
-                .filter(this::isPlatformIncome)
-                .mapToDouble(tx -> Math.abs(tx.getAmount()))
-                .sum();
-
-        // 📊 Granular Service Revenue Breakdown
-        double aiRevenue = allTransactions.stream()
-                .filter(tx -> isPlatformIncome(tx) && (tx.getDescription().contains("AI") || tx.getDescription().contains("Audit")))
-                .mapToDouble(tx -> Math.abs(tx.getAmount()))
-                .sum();
-
-        double chatRevenue = allTransactions.stream()
-                .filter(tx -> isPlatformIncome(tx) && tx.getDescription().contains("Chat"))
-                .mapToDouble(tx -> Math.abs(tx.getAmount()))
-                .sum();
-
-        double appointmentRevenue = allTransactions.stream()
-                .filter(tx -> isPlatformIncome(tx) && (tx.getDescription().contains("Appointment") || tx.getDescription().contains("LZY-")))
-                .mapToDouble(tx -> Math.abs(tx.getAmount()))
-                .sum();
-
-        double platformDaily = allTransactions.stream()
-                .filter(tx -> isPlatformIncome(tx) && tx.getTimestamp().isAfter(todayStart))
-                .mapToDouble(tx -> Math.abs(tx.getAmount()))
-                .sum();
-
-        double platformWeekly = allTransactions.stream()
-                .filter(tx -> isPlatformIncome(tx) && tx.getTimestamp().isAfter(weekStart))
-                .mapToDouble(tx -> Math.abs(tx.getAmount()))
-                .sum();
-
-        double platformMonthly = allTransactions.stream()
-                .filter(tx -> isPlatformIncome(tx) && tx.getTimestamp().isAfter(monthStart))
-                .mapToDouble(tx -> Math.abs(tx.getAmount()))
-                .sum();
-
-        // Calculate Overall Payable Balance (Sum of all experts' earned balances)
-        double overallPayable = walletRepository.findAll().stream()
-                .filter(w -> {
-                    User u = userRepository.findById(w.getId()).orElse(null);
-                    return u != null && (u.getRole() == Role.LAWYER || u.getRole() == Role.CA || u.getRole() == Role.CFA);
-                })
-                .mapToDouble(w -> w.getEarnedBalance() != null ? w.getEarnedBalance() : 0.0)
-                .sum();
+        // Calculate Overall Payable Balance using high-performance JOIN
+        double overallPayable = walletRepository.sumTotalExpertEarnedBalance();
 
         String systemMode = systemConfigRepository.findById("SYSTEM_MODE")
                 .map(SystemConfig::getConfigValue)
@@ -235,9 +197,10 @@ public class AdminController {
     }
 
     @GetMapping("/clients")
-    public ResponseEntity<List<User>> getClients() {
-        List<User> clients = userRepository.findByRoleIn(Collections.singletonList(Role.CLIENT));
-        return ResponseEntity.ok(clients);
+    public ResponseEntity<org.springframework.data.domain.Page<User>> getClients(
+            @org.springframework.data.web.PageableDefault(size = 20) org.springframework.data.domain.Pageable pageable) {
+        validatePermission("PROFILE AUDIT");
+        return ResponseEntity.ok(userRepository.findByRoleIn(java.util.Collections.singletonList(Role.CLIENT), pageable));
     }
 
     @GetMapping("/complaints")
@@ -251,15 +214,17 @@ public class AdminController {
     }
 
     @GetMapping("/ledger")
-    public ResponseEntity<List<FinancialTransaction>> getLedger() {
+    public ResponseEntity<org.springframework.data.domain.Page<FinancialTransaction>> getLedger(
+            @org.springframework.data.web.PageableDefault(size = 50, sort = "timestamp", direction = org.springframework.data.domain.Sort.Direction.DESC) org.springframework.data.domain.Pageable pageable) {
         validatePermission("FINANCIAL LEDGER");
-        return ResponseEntity.ok(financialTransactionRepository.findAll(Sort.by(Sort.Direction.DESC, "timestamp")));
+        return ResponseEntity.ok(financialTransactionRepository.findAll(pageable));
     }
 
     @GetMapping("/logs")
-    public ResponseEntity<List<AuditLog>> getLogs() {
+    public ResponseEntity<org.springframework.data.domain.Page<AuditLog>> getLogs(
+            @org.springframework.data.web.PageableDefault(size = 50, sort = "timestamp", direction = org.springframework.data.domain.Sort.Direction.DESC) org.springframework.data.domain.Pageable pageable) {
         validatePermission("SYSTEM LOGS");
-        return ResponseEntity.ok(auditLogRepository.findAll(Sort.by(Sort.Direction.DESC, "timestamp")));
+        return ResponseEntity.ok(auditLogRepository.findAll(pageable));
     }
 
     @GetMapping("/admin-actions")
@@ -459,7 +424,14 @@ public class AdminController {
         
         // This is a high-density update that targets the specific profile tables
         if (user.getRole() == Role.LAWYER) {
-            com.LawEZY.user.entity.LawyerProfile p = lawyerProfileRepository.findById(id).orElseThrow();
+            com.LawEZY.user.entity.LawyerProfile p = lawyerProfileRepository.findById(id).orElseGet(() -> {
+                com.LawEZY.user.entity.LawyerProfile newP = new com.LawEZY.user.entity.LawyerProfile();
+                newP.setId(id);
+                newP.setFirstName(user.getFirstName());
+                newP.setLastName(user.getLastName());
+                newP.setVerified(false);
+                return newP;
+            });
             if (payload.containsKey("firstName")) p.setFirstName((String) payload.get("firstName"));
             if (payload.containsKey("lastName")) p.setLastName((String) payload.get("lastName"));
             if (payload.containsKey("consultationFee")) p.setConsultationFee(Double.valueOf(payload.get("consultationFee").toString()));
@@ -479,7 +451,14 @@ public class AdminController {
             if (payload.containsKey("upiId")) p.setUpiId((String) payload.get("upiId"));
             lawyerProfileRepository.save(p);
         } else if (user.getRole() == Role.CA) {
-            com.LawEZY.user.entity.CAProfile p = caProfileRepository.findById(id).orElseThrow();
+            com.LawEZY.user.entity.CAProfile p = caProfileRepository.findById(id).orElseGet(() -> {
+                com.LawEZY.user.entity.CAProfile newP = new com.LawEZY.user.entity.CAProfile();
+                newP.setId(id);
+                newP.setFirstName(user.getFirstName());
+                newP.setLastName(user.getLastName());
+                newP.setVerified(false);
+                return newP;
+            });
             if (payload.containsKey("firstName")) p.setFirstName((String) payload.get("firstName"));
             if (payload.containsKey("lastName")) p.setLastName((String) payload.get("lastName"));
             if (payload.containsKey("consultationFee")) p.setConsultationFee(Double.valueOf(payload.get("consultationFee").toString()));
@@ -499,7 +478,14 @@ public class AdminController {
             if (payload.containsKey("upiId")) p.setUpiId((String) payload.get("upiId"));
             caProfileRepository.save(p);
         } else if (user.getRole() == Role.CFA) {
-            com.LawEZY.user.entity.CFAProfile p = cfaProfileRepository.findById(id).orElseThrow();
+            com.LawEZY.user.entity.CFAProfile p = cfaProfileRepository.findById(id).orElseGet(() -> {
+                com.LawEZY.user.entity.CFAProfile newP = new com.LawEZY.user.entity.CFAProfile();
+                newP.setId(id);
+                newP.setFirstName(user.getFirstName());
+                newP.setLastName(user.getLastName());
+                newP.setVerified(false);
+                return newP;
+            });
             if (payload.containsKey("firstName")) p.setFirstName((String) payload.get("firstName"));
             if (payload.containsKey("lastName")) p.setLastName((String) payload.get("lastName"));
             if (payload.containsKey("consultationFee")) p.setConsultationFee(Double.valueOf(payload.get("consultationFee").toString()));
@@ -858,7 +844,7 @@ public class AdminController {
 
     @DeleteMapping("/users/{id}")
     @Transactional
-    public ResponseEntity<Map<String, String>> deleteProfile(@PathVariable String id, @RequestParam String adminId) {
+    public ResponseEntity<Map<String, String>> deleteProfile(@PathVariable String id, @RequestParam(required = false) String adminId) {
         // Governance Check: Strictly limited to MASTER_ADMIN or the primary hardcoded master ID
         String requesterEmail = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
         User requester = userRepository.findByEmail(requesterEmail).orElse(null);
@@ -867,19 +853,26 @@ public class AdminController {
             return ResponseEntity.status(403).body(Map.of("error", "Access Denied: Master Identity required for user purge"));
         }
 
+        // Use the authenticated requester's ID if adminId param is missing
+        String actingAdminId = adminId != null ? adminId : requester.getId();
+
         User target = userRepository.findById(id).orElse(null);
         if (target == null) return ResponseEntity.notFound().build();
 
         // Prevent self-deletion
-        if (id.equals(adminId)) return ResponseEntity.badRequest().body(Map.of("error", "Security Breach: Self-deletion blocked"));
+        if (id.equals(actingAdminId)) return ResponseEntity.badRequest().body(Map.of("error", "Security Breach: Self-deletion blocked"));
 
-        // Cleanup associated records (Comprehensive Purge)
+        // Cleanup associated records (Comprehensive Purge - Order matters!)
         walletRepository.deleteByUserId(id);
         financialTransactionRepository.deleteByUserId(id);
-        appointmentRepository.deleteByExpert_Id(id);
-        appointmentRepository.deleteByClient_Id(id);
         reviewRepository.deleteByExpert_Id(id);
         reviewRepository.deleteByClient_Id(id);
+        reportRepository.deleteByReporterId(id);
+        reportRepository.deleteByTargetUserId(id);
+        
+        appointmentRepository.deleteByExpert_Id(id);
+        appointmentRepository.deleteByClient_Id(id);
+        
         professionalProfileRepository.deleteByUserId(id);
         
         // Role-Specific Profile cleanup
@@ -895,8 +888,8 @@ public class AdminController {
         log.setTimestamp(LocalDateTime.now());
         log.setUserRole("ADMIN");
         log.setEventType("DELETE_PROFILE");
-        log.setSummary("Permanently deleted profile: " + id + " (" + target.getEmail() + ") by admin: " + adminId);
-        log.setUserId(adminId);
+        log.setSummary("Permanently deleted profile: " + id + " (" + target.getEmail() + ") by admin: " + actingAdminId);
+        log.setUserId(actingAdminId);
         auditLogRepository.save(log);
 
         return ResponseEntity.ok(Map.of("message", "Profile and associated data purged successfully"));

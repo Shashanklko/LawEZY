@@ -11,4 +11,5 @@ public interface CAProfileRepository extends JpaRepository<CAProfile, String> {
     Optional<CAProfile> findBySlug(String slug);
     Optional<CAProfile> findByPhoneNumber(String phoneNumber);
     void deleteByUserId(String userId);
+    long countByIsVerifiedTrue();
 }

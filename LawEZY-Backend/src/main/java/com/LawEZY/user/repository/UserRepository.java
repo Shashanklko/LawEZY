@@ -15,6 +15,7 @@ public interface UserRepository extends JpaRepository<User, String>{
     boolean existsByEmail(String email);
     boolean existsByLoginId(String loginId);
     java.util.List<User> findByRoleIn(java.util.List<com.LawEZY.user.enums.Role> roles);
+    org.springframework.data.domain.Page<User> findByRoleIn(java.util.List<com.LawEZY.user.enums.Role> roles, org.springframework.data.domain.Pageable pageable);
     java.util.List<User> findByRole(com.LawEZY.user.enums.Role role);
     long countByRoleIn(java.util.List<com.LawEZY.user.enums.Role> roles);
 
