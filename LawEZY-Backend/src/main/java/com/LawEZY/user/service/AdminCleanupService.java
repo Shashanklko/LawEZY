@@ -25,7 +25,19 @@ public class AdminCleanupService {
     @Autowired private ProfessionalProfileRepository professionalProfileRepository;
     @Autowired private ClientProfileRepository clientProfileRepository;
 
-    @PostConstruct
+    @org.springframework.context.annotation.Lazy
+    @Autowired private AdminCleanupService self;
+
+    @org.springframework.context.event.EventListener(org.springframework.boot.context.event.ApplicationReadyEvent.class)
+    public void onApplicationReady() {
+        try {
+            self.cleanup();
+        } catch (Exception e) {
+            log.error("❌ INSTITUTIONAL CLEANUP: Final failure in startup purge.", e);
+        }
+    }
+
+    @Transactional
     public void cleanup() {
         List<String> idsToDelete = Arrays.asList("21LZ76AD", "25MA01MA");
         log.info("🛡️ INSTITUTIONAL CLEANUP: Starting purge for redundant administrative identities: {}", idsToDelete);

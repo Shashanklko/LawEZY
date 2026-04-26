@@ -327,6 +327,11 @@ const AdminPortal = () => {
            fetchAdminData(); // Silently sync with DB for accuracy
         }
 
+        // 🚀 REAL-TIME FINANCIAL SYNC
+        if (['NEW_TRANSACTION', 'WITHDRAWAL_REQUEST', 'APPOINTMENT_CONFIRMED', 'APPOINTMENT_PAID', 'APPOINTMENT_COMPLETED'].includes(eventType)) {
+            fetchAdminData();
+        }
+
         // 5. Profile Update Alerts
         if (eventType === 'PROFILE_UPDATE') {
            setAdminAlert({
@@ -1151,12 +1156,12 @@ const AdminPortal = () => {
                   .reduce((acc, l) => acc + l.amount, 0);
 
                 const commissionRevenue = ledger
-                  .filter(l => isPlatformRev(l) && (l.description.includes('Commission') || l.description.includes('Fee')))
-                  .reduce((acc, l) => acc + Math.abs(l.amount || 0), 0);
-
+                   .filter(l => l.amount > 0 && isPlatformRev(l) && (l.description.includes('Commission') || l.description.includes('Fee')))
+                   .reduce((acc, l) => acc + (l.amount || 0), 0);
+ 
                 const aiRevenue = ledger
-                  .filter(l => isPlatformRev(l) && (l.description.includes('AI') || l.description.includes('Audit')))
-                  .reduce((acc, l) => acc + Math.abs(l.amount || 0), 0);
+                   .filter(l => l.amount > 0 && isPlatformRev(l) && (l.description.includes('AI') || l.description.includes('Audit')))
+                   .reduce((acc, l) => acc + (l.amount || 0), 0);
 
                 // Chart Data (Last 7 Days)
                 const chartData = [...new Set(ledger.map(l => new Date(l.timestamp).toLocaleDateString()))]
@@ -1164,8 +1169,8 @@ const AdminPortal = () => {
                   .map(date => ({
                     date,
                     revenue: ledger
-                      .filter(l => isPlatformRev(l) && new Date(l.timestamp).toLocaleDateString() === date)
-                      .reduce((acc, l) => acc + Math.abs(l.amount || 0), 0)
+                      .filter(l => l.amount > 0 && isPlatformRev(l) && new Date(l.timestamp).toLocaleDateString() === date)
+                      .reduce((acc, l) => acc + (l.amount || 0), 0)
                   }))
                   .reverse();
 
@@ -1197,12 +1202,12 @@ const AdminPortal = () => {
                         </div>
 
                         <div className="finance-performance-grid" style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '20px', marginTop: '20px' }}>
-                          <div className="finance-chart-section glass animate-slide-up" style={{ padding: '30px', height: '400px' }}>
+                          <div className="finance-chart-section glass animate-fade-in" style={{ padding: '30px', height: '400px', minWidth: 0 }}>
                             <div className="section-header-saas" style={{ marginBottom: '20px' }}>
                               <h3>📈 Revenue Performance (Last 7 Days)</h3>
                               <span className="live-tag">REAL-TIME DATA</span>
                             </div>
-                            <ResponsiveContainer width="100%" height="100%">
+                            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} debounce={100}>
                               <AreaChart data={chartData}>
                                 <defs>
                                   <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
@@ -1222,12 +1227,12 @@ const AdminPortal = () => {
                             </ResponsiveContainer>
                           </div>
 
-                          <div className="finance-distribution-section glass animate-slide-up" style={{ padding: '30px', height: '400px' }}>
+                          <div className="finance-distribution-section glass animate-fade-in" style={{ padding: '30px', height: '400px', minWidth: 0 }}>
                             <div className="section-header-saas" style={{ marginBottom: '20px' }}>
                               <h3>🥧 Service Distribution</h3>
                               <span className="live-tag">REVENUE SPLIT</span>
                             </div>
-                            <ResponsiveContainer width="100%" height="100%">
+                            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} debounce={100}>
                               <PieChart>
                                 <Pie
                                   data={[
@@ -1256,6 +1261,51 @@ const AdminPortal = () => {
                                <div style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '5px' }}><span style={{ width: '8px', height: '8px', background: '#3b82f6', borderRadius: '50%' }}></span> Chat</div>
                                <div style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '5px' }}><span style={{ width: '8px', height: '8px', background: '#10b981', borderRadius: '50%' }}></span> Appt</div>
                             </div>
+                          </div>
+                        </div>
+
+                        {/* MIRRORED LEDGER FOR QUICK VISIBILITY */}
+                        <div className="dashboard-ledger-preview glass animate-slide-up" style={{ marginTop: '32px' }}>
+                          <div className="section-header-saas">
+                            <h3>📒 Recent Platform Transactions</h3>
+                            <div className="export-controls">
+                              <button className="btn-view-sm" onClick={() => setFinanceSubTab('audit')} style={{ fontSize: '0.7rem', padding: '4px 10px' }}>Full Audit Ledger →</button>
+                            </div>
+                          </div>
+                          <div style={{ overflowX: 'auto' }}>
+                            <table className="saas-finance-table" style={{ marginTop: '10px' }}>
+                              <thead>
+                                <tr>
+                                  <th>Date</th>
+                                  <th>Description</th>
+                                  <th>Party</th>
+                                  <th style={{ textAlign: 'right' }}>Amount</th>
+                                  <th style={{ textAlign: 'center' }}>Status</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {ledger.slice(0, 10).map(txn => (
+                                  <tr key={txn.id}>
+                                    <td style={{ fontSize: '0.7rem', opacity: 0.7 }}>{new Date(txn.timestamp).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</td>
+                                    <td style={{ fontWeight: 600 }}>{txn.description}</td>
+                                    <td style={{ fontSize: '0.75rem' }}>{txn.userName || txn.userId || 'System'}</td>
+                                    <td style={{ textAlign: 'right', fontWeight: 800 }} className={txn.amount < 0 ? 'text-danger' : 'text-success'}>
+                                      ₹{Math.abs(txn.amount).toLocaleString()}
+                                    </td>
+                                    <td style={{ textAlign: 'center' }}>
+                                      <span className={`saas-pill ${txn.status === 'COMPLETED' || txn.status === 'SUCCESS' ? 'success' : txn.status === 'ESCROW' ? 'info' : 'warning'}`}>
+                                        {txn.status}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                ))}
+                                {ledger.length === 0 && (
+                                  <tr>
+                                    <td colSpan="5" style={{ textAlign: 'center', padding: '40px', opacity: 0.5 }}>No recent transactions recorded.</td>
+                                  </tr>
+                                )}
+                              </tbody>
+                            </table>
                           </div>
                         </div>
                       </div>
@@ -1410,7 +1460,7 @@ const AdminPortal = () => {
                                 <h3>🏦 Institutional Escrow Ledger</h3>
                               </div>
                               <div className="transaction-timeline">
-                                {ledger.filter(t => t.status === 'LOCKED').map(tx => (
+                                {ledger.filter(t => t.status === 'LOCKED' || t.status === 'ESCROW').map(tx => (
                                   <div key={tx.id} className="tx-step-item">
                                     <div className="tx-info-block">
                                       <h4>{tx.userName || tx.userId} ➔ Escrow</h4>

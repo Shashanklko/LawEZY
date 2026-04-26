@@ -179,7 +179,7 @@ const Messages = () => {
       const response = await apiClient.get(endpoint);
       
       if (response.data && response.data.data) {
-        const incoming = response.data.data;
+        const incoming = Array.isArray(response.data.data) ? response.data.data : [];
         
         setChats(prev => {
             // [INSTITUTIONAL SYNC] Merge new data while preserving state of existing chats
@@ -540,7 +540,9 @@ const Messages = () => {
     const fetchProfessionals = async () => {
       try {
         const response = await apiClient.get('/api/professionals');
-        setProfessionals(response.data);
+        // Handle both Array and Page objects from Spring Data
+        const data = Array.isArray(response.data) ? response.data : (response.data?.content || []);
+        setProfessionals(data);
       } catch (err) {
         console.error('Error fetching discovery professionals:', err);
       }
@@ -585,7 +587,8 @@ const Messages = () => {
     const fetchHistory = async () => {
       try {
         const response = await apiClient.get(`/api/chat/${activeChatId}/history`);
-        setMessages(response.data.data);
+        const historyData = Array.isArray(response.data.data) ? response.data.data : [];
+        setMessages(historyData);
         
         // Institutional Sync: Mark messages as read on entry
         apiClient.post(`/api/chat/${activeChatId}/read`).catch(() => {});
@@ -1209,7 +1212,9 @@ const Messages = () => {
                     style={{ borderLeft: '3px solid transparent' }}
                   >
                     <div className="chat-avatar-wrapper">
-                      <img src={expert.avatar} alt={expert.name} />
+                      <div className="letter-avatar" style={{ background: 'var(--midnight-primary)', color: 'var(--elite-gold)', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.9rem', border: '2px solid var(--elite-gold)' }}>
+                        {(expert.name || 'P')[0].toUpperCase()}
+                      </div>
                       {expert.online && <div className="online-indicator"></div>}
                     </div>
                     <div className="chat-preview-text">
@@ -1231,7 +1236,9 @@ const Messages = () => {
                 onClick={() => setActiveChatId(chat.id)}
               >
                 <div className="chat-avatar-wrapper">
-                  <img src={chat.avatar} alt={chat.name} />
+                  <div className="letter-avatar" style={{ background: 'var(--midnight-primary)', color: 'var(--elite-gold)', width: '45px', height: '45px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1rem', border: '2px solid var(--elite-gold)' }}>
+                    {(chat.name || 'C')[0].toUpperCase()}
+                  </div>
                   {chat.online && <div className="online-indicator"></div>}
                 </div>
                 <div className="chat-preview-text">
@@ -1315,7 +1322,9 @@ const Messages = () => {
             title="Account Options"
           >
             <div className="sidebar-user-avatar">
-              <img src={user?.avatar || "https://i.pravatar.cc/150?img=11"} alt="Current User" />
+              <div className="letter-avatar" style={{ background: 'var(--midnight-primary)', color: 'var(--elite-gold)', width: '42px', height: '42px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1rem', border: '2px solid var(--elite-gold)' }}>
+                {(user?.firstName || user?.name || 'U')[0].toUpperCase()}
+              </div>
               <div className="user-online-status"></div>
             </div>
             <div className="sidebar-user-info">
@@ -1393,7 +1402,9 @@ const Messages = () => {
                   >
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
                   </button>
-                  <img src={activeChat.avatar || (isConnecting ? 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=400&fit=crop' : '')} alt={activeChat.name} className="header-avatar" />
+                  <div className="header-avatar-letter" style={{ background: 'var(--midnight-primary)', color: 'var(--elite-gold)', width: '45px', height: '45px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1.1rem', border: '2px solid var(--elite-gold)', marginRight: '15px' }}>
+                    {(activeChat.name || 'E')[0].toUpperCase()}
+                  </div>
                   <div>
                     <h3>{activeChat.name || (isConnecting ? (expertNameParam || 'Expert Consultation') : '')}</h3>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
@@ -2088,7 +2099,9 @@ const Messages = () => {
                                             </button>
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                            <h4 style={{ color: 'white', margin: 0, fontFamily: 'Outfit, sans-serif', fontSize: '0.8rem', letterSpacing: '0.3px' }}>Consultation Window Concluded</h4>
+                                            <h4 style={{ color: 'white', margin: 0, fontFamily: 'Outfit, sans-serif', fontSize: '0.8rem', letterSpacing: '0.3px' }}>
+                                                {activeChat?.trialEnded && !activeChat?.expiryTime ? "Trial Consumed - Payment Required" : "Consultation Window Concluded"}
+                                            </h4>
                                         </div>
                                     </>
                                 ) : (
@@ -2129,7 +2142,9 @@ const Messages = () => {
                                             </button>
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                            <h4 style={{ color: 'white', margin: 0, fontFamily: 'Outfit, sans-serif', fontSize: '0.8rem', letterSpacing: '0.3px' }}>Consultation Window Concluded</h4>
+                                            <h4 style={{ color: 'white', margin: 0, fontFamily: 'Outfit, sans-serif', fontSize: '0.8rem', letterSpacing: '0.3px' }}>
+                                                {activeChat?.trialEnded && !activeChat?.expiryTime ? "Trial Consumed - Payment Required" : "Consultation Window Concluded"}
+                                            </h4>
                                         </div>
                                     </>
                                 )}

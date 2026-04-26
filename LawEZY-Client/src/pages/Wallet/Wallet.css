@@ -389,6 +389,7 @@
 
 .status-tx-paid { background: #dcfce7; color: #166534; }
 .status-tx-pending { background: #fef3c7; color: #92400e; }
+.status-tx-escrow { background: #dbeafe; color: #1e40af; }
 
 .btn-reset-ledger {
     background: transparent;

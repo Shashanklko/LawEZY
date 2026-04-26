@@ -33,6 +33,7 @@ public class WalletService {
     private final ProfessionalProfileRepository professionalProfileRepository;
     private final NotificationService notificationService;
     private final com.LawEZY.common.service.EmailService emailService;
+    private final AdminBroadcastService adminBroadcastService;
 
     public WalletService(
             WalletRepository walletRepository,
@@ -41,7 +42,8 @@ public class WalletService {
             ClientProfileRepository clientProfileRepository,
             ProfessionalProfileRepository professionalProfileRepository,
             NotificationService notificationService,
-            com.LawEZY.common.service.EmailService emailService
+            com.LawEZY.common.service.EmailService emailService,
+            AdminBroadcastService adminBroadcastService
     ) {
         this.walletRepository = walletRepository;
         this.transactionRepository = transactionRepository;
@@ -50,6 +52,7 @@ public class WalletService {
         this.professionalProfileRepository = professionalProfileRepository;
         this.notificationService = notificationService;
         this.emailService = emailService;
+        this.adminBroadcastService = adminBroadcastService;
     }
 
     @Transactional
@@ -101,6 +104,13 @@ public class WalletService {
                 String.format("₹%.0f has been credited to your institutional wallet. New balance: ₹%.0f", amount, wallet.getCashBalance()),
                 "PAYMENT", "FINANCIAL", "/wallet");
         } catch (Exception e) { log.warn("Notification dispatch failed for deposit: {}", e.getMessage()); }
+
+        // 🚀 REAL-TIME BROADCAST: Admin Sync
+        adminBroadcastService.broadcastAdminEvent("NEW_TRANSACTION", java.util.Map.of(
+            "type", "DEPOSIT",
+            "amount", amount,
+            "userId", userId
+        ));
 
         return saved;
     }
@@ -206,6 +216,14 @@ public class WalletService {
             FinancialTransaction platformTxn = createTxn(masterAdmin, platformDesc, platformCut, "COMPLETED");
             transactionRepository.save(platformTxn);
         }
+        
+        // 🚀 REAL-TIME BROADCAST: Admin Sync
+        adminBroadcastService.broadcastAdminEvent("NEW_TRANSACTION", java.util.Map.of(
+            "type", "APPOINTMENT_PAYMENT",
+            "amount", fee,
+            "appointmentId", appt.getId()
+        ));
+
         log.info("[WALLET] Appointment Ref-{} payment processed: Client deducted ₹{} via direct User ID.", appt.getId(), fee);
     }
 
@@ -249,6 +267,12 @@ public class WalletService {
             log.warn("Failed to dispatch payout release email: {}", e.getMessage());
         }
         
+        // 🚀 REAL-TIME BROADCAST: Admin Sync
+        adminBroadcastService.broadcastAdminEvent("ESCROW_RELEASED", java.util.Map.of(
+            "appointmentId", appt.getId(),
+            "amount", expertEarned
+        ));
+
         log.info("[WALLET] Escrow released for Appointment Ref-{}. Amount: ₹{}", appt.getId(), expertEarned);
     }
 
@@ -273,6 +297,12 @@ public class WalletService {
                 String.format("₹%.0f payout request submitted. Admin settles expert payouts at week-end.", amount),
                 "PAYMENT", "FINANCIAL", "/wallet");
         } catch (Exception e) { log.warn("Notification dispatch failed for withdrawal: {}", e.getMessage()); }
+
+        // 🚀 REAL-TIME BROADCAST: Admin Sync
+        adminBroadcastService.broadcastAdminEvent("WITHDRAW_REQUEST", java.util.Map.of(
+            "amount", amount,
+            "userId", uid
+        ));
 
         return saved;
     }

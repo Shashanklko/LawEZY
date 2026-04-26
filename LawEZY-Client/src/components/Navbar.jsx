@@ -375,7 +375,7 @@ const Navbar = () => {
           display: flex;
           align-items: center;
           position: fixed;
-          top: 0;
+          top: var(--banner-height, 0);
           left: 0;
           right: 0;
           z-index: 2000;

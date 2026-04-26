@@ -37,9 +37,13 @@ const ExpertAppointments = ({ walletBalance, pendingCount, onRefresh }) => {
             };
             socket.on('notification_received', handler);
             socket.on('discovery_sync', handler);
+            socket.on('new_notification', handler);
+            socket.on('appointment_update', handler);
             return () => {
                 socket.off('notification_received', handler);
                 socket.off('discovery_sync', handler);
+                socket.off('new_notification', handler);
+                socket.off('appointment_update', handler);
             };
         }
     }, [onRefresh]);

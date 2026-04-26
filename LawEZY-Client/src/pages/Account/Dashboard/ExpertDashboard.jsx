@@ -84,10 +84,16 @@ const ExpertDashboard = () => {
                 const socket = getSocket(token);
                 socket.on('notification_received', fetchDashboardData);
                 socket.on('discovery_sync', fetchDashboardData);
+                socket.on('new_notification', fetchDashboardData);
+                socket.on('appointment_update', fetchDashboardData);
+                socket.on('transaction_update', fetchDashboardData);
                 
                 return () => {
                     socket.off('notification_received', fetchDashboardData);
                     socket.off('discovery_sync', fetchDashboardData);
+                    socket.off('new_notification', fetchDashboardData);
+                    socket.off('appointment_update', fetchDashboardData);
+                    socket.off('transaction_update', fetchDashboardData);
                 };
             }
         }
@@ -146,7 +152,38 @@ const ExpertDashboard = () => {
             case 'appointments':
                 return <ExpertAppointments walletBalance={wallet?.earnedBalance || 0} pendingCount={pendingAppointments} onRefresh={fetchDashboardData} />;
             case 'wallet':
-                return <Wallet transactions={transactions} onRefresh={fetchDashboardData} isExpertView={true} />;
+                return (
+                    <div className="wallet-tab-view animate-slide-up">
+                        <Wallet transactions={transactions} onRefresh={fetchDashboardData} isExpertView={true} />
+                        
+                        {/* 🔒 ESCROW VAULT BREAKDOWN */}
+                        <div className="escrow-vault-section glass" style={{ marginTop: '40px', padding: '30px', borderRadius: '24px', background: 'rgba(59, 130, 246, 0.02)', border: '1px solid rgba(59, 130, 246, 0.1)' }}>
+                            <div className="section-header-pro" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                                <h3 style={{ color: '#1e40af', fontWeight: 900, margin: 0 }}>🛡️ Escrow Vault Ledger</h3>
+                                <span className="vault-status-pill" style={{ background: '#dbeafe', color: '#1e40af', padding: '4px 12px', borderRadius: '20px', fontSize: '0.7rem', fontWeight: 800 }}>SECURED BY LAW-EZY</span>
+                            </div>
+                            <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '25px' }}>These funds are held in escrow for active appointments and will be released to your main balance upon session completion and client review.</p>
+                            
+                            <div className="escrow-list">
+                                {transactions.filter(t => t.status === 'ESCROW').length > 0 ? (
+                                    transactions.filter(t => t.status === 'ESCROW').map(tx => (
+                                        <div key={tx.id} className="escrow-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 20px', background: 'white', borderRadius: '16px', marginBottom: '10px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+                                            <div className="e-info">
+                                                <div className="e-desc" style={{ fontWeight: 700, fontSize: '0.9rem', color: '#0f172a' }}>{tx.description}</div>
+                                                <div className="e-meta" style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '2px' }}>{new Date(tx.timestamp).toLocaleString()} • Ref: {tx.transactionRefId?.substring(0, 8)}</div>
+                                            </div>
+                                            <div className="e-amount" style={{ fontWeight: 900, color: '#3b82f6', fontSize: '1rem' }}>₹{tx.amount.toLocaleString()}</div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div style={{ textAlign: 'center', padding: '40px', opacity: 0.5, fontStyle: 'italic', fontSize: '0.85rem' }}>
+                                        No active funds currently held in escrow.
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                );
             default:
                 return <ExpertAppointments walletBalance={wallet?.earnedBalance || 0} pendingCount={pendingAppointments} onRefresh={fetchDashboardData} />;
         }
@@ -170,7 +207,9 @@ const ExpertDashboard = () => {
                     </div>
                     <div className="expert-identity-card">
                         <div className="avatar-wrapper-elite">
-                            <img src={profile?.avatar || user?.avatar || 'https://ui-avatars.com/api/?name=EX&background=0D1B2A&color=E0C389'} alt="Expert" />
+                            <div className="letter-avatar" style={{ background: 'var(--midnight-primary)', color: 'var(--elite-gold)', width: '60px', height: '60px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1.5rem', border: '3px solid var(--elite-gold)' }}>
+                                {(profile?.name || user?.firstName || 'E')[0].toUpperCase()}
+                            </div>
                             {!isCollapsed && <div className={`status-node ${isOnline ? 'online' : 'offline'}`}></div>}
                         </div>
                         {!isCollapsed && (
@@ -327,6 +366,13 @@ const ExpertDashboard = () => {
                                     </div>
                                     <div className="m-icon" style={{ width: '30px', height: '30px', fontSize: '0.9rem' }}>🏛️</div>
                                 </div>
+                                <div className="metric-card-pro mini-gold" onClick={() => setActiveTab('wallet')} style={{ cursor: 'pointer', background: '#dbeafe', borderColor: '#3b82f6' }}>
+                                    <div className="m-content">
+                                        <span className="m-label" style={{ color: '#1e40af', fontWeight: 800 }}>ESCROW LOCKED</span>
+                                        <span className="m-value" style={{ fontSize: '1rem', color: '#1e40af' }}>₹{wallet?.escrowBalance?.toLocaleString() || '0'}</span>
+                                    </div>
+                                    <div className="m-icon" style={{ width: '30px', height: '30px', fontSize: '0.9rem', background: '#3b82f6', color: 'white' }}>🔒</div>
+                                </div>
                             </>
                         )}
                     </div>
@@ -364,7 +410,7 @@ const ExpertDashboard = () => {
                             ) : chatSessions.length > 0 ? (
                                 chatSessions.slice(0, 4).map(session => (
                                     <div key={session.id} className="chat-item-dash" onClick={() => navigate(`/messages?sessionId=${session.id}`)} style={{ borderBottom: '1px solid #f8fafc' }}>
-                                        <div className="c-avatar" style={{ background: 'var(--midnight-primary)', color: 'var(--elite-gold)', borderRadius: '12px' }}>{session.clientName?.charAt(0) || 'C'}</div>
+                                        <div className="c-avatar" style={{ background: 'var(--midnight-primary)', color: 'var(--elite-gold)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>{(session.clientName || 'C').charAt(0).toUpperCase()}</div>
                                         <div className="c-info">
                                             <strong style={{ color: 'var(--midnight-primary)', fontSize: '0.9rem' }}>{session.clientName || 'Client'}</strong>
                                             <p className="last-msg" style={{ color: '#64748b' }}>{session.lastMessage || 'Awaiting synchronization...'}</p>

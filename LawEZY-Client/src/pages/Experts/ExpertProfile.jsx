@@ -158,7 +158,9 @@ const ExpertProfile = ({ expertId, isModal }) => {
           <div className="profile-header-main">
             <div className="profile-avatar-large">
               <div className="avatar-wrapper-elite">
-                <img src={expert.avatar} alt={expert.name} />
+                <div className="letter-avatar" style={{ background: 'var(--midnight-primary)', color: 'var(--elite-gold)', width: '120px', height: '120px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '3rem', border: '4px solid var(--elite-gold)', boxShadow: '0 15px 35px rgba(0,0,0,0.2)' }}>
+                  {(expert.name || 'P')[0].toUpperCase()}
+                </div>
                 <span className={`status-badge ${expert.online ? 'online' : 'offline'}`}>
                   {expert.online ? 'AVAILABLE NOW' : 'OFFLINE'}
                 </span>
@@ -420,7 +422,9 @@ const ExpertProfile = ({ expertId, isModal }) => {
         <div className="sticky-action-bar animate-reveal-up">
           <div className="sticky-bar-content">
             <div className="sticky-expert-info">
-              <img src={expert.avatar} alt={expert.name} className="sticky-avatar" />
+              <div className="sticky-avatar-letter" style={{ background: 'var(--midnight-primary)', color: 'var(--elite-gold)', width: '35px', height: '35px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.8rem', border: '1px solid var(--elite-gold)', marginRight: '10px' }}>
+                {(expert.name || 'P')[0].toUpperCase()}
+              </div>
               <div className="sticky-text">
                 <strong>{expert.name}</strong>
                 <span>{expert.price ? `₹${expert.price}/session` : 'Value-Based Pricing'}</span>

@@ -12,7 +12,7 @@ const Wallet = ({ onRefresh }) => {
     const isExpertUI = viewMode === 'EXPERT';
 
     const [transactions, setTransactions] = useState([]);
-    const [showTxHistory, setShowTxHistory] = useState(false);
+    const [showTxHistory, setShowTxHistory] = useState(true);
     const [loading, setLoading] = useState(true);
     const [processing, setProcessing] = useState(false);
     const [message, setMessage] = useState('');
@@ -160,17 +160,17 @@ const Wallet = ({ onRefresh }) => {
 
     const classifyExpertIncomeSource = (description = '') => {
         const text = description.toLowerCase();
-        if (text.includes('consultation earned') || text.includes('appointment')) return 'APPOINTMENT';
-        if (text.includes('expert consultation') || text.includes('chat') || text.includes('message')) return 'MESSAGE';
-        if (text.includes('payout')) return 'SETTLEMENT';
-        return 'OTHER';
+        if (text.includes('consultation') || text.includes('appointment') || text.includes('secured') || text.includes('vault') || text.includes('session')) return 'APPOINTMENT';
+        if (text.includes('chat') || text.includes('message') || text.includes('expert fee')) return 'MESSAGE';
+        if (text.includes('payout') || text.includes('withdrawal') || text.includes('settlement')) return 'SETTLEMENT';
+        return 'INCOME';
     };
 
     const getCompletedIncome = (tx) => {
         const amount = Number(tx?.amount || 0);
         const status = (tx?.status || '').toUpperCase();
         const isPayout = (tx?.description || '').toLowerCase().includes('payout');
-        return (amount > 0 || isPayout) && ['COMPLETED', 'PAID', 'SUCCESS'].includes(status);
+        return (amount > 0 || isPayout) && ['COMPLETED', 'PAID', 'SUCCESS', 'ESCROW'].includes(status);
     };
 
     const expertIncomeTransactions = (transactions || [])
@@ -179,7 +179,7 @@ const Wallet = ({ onRefresh }) => {
             if (!tx) return null;
             return { ...tx, source: classifyExpertIncomeSource(tx.description) };
         })
-        .filter((tx) => tx && (tx.source === 'APPOINTMENT' || tx.source === 'MESSAGE' || tx.source === 'SETTLEMENT'));
+        .filter((tx) => tx && (tx.source === 'APPOINTMENT' || tx.source === 'MESSAGE' || tx.source === 'SETTLEMENT' || tx.source === 'INCOME'));
 
     const startOfWeek = new Date(now);
     const day = now.getDay();
@@ -390,7 +390,7 @@ const Wallet = ({ onRefresh }) => {
                                     {tx.amount < 0 ? '-' : '+'}₹{Math.abs(tx.amount).toLocaleString()}
                                 </td>
                                 <td style={{textAlign: 'center'}}>
-                                    <span className={`status-pill-tx ${tx.status === 'PAID' ? 'status-tx-paid' : 'status-tx-pending'}`}>
+                                    <span className={`status-pill-tx ${['PAID', 'COMPLETED', 'SUCCESS'].includes(tx.status) ? 'status-tx-paid' : tx.status === 'ESCROW' ? 'status-tx-escrow' : 'status-tx-pending'}`}>
                                         {tx.status}
                                     </span>
                                 </td>

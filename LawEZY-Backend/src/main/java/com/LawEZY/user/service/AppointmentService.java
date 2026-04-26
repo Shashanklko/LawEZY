@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+import java.util.Map;
 
 @Service
 public class AppointmentService {
@@ -25,6 +26,7 @@ public class AppointmentService {
     private final com.LawEZY.user.repository.UserRepository userRepository;
     private final com.LawEZY.user.service.WalletService walletService;
     private final NotificationService notificationService;
+    private final AdminBroadcastService adminBroadcastService;
     private final com.LawEZY.common.service.EmailService emailService;
 
     public AppointmentService(
@@ -38,6 +40,7 @@ public class AppointmentService {
             com.LawEZY.user.repository.UserRepository userRepository,
             com.LawEZY.user.service.WalletService walletService,
             NotificationService notificationService,
+            AdminBroadcastService adminBroadcastService,
             com.LawEZY.common.service.EmailService emailService
     ) {
         this.appointmentRepository = appointmentRepository;
@@ -50,6 +53,7 @@ public class AppointmentService {
         this.userRepository = userRepository;
         this.walletService = walletService;
         this.notificationService = notificationService;
+        this.adminBroadcastService = adminBroadcastService;
         this.emailService = emailService;
     }
 
@@ -252,6 +256,13 @@ public class AppointmentService {
             log.warn("Failed to send confirmation email: {}", e.getMessage());
         }
         
+        // 🚀 REAL-TIME BROADCAST: Admin Sync
+        adminBroadcastService.broadcastAdminEvent("APPOINTMENT_CONFIRMED", Map.of(
+            "id", saved.getId(),
+            "client", appt.getClient().getId(),
+            "expert", appt.getExpert().getId()
+        ));
+
         return saved;
     }
 
@@ -420,7 +431,17 @@ public class AppointmentService {
             }
         }
         
-        return appointmentRepository.save(appointment);
+        Appointment saved = appointmentRepository.save(appointment);
+
+        // 🚀 REAL-TIME BROADCAST: Admin Sync
+        if ("PAID".equalsIgnoreCase(status)) {
+            adminBroadcastService.broadcastAdminEvent("APPOINTMENT_PAID", Map.of(
+                "id", saved.getId(),
+                "amount", saved.getFee()
+            ));
+        }
+
+        return saved;
     }
 
     @Transactional
@@ -469,7 +490,15 @@ public class AppointmentService {
             appt.setPayoutReleased(true);
         }
         
-        return appointmentRepository.save(appt);
+        Appointment saved = appointmentRepository.save(appt);
+
+        // 🚀 REAL-TIME BROADCAST: Admin Sync
+        adminBroadcastService.broadcastAdminEvent("APPOINTMENT_COMPLETED", Map.of(
+            "id", saved.getId(),
+            "expert", saved.getExpert().getId()
+        ));
+
+        return saved;
     }
 
     /**

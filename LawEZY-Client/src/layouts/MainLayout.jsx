@@ -12,6 +12,15 @@ const MainLayout = () => {
   const location = useLocation();
   const path = location.pathname;
   const { systemMode, setSystemMode, user, updateLastSeen } = useAuthStore();
+  const [activeAlert, setActiveAlert] = React.useState(null);
+
+  // 🕒 DYNAMIC BANNER CALCULATOR: Ensure UI shifts correctly for stacked alerts
+  const showTestingBanner = systemMode === 'TESTING' && !isAdminPage;
+  const showGlobalAlert = !!activeAlert;
+  
+  const testingBannerHeight = showTestingBanner ? 36 : 0;
+  const alertBannerHeight = showGlobalAlert ? 48 : 0;
+  const totalBannerHeight = testingBannerHeight + alertBannerHeight;
 
   // 🕒 INSTITUTIONAL SESSION HEARTBEAT: Update 'lastSeen' on navigation and every 5 minutes
   useEffect(() => {
@@ -58,8 +67,6 @@ const MainLayout = () => {
     };
   }, [path, setSystemMode]);
 
-  const [activeAlert, setActiveAlert] = React.useState(null);
-
   // 🛡️ NAVIGATION GOVERNANCE
   const isAuthPage = path === '/login' || path === '/signup';
   const isAdminPage = path.startsWith('/admin');
@@ -82,14 +89,20 @@ const MainLayout = () => {
     <div className="layout-root">
       {!isAuthPage && !isAdminPage && <Navbar />}
       
-      {systemMode === 'TESTING' && !isAdminPage && (
-        <div className="testing-mode-banner">
-          ⚠️ <strong>SYSTEM IN TESTING MODE:</strong> Some features may be unstable or experimental.
+      {showTestingBanner && (
+        <div className="system-global-banner testing-mode" style={{ top: '0px' }}>
+          <span className="banner-icon">🧪</span>
+          <div className="banner-text">
+            <strong>INSTITUTIONAL TESTING ENVIRONMENT:</strong> You are currently operating in an experimental mode. Data may be reset or modified during this cycle.
+          </div>
         </div>
       )}
 
-      {activeAlert && (
-        <div className={`system-alert-banner ${activeAlert.level?.toLowerCase()}`}>
+      {showGlobalAlert && (
+        <div 
+          className={`system-global-banner alert-banner ${activeAlert.level?.toLowerCase()}`}
+          style={{ top: `${testingBannerHeight}px`, height: '48px' }}
+        >
           <div className="alert-content">
             <span className="alert-icon">
               {activeAlert.level === 'DANGER' ? '🛑' : activeAlert.level === 'WARNING' ? '⚠️' : '📢'}
@@ -130,6 +143,10 @@ const MainLayout = () => {
           background: var(--primary-bg);
           display: flex;
           flex-direction: column;
+          /* Handle global banner offsets dynamically */
+          --banner-height: ${totalBannerHeight}px;
+          padding-top: var(--banner-height);
+          transition: padding-top 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
         .content {
           flex: 1;
@@ -182,9 +199,10 @@ const MainLayout = () => {
         }
 
         .alert-text {
-          font-size: 0.95rem;
-          font-weight: 500;
+          font-size: 0.85rem;
+          font-weight: 600;
           font-family: 'Inter', sans-serif;
+          color: inherit;
         }
 
         .btn-close-alert {
@@ -205,14 +223,51 @@ const MainLayout = () => {
           to { transform: translateY(0); }
         }
 
-        .testing-mode-banner {
-          background: #f59e0b;
-          color: #000;
-          padding: 8px;
-          text-align: center;
-          font-size: 0.85rem;
+        .system-global-banner {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 36px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 12px;
+          z-index: 2100; /* Above Navbar */
+          font-family: 'Inter', sans-serif;
+          font-size: 0.75rem;
           font-weight: 700;
-          letter-spacing: 0.5px;
+          letter-spacing: 0.3px;
+          box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .system-global-banner.alert-banner {
+          background: var(--elite-gold);
+          color: #000;
+        }
+
+        .system-global-banner.alert-banner.warning {
+          background: #f59e0b;
+        }
+
+        .system-global-banner.alert-banner.danger {
+          background: #ef4444;
+          color: white;
+        }
+
+        .alert-content {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          max-width: 1200px;
+          margin: 0 auto;
+        }
+
+        .banner-icon { font-size: 1rem; }
+        
+        .banner-text strong {
+          color: #000;
+          margin-right: 4px;
         }
       `}</style>
     </div>

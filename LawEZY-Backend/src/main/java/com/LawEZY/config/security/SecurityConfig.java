@@ -73,8 +73,10 @@ public class SecurityConfig {
                 .requestMatchers("/ws/**").permitAll()               // ALLOW WebSocket handshake
                 // 🔐 ADMIN GOVERNANCE: Strictly enforce ROLE_ADMIN or ROLE_MASTER_ADMIN for all command-center endpoints
                 .requestMatchers("/api/admin/**").hasAnyRole("ADMIN", "MASTER_ADMIN")
-                // 🛡️ RESOURCE PROTECTION: Any authenticated user can publish; only Admins can delete
-                .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/api/resources/**").hasRole("ADMIN")
+                // 🛡️ RESOURCE PROTECTION: Restricted to Professionals/Admins; Master Admin parity
+                .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/resources/**").hasAnyRole("ADMIN", "MASTER_ADMIN", "LAWYER", "CA", "CFA")
+                .requestMatchers(org.springframework.http.HttpMethod.PUT, "/api/resources/**").hasAnyRole("ADMIN", "MASTER_ADMIN", "LAWYER", "CA", "CFA")
+                .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/api/resources/**").hasAnyRole("ADMIN", "MASTER_ADMIN")
                 .anyRequest().authenticated()                        // Block ALL other endpoints without a valid JWT
             )
             .sessionManagement(session -> session

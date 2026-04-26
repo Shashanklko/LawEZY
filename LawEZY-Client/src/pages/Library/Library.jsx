@@ -21,7 +21,7 @@ const MOCK_CATEGORIES = [
 
 const Library = () => {
   const navigate = useNavigate();
-  const { user } = useAuthStore();
+  const { user, viewMode } = useAuthStore();
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -312,7 +312,7 @@ const Library = () => {
             ))}
 
             <div className="nav-section-label" style={{ marginTop: '25px' }}>My Expert Hub</div>
-            {(user?.role === 'EXPERT' || user?.role === 'ADMIN') && (
+            {(viewMode === 'EXPERT' || viewMode === 'ADMIN') && (
               <button 
                 className={`nav-item ${showNotion ? 'active' : ''}`}
                 onClick={() => { setShowNotion(true); setHubFilter(null); }}
@@ -360,7 +360,7 @@ const Library = () => {
               <p>{filteredResources.length} curated volumes available in this compartment.</p>
             </div>
             <div className="header-actions">
-              {(user?.role === 'EXPERT' || user?.role === 'ADMIN') && (
+              {(viewMode === 'EXPERT' || viewMode === 'ADMIN') && (
                 <button className="btn-add-resource-elite" onClick={() => setShowAddModal(true)}>
                   <span>+</span> Add Resource
                 </button>
@@ -423,7 +423,7 @@ const Library = () => {
                       
                       {activeMenuId === resource.id && (
                         <div className="card-more-dropdown glass animate-reveal">
-                          {(user?.role === 'ADMIN' || user?.id === resource.authorId) && (
+                          {(viewMode === 'ADMIN' || user?.id === resource.authorId) && (
                             <>
                               <button onClick={() => { handleEdit(resource); setActiveMenuId(null); }}>✏️ Edit Content</button>
                               <button className="danger" onClick={(e) => { handleDelete(e, resource.id); setActiveMenuId(null); }}>🗑️ Decommission</button>

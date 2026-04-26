@@ -187,6 +187,18 @@
     color: var(--brand-gold);
 }
 
+.history-empty {
+    padding: 32px 16px;
+    text-align: center;
+    color: var(--sidebar-muted);
+    font-size: 0.75rem;
+    font-style: italic;
+    border: 1px dashed var(--sidebar-border);
+    border-radius: 12px;
+    margin-top: 8px;
+    background: rgba(255, 255, 255, 0.02);
+}
+
 .doc-analyzer-container .entry-main {
     display: flex;
     align-items: center;

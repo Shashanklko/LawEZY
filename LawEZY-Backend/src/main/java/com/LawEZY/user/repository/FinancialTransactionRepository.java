@@ -17,10 +17,10 @@ public interface FinancialTransactionRepository extends JpaRepository<FinancialT
     @org.springframework.transaction.annotation.Transactional
     void deleteByTimestampBefore(java.time.LocalDateTime timestamp);
 
-    @org.springframework.data.jpa.repository.Query("SELECT COALESCE(SUM(ABS(t.amount)), 0) FROM FinancialTransaction t WHERE t.description LIKE %:keyword%")
+    @org.springframework.data.jpa.repository.Query("SELECT COALESCE(SUM(t.amount), 0) FROM FinancialTransaction t WHERE t.amount > 0 AND t.description LIKE %:keyword%")
     double sumAmountByDescriptionKeyword(String keyword);
 
-    @org.springframework.data.jpa.repository.Query("SELECT COALESCE(SUM(ABS(t.amount)), 0) FROM FinancialTransaction t WHERE " +
+    @org.springframework.data.jpa.repository.Query("SELECT COALESCE(SUM(t.amount), 0) FROM FinancialTransaction t WHERE t.amount > 0 AND (" +
             "t.description LIKE '%Commission%' OR " +
             "t.description LIKE '%Platform Fee%' OR " +
             "t.description LIKE '%Institutional Fee%' OR " +
@@ -29,10 +29,10 @@ public interface FinancialTransactionRepository extends JpaRepository<FinancialT
             "t.description LIKE '%AI Intelligence%' OR " +
             "t.description LIKE '%Auditor Refill%' OR " +
             "t.description LIKE '%Message Service%' OR " +
-            "t.description LIKE '%Platform Earning%'")
+            "t.description LIKE '%Platform Earning%')")
     double sumTotalPlatformRevenue();
 
-    @org.springframework.data.jpa.repository.Query("SELECT COALESCE(SUM(ABS(t.amount)), 0) FROM FinancialTransaction t WHERE t.timestamp > :since AND (" +
+    @org.springframework.data.jpa.repository.Query("SELECT COALESCE(SUM(t.amount), 0) FROM FinancialTransaction t WHERE t.amount > 0 AND t.timestamp > :since AND (" +
             "t.description LIKE '%Commission%' OR " +
             "t.description LIKE '%Platform Fee%' OR " +
             "t.description LIKE '%Institutional Fee%' OR " +

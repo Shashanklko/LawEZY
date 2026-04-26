@@ -23,7 +23,9 @@ const ExpertCard = ({ expert, onViewProfile, onBookAppointment }) => {
       
       <div className="card-header">
         <div className="avatar-wrapper">
-          <img src={expert.avatar || 'https://via.placeholder.com/100'} alt={expert.name} />
+          <div className="letter-avatar" style={{ background: 'var(--midnight-primary)', color: 'var(--elite-gold)', width: '60px', height: '60px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1.4rem', border: '2px solid var(--elite-gold)' }}>
+            {(expert.name || 'P')[0].toUpperCase()}
+          </div>
           {expert.isVerified && (
             <div className="verified-badge-institutional" title="Institutional Verified">
               <span style={{ fontSize: '12px' }}>V</span>
