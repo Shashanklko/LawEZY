@@ -263,7 +263,7 @@ const DocumentAnalyzer = () => {
                         padding: '12px 24px',
                         display: 'flex',
                         alignItems: 'center',
-                        justify-content: 'space-between',
+                        justifyContent: 'space-between',
                         gap: '12px',
                         zIndex: 50,
                         backdropFilter: 'blur(5px)'
