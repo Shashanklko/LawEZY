@@ -804,9 +804,16 @@ const AdminPortal = () => {
                 <h3>⚖️ Legal & Financial Expert Audit</h3>
                 <div className="list-actions">
                   <button className="btn-filter">Filter: All Experts</button>
-                  <input type="text" placeholder="Search Expert ID..." className="admin-search-input" />
+                  <input 
+                    type="text" 
+                    placeholder="Search Expert ID..." 
+                    className="admin-search-input" 
+                    value={expertSearch}
+                    onChange={(e) => setExpertSearch(e.target.value)}
+                  />
                 </div>
               </div>
+              <table className="admin-table">
                 <thead>
                   <tr>
                     <th>Expert ID</th>
@@ -874,7 +881,7 @@ const AdminPortal = () => {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                  )))}
                 </tbody>
               </table>
             </div>
@@ -1173,18 +1180,23 @@ const AdminPortal = () => {
                 const overallPayable = expertWallets.reduce((acc, w) => acc + (w.earnedBalance || 0), 0);
                 const escrowVault = expertWallets.reduce((acc, w) => acc + (w.escrowBalance || 0), 0);
 
-                const isPlatformRev = (l) => 
-                  (l.status === 'COMPLETED' || l.status === 'RELEASED' || l.status === 'LOCKED') && 
-                  l.description && 
-                  (l.description.includes('Commission') || 
-                  l.description.includes('Fee') || 
-                  l.description.includes('Institutional') ||
-                  l.description.includes('AI Token') ||
-                  l.description.includes('Document Audit') ||
-                  l.description.includes('AI Intelligence') ||
-                  l.description.includes('Auditor Refill') ||
-                  l.description.includes('Message Service') ||
-                  l.description.includes('Platform Earning'));
+                const isPlatformRev = (l) => {
+                  if (!l.description) return false;
+                  const desc = l.description.toLowerCase();
+                  const isAcceptedStatus = (l.status === 'COMPLETED' || l.status === 'RELEASED' || l.status === 'LOCKED' || l.status === 'PAID');
+                  
+                  return isAcceptedStatus && (
+                    desc.includes('commission') || 
+                    desc.includes('fee') || 
+                    desc.includes('institutional') ||
+                    desc.includes('ai token') ||
+                    desc.includes('document audit') ||
+                    desc.includes('ai intelligence') ||
+                    desc.includes('auditor refill') ||
+                    desc.includes('message service') ||
+                    desc.includes('platform earning')
+                  );
+                };
 
                 // 📊 Dashboard Calculations
                 const totalInflow = ledger
@@ -1192,11 +1204,11 @@ const AdminPortal = () => {
                   .reduce((acc, l) => acc + l.amount, 0);
 
                 const commissionRevenue = ledger
-                   .filter(l => l.amount > 0 && isPlatformRev(l) && (l.description.includes('Commission') || l.description.includes('Fee')))
+                   .filter(l => l.amount > 0 && isPlatformRev(l) && (l.description.toLowerCase().includes('commission') || l.description.toLowerCase().includes('fee')))
                    .reduce((acc, l) => acc + (l.amount || 0), 0);
  
                 const aiRevenue = ledger
-                   .filter(l => l.amount > 0 && isPlatformRev(l) && (l.description.includes('AI') || l.description.includes('Audit')))
+                   .filter(l => l.amount > 0 && isPlatformRev(l) && (l.description.toLowerCase().includes('ai') || l.description.toLowerCase().includes('audit')))
                    .reduce((acc, l) => acc + (l.amount || 0), 0);
 
                 // Chart Data (Last 7 Days)
@@ -1210,30 +1222,42 @@ const AdminPortal = () => {
                   }))
                   .reverse();
 
+                const clientWallets = wallets.filter(w => {
+                  const targetUser = w.user || [...experts, ...clients, ...admins].find(usr => usr.id === w.id);
+                  const roleName = (targetUser?.role?.name || targetUser?.role || '').toString().toUpperCase(); 
+                  return ['CLIENT', 'ROLE_CLIENT', 'USER', 'ROLE_USER'].includes(roleName);
+                });
+                const totalClientBalance = clientWallets.reduce((acc, w) => acc + (w.cashBalance || 0), 0);
+
                 return (
                   <>
                     {financeSubTab === 'dashboard' && (
                       <div className="finance-dashboard-view animate-fade-in">
-                        <div className="earnings-quick-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+                        <div className="earnings-quick-grid" style={{ gridTemplateColumns: 'repeat(5, 1fr)' }}>
                           <div className="earning-mini-card highlight-gold">
-                            <label>Total Platform Inflow</label>
+                            <label>TOTAL PLATFORM INFLOW</label>
                             <h3>₹{totalInflow.toLocaleString()}</h3>
                             <span style={{fontSize:'0.65rem', color:'var(--elite-gold)'}}>Gross Deposits</span>
                           </div>
                           <div className="earning-mini-card">
-                            <label>Amount Expert is Earning (Payable)</label>
+                            <label>CLIENT WALLET LIABILITIES</label>
+                            <h3>₹{totalClientBalance.toLocaleString()}</h3>
+                            <span style={{fontSize:'0.65rem', color:'rgba(255,255,255,0.4)'}}>Total Payable to Clients</span>
+                          </div>
+                          <div className="earning-mini-card">
+                            <label>EXPERT EARNINGS (PAYABLE)</label>
                             <h3>₹{overallPayable.toLocaleString()}</h3>
                             <span style={{fontSize:'0.65rem', color:'rgba(255,255,255,0.4)'}}>Total Expert Liabilities</span>
                           </div>
                           <div className="earning-mini-card highlight-success">
-                            <label>Platform Earning (Commision + Fees)</label>
+                            <label>PLATFORM REVENUE (COMMISSION)</label>
                             <h3>₹{commissionRevenue.toLocaleString()}</h3>
-                            <span style={{fontSize:'0.65rem', color:'#10b981'}}>Platform Revenue</span>
+                            <span style={{fontSize:'0.65rem', color:'#10b981'}}>Platform Earnings</span>
                           </div>
                           <div className="earning-mini-card">
-                            <label>Platform Earning (AI Tokens)</label>
+                            <label>PLATFORM REVENUE (AI)</label>
                             <h3>₹{aiRevenue.toLocaleString()}</h3>
-                            <span style={{fontSize:'0.65rem', color:'rgba(255,255,255,0.4)'}}>AI & Document Intelligence</span>
+                            <span style={{fontSize:'0.65rem', color:'rgba(255,255,255,0.4)'}}>AI & Document Services</span>
                           </div>
                         </div>
 
