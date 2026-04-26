@@ -43,7 +43,7 @@ public class HomeController {
                "        <div class='status'><span class='dot'></span> Institutional API Active</div>" +
                "        <h1>LawEZY Engine</h1>" +
                "        <p>Elite Legal Intelligence & AI Infrastructure.<br>The backend services are synchronized and running on Render AP-South.</p>" +
-               "        <a href='https://lawezy.in' class='btn'>Launch App Portal</a>" +
+               "        <a href='https://www.lawezy.in/' class='btn'>Launch App Portal</a>" +
                "    </div>" +
                "</body>" +
                "</html>";
