@@ -129,9 +129,12 @@ const ExpertListing = () => {
     const fetchExperts = async () => {
       try {
         const response = await apiClient.get('/api/professionals');
-        const mappedExperts = response.data.map(ex => ({
+        // Handle Spring Boot Paginated Response (data.content) or direct array
+        const expertsArray = Array.isArray(response.data) ? response.data : response.data.content || [];
+        
+        const mappedExperts = expertsArray.map(ex => ({
           ...ex,
-          category: ex.category === 'LAWYER' ? 'legal' : 'financial'
+          category: (ex.category === 'LAWYER' || ex.role === 'LAWYER') ? 'legal' : 'financial'
         }));
         
         setExperts(mappedExperts);

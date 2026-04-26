@@ -2,13 +2,20 @@ import React, { useState, useEffect, useRef } from 'react';
 import './ReaderSpace.css';
 import './NotionWorkspace.css'; // Reusing established Notion styles
 
-const ReaderSpace = ({ initialTitle = '', initialBlocks = [], author = '', onExit, onEdit }) => {
-  const [blocks] = useState(initialBlocks.length > 0 ? initialBlocks : []);
-  const [title] = useState(initialTitle);
+const ReaderSpace = ({ book, onExit, onEdit }) => {
+  const [blocks] = useState(() => {
+    if (book?.blocks) return book.blocks;
+    try {
+      return JSON.parse(book?.content || '[]');
+    } catch (e) {
+      return [];
+    }
+  });
+  const [title] = useState(book?.title || 'Untitled Document');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
   
-  const isAuthor = author === 'You (Institutionalist)';
+  const isAuthor = book?.author === 'You (Institutionalist)' || book?.authorId === 'current-user-id'; // Simplified check
   
   const blockRefs = useRef({});
 

@@ -610,6 +610,48 @@
   color: #000;
 }
 
+.btn-export {
+  background: rgba(224, 195, 137, 0.05);
+  color: var(--elite-gold);
+  border: 1px solid rgba(224, 195, 137, 0.2);
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-export:hover {
+  background: rgba(224, 195, 137, 0.15);
+  border-color: var(--elite-gold);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(224, 195, 137, 0.1);
+}
+
+.btn-export.csv {
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #10b981;
+}
+
+.btn-export.csv:hover {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: #10b981;
+}
+
+.btn-export.pdf {
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+}
+
+.btn-export.pdf:hover {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: #ef4444;
+}
+
 /* SESSIONS */
 .session-grid {
   display: grid;

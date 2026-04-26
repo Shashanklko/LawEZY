@@ -62,6 +62,7 @@ public class AdminController {
     private final com.LawEZY.auth.service.OtpService otpService;
     private final ReviewRepository reviewRepository;
     private final ProfessionalProfileRepository professionalProfileRepository;
+    private final com.LawEZY.user.repository.PlatformTreasuryRepository platformTreasuryRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Autowired
@@ -80,12 +81,13 @@ public class AdminController {
                            com.LawEZY.user.repository.LawyerProfileRepository lawyerProfileRepository,
                            com.LawEZY.user.repository.CAProfileRepository caProfileRepository,
                            com.LawEZY.user.repository.CFAProfileRepository cfaProfileRepository,
-                            com.LawEZY.user.repository.ClientProfileRepository clientProfileRepository,
+                           com.LawEZY.user.repository.ClientProfileRepository clientProfileRepository,
                            ProfessionalProfileRepository professionalProfileRepository,
                            EmailService emailService,
                            com.LawEZY.user.service.WalletService walletService,
                            com.LawEZY.auth.service.OtpService otpService,
                            ReviewRepository reviewRepository,
+                           com.LawEZY.user.repository.PlatformTreasuryRepository platformTreasuryRepository,
                            PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.reportRepository = reportRepository;
@@ -108,6 +110,7 @@ public class AdminController {
         this.walletService = walletService;
         this.otpService = otpService;
         this.reviewRepository = reviewRepository;
+        this.platformTreasuryRepository = platformTreasuryRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -151,13 +154,16 @@ public class AdminController {
         long totalResources = resourceRepository.count();
         long totalPosts = postRepository.count();
 
-        // Calculate platform revenue using HIGH-PERFORMANCE NATIVE SQL
-        double platformRevenue = financialTransactionRepository.sumTotalPlatformRevenue();
-        double aiRevenue = financialTransactionRepository.sumAmountByDescriptionKeyword("AI") + 
-                          financialTransactionRepository.sumAmountByDescriptionKeyword("Audit");
-        double chatRevenue = financialTransactionRepository.sumAmountByDescriptionKeyword("Chat");
-        double appointmentRevenue = financialTransactionRepository.sumAmountByDescriptionKeyword("Appointment") + 
-                                   financialTransactionRepository.sumAmountByDescriptionKeyword("LZY-");
+        // 💰 Calculate platform revenue using HIGH-PERFORMANCE TREASURY table
+        com.LawEZY.user.entity.PlatformTreasury treasury = platformTreasuryRepository.findById("SYSTEM_TREASURY")
+                .orElse(new com.LawEZY.user.entity.PlatformTreasury());
+
+        double platformRevenue = treasury.getTotalEarnings();
+        double aiRevenue = treasury.getAiChatEarnings() + treasury.getAiAuditEarnings();
+        double chatRevenue = treasury.getAiChatEarnings(); // Mapping AI Chat specifically
+        double auditRevenue = treasury.getAiAuditEarnings();
+        double appointmentRevenue = treasury.getCommissionEarnings();
+        double platformFeeRevenue = treasury.getPlatformFeeEarnings();
 
         LocalDateTime now = LocalDateTime.now();
         double platformDaily = financialTransactionRepository.sumPlatformRevenueSince(now.toLocalDate().atStartOfDay());
@@ -183,6 +189,9 @@ public class AdminController {
         stats.put("platformRevenue", platformRevenue);
         stats.put("aiRevenue", aiRevenue);
         stats.put("chatRevenue", chatRevenue);
+        stats.put("auditRevenue", auditRevenue); // New specific stat
+        stats.put("commissionRevenue", appointmentRevenue); // Renamed for clarity
+        stats.put("platformFeeRevenue", platformFeeRevenue); // New specific stat
         stats.put("appointmentRevenue", appointmentRevenue);
         stats.put("platformDaily", platformDaily);
         stats.put("platformWeekly", platformWeekly);
@@ -1088,6 +1097,82 @@ public class AdminController {
         return ResponseEntity.ok(Map.of("message", "Wallet balance reconciled with ledger truth", "newBalance", calculatedEarned));
     }
     
+    @PostMapping("/treasury/reset")
+    @Transactional
+    public ResponseEntity<?> resetTreasury(@RequestParam String otp, @RequestParam(defaultValue = "ALL") String scope) {
+        String requesterEmail = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+        User requester = userRepository.findByEmail(requesterEmail).orElse(null);
+        
+        if (requester == null || requester.getRole() != Role.MASTER_ADMIN) {
+            return ResponseEntity.status(403).body(Map.of("error", "Access Denied: Master Identity mismatch"));
+        }
+
+        if (!otpService.validateOtp("lawezy2025@gmail.com", otp, "MASTER_ADMIN_ACTION")) {
+            return ResponseEntity.status(401).body(Map.of("error", "Invalid Security Code"));
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime todayStart = now.toLocalDate().atStartOfDay();
+
+        switch (scope.toUpperCase()) {
+            case "TODAY":
+                financialTransactionRepository.deleteByTimestampAfter(todayStart);
+                break;
+            case "BEFORE_TODAY":
+                financialTransactionRepository.deleteByTimestampBefore(todayStart);
+                break;
+            case "SIX_MONTHS":
+                financialTransactionRepository.deleteByTimestampBefore(now.minusMonths(6));
+                break;
+            case "ONE_YEAR":
+                financialTransactionRepository.deleteByTimestampBefore(now.minusYears(1));
+                break;
+            case "ALL":
+            default:
+                financialTransactionRepository.deleteAll();
+                payoutRequestRepository.deleteAll();
+                break;
+        }
+
+        // 🔄 Recalculate Treasury after purge
+        platformTreasuryRepository.findById("SYSTEM_TREASURY").ifPresent(t -> {
+            t.setCommissionEarnings(financialTransactionRepository.sumCommissionEarnings());
+            t.setPlatformFeeEarnings(financialTransactionRepository.sumPlatformFeeEarnings());
+            t.setAiChatEarnings(financialTransactionRepository.sumAiChatEarnings());
+            t.setAiAuditEarnings(financialTransactionRepository.sumAiAuditEarnings());
+            t.setTotalEarnings(t.getCommissionEarnings() + t.getPlatformFeeEarnings() + t.getAiChatEarnings() + t.getAiAuditEarnings());
+            t.setLastUpdatedAt(LocalDateTime.now());
+            platformTreasuryRepository.save(t);
+        });
+
+        // Sync Master Admin Wallet if ALL was chosen
+        if ("ALL".equalsIgnoreCase(scope)) {
+            walletRepository.findById(requester.getId()).ifPresent(w -> {
+                w.setEarnedBalance(0.0);
+                walletRepository.save(w);
+            });
+        }
+
+        // Audit Log
+        com.LawEZY.common.entity.AuditLog log = new com.LawEZY.common.entity.AuditLog();
+        log.setTimestamp(LocalDateTime.now());
+        log.setUserRole("MASTER_ADMIN");
+        log.setEventType("TREASURY_RESET");
+        log.setSummary("Master Admin performed a " + scope + " institutional treasury liquidation.");
+        log.setUserId(requester.getId());
+        auditLogRepository.save(log);
+
+        return ResponseEntity.ok(Map.of("message", "Institutional Treasury has been reset with scope: " + scope));
+    }
+
+    @GetMapping("/treasury/ledger")
+    public ResponseEntity<?> getTreasuryLedger(@RequestParam(defaultValue = "0") int page,
+                                              @RequestParam(defaultValue = "100") int size) {
+        validatePermission("FINANCIAL LEDGER");
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size);
+        return ResponseEntity.ok(financialTransactionRepository.findAllPlatformEarnings(pageable));
+    }
+
     private boolean isPlatformIncome(FinancialTransaction tx) {
         if (tx.getDescription() == null) return false;
         String d = tx.getDescription();

@@ -131,6 +131,9 @@ public class FinancialService {
         // 4. Ledger Entry
         recordTransaction(userId, "Institutional Token Purchase: " + tokenCount + " Credits", -cost, "COMPLETED", "DEBIT");
         
+        // 🛡️ Institutional Sync: Record Platform Earning
+        walletService.recordPlatformEarning(cost, "Platform Earning: Token Purchase (" + tokenCount + ")", userId, "PLATFORM_FEE");
+
         return walletRepository.save(wallet);
     }
 

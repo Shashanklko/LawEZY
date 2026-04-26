@@ -34,6 +34,7 @@ public class WalletService {
     private final NotificationService notificationService;
     private final com.LawEZY.common.service.EmailService emailService;
     private final AdminBroadcastService adminBroadcastService;
+    private final com.LawEZY.user.repository.PlatformTreasuryRepository treasuryRepository;
 
     public WalletService(
             WalletRepository walletRepository,
@@ -43,7 +44,8 @@ public class WalletService {
             ProfessionalProfileRepository professionalProfileRepository,
             NotificationService notificationService,
             com.LawEZY.common.service.EmailService emailService,
-            AdminBroadcastService adminBroadcastService
+            AdminBroadcastService adminBroadcastService,
+            com.LawEZY.user.repository.PlatformTreasuryRepository treasuryRepository
     ) {
         this.walletRepository = walletRepository;
         this.transactionRepository = transactionRepository;
@@ -53,6 +55,7 @@ public class WalletService {
         this.notificationService = notificationService;
         this.emailService = emailService;
         this.adminBroadcastService = adminBroadcastService;
+        this.treasuryRepository = treasuryRepository;
     }
 
     @Transactional
@@ -155,10 +158,7 @@ public class WalletService {
             transactionRepository.save(expertTxn);
 
             // 🛡️ Institutional Audit: Explicit Platform Commission Log (Attributed to Master Admin)
-            User masterAdmin = userRepository.findByRole(com.LawEZY.user.enums.Role.MASTER_ADMIN).stream().findFirst().orElse(user);
-            String platformDesc = String.format("Platform Fee (Ref: %d) - Client: %s", appt.getId(), clientId);
-            FinancialTransaction platformTxn = createTxn(masterAdmin, platformDesc, platformCut, "COMPLETED");
-            transactionRepository.save(platformTxn);
+            recordPlatformEarning(platformCut, String.format("Platform Fee (Ref: %d) - Client: %s", appt.getId(), clientId), appt.getId().toString(), "COMMISSION");
         }
     }
 
@@ -211,10 +211,8 @@ public class WalletService {
             transactionRepository.save(expertTxn);
 
             // 🛡️ Institutional Audit: Explicit Platform Commission Log (Attributed to Master Admin)
-            User masterAdmin = userRepository.findByRole(com.LawEZY.user.enums.Role.MASTER_ADMIN).stream().findFirst().orElse(user);
-            String platformDesc = String.format("Platform Fee (Ref: %d) - Client: %s", appt.getId(), userId);
-            FinancialTransaction platformTxn = createTxn(masterAdmin, platformDesc, platformCut, "COMPLETED");
-            transactionRepository.save(platformTxn);
+            recordPlatformEarning(platformCut, String.format("Platform Fee (Ref: %d) - Client: %s", appt.getId(), userId), appt.getId().toString(), "COMMISSION");
+        }
         }
         
         // 🚀 REAL-TIME BROADCAST: Admin Sync
@@ -274,6 +272,37 @@ public class WalletService {
         ));
 
         log.info("[WALLET] Escrow released for Appointment Ref-{}. Amount: ₹{}", appt.getId(), expertEarned);
+    }
+
+    @Transactional
+    public void recordPlatformEarning(Double amount, String description, String referenceId, String category) {
+        if (amount == null || amount <= 0) return;
+
+        // 1. Update the Specialized Platform Treasury Table
+        com.LawEZY.user.entity.PlatformTreasury treasury = treasuryRepository.findById("SYSTEM_TREASURY")
+                .orElse(new com.LawEZY.user.entity.PlatformTreasury());
+        
+        treasury.addEarning(amount, category);
+        treasuryRepository.save(treasury);
+
+        // 2. Mirror in Master Admin Wallet (For Dashboard Visibility)
+        User masterAdmin = userRepository.findByRole(com.LawEZY.user.enums.Role.MASTER_ADMIN)
+                .stream()
+                .findFirst()
+                .orElse(null);
+
+        if (masterAdmin != null) {
+            Wallet adminWallet = walletRepository.findById(masterAdmin.getId())
+                    .orElseGet(() -> createDefaultWallet(masterAdmin.getId()));
+            adminWallet.setEarnedBalance(adminWallet.getEarnedBalance() + amount);
+            walletRepository.save(adminWallet);
+
+            // Record the Ledger Entry
+            FinancialTransaction txn = createTxn(masterAdmin, description + " [" + category + "]", amount, "COMPLETED");
+            transactionRepository.save(txn);
+        }
+
+        log.info("[TREASURY] {} Recorded: ₹{} (Total Treasury: ₹{})", category, amount, treasury.getTotalEarnings());
     }
 
     @Transactional
@@ -422,6 +451,10 @@ public class WalletService {
         walletRepository.save(wallet);
         FinancialTransaction txn = createTxn(wallet.getUser(), desc, -cost, "COMPLETED");
         transactionRepository.save(txn);
+
+        // 🛡️ Institutional Sync: Record Platform Earning for the refill
+        String category = "AI_15".equalsIgnoreCase(packageType) ? "AI_CHAT" : "AI_AUDIT";
+        recordPlatformEarning(cost, "Platform Earning: " + desc, userId, category);
 
         log.info("[WALLET] Package purchased: {} by user: {}", packageType, userId);
         return wallet;

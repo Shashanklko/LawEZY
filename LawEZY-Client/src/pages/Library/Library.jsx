@@ -169,7 +169,7 @@ const Library = () => {
   });
 
   if (showReader && activeBook) {
-    return <ReaderSpace book={activeBook} onBack={() => setShowReader(false)} />;
+    return <ReaderSpace book={activeBook} onExit={() => setShowReader(false)} />;
   }
 
   if (showNotion) {
@@ -177,8 +177,8 @@ const Library = () => {
       <NotionWorkspace 
         initialTitle={editDraft?.title}
         initialBlocks={editDraft?.blocks}
-        onSave={handlePublishNew} 
-        onBack={() => { setShowNotion(false); setEditDraft(null); }} 
+        onPublish={handlePublishNew} 
+        onExit={() => { setShowNotion(false); setEditDraft(null); }} 
       />
     );
   }

@@ -172,7 +172,7 @@
 
 .notion-block-actions {
   position: absolute;
-  left: -48px;
+  left: -78px;
   top: 6px;
   display: flex;
   opacity: 0;
@@ -199,6 +199,11 @@
 .block-btn:hover {
   background: var(--notion-hover);
   opacity: 1;
+}
+
+.block-btn.delete-btn:hover {
+  color: #ff4d4f;
+  background: rgba(255, 77, 79, 0.1);
 }
 
 .notion-block-content {

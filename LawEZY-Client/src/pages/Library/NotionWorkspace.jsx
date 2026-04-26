@@ -287,8 +287,9 @@ const NotionWorkspace = ({ onExit, onPublish, initialBlocks = [], initialTitle =
             {blocks.map(block => (
               <div key={block.id} className="notion-block-row">
                 <div className="notion-block-actions">
-                  <div className="block-btn" onClick={() => addBlock(block.id)}>+</div>
-                  <div className="block-btn" draggable>⠿</div>
+                  <div className="block-btn add-btn" onClick={() => addBlock(block.id)} title="Add Block">+</div>
+                  <div className="block-btn delete-btn" onClick={() => deleteBlock(block.id)} title="Delete Block">×</div>
+                  <div className="block-btn drag-btn" draggable title="Drag to reorder">⠿</div>
                 </div>
                 {renderBlock(block)}
               </div>

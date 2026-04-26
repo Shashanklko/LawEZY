@@ -59,6 +59,10 @@ const AdminPortal = () => {
     masterAdmins: 0,
     totalAppointments: 0,
     platformRevenue: 0,
+    commissionRevenue: 0,
+    platformFeeRevenue: 0,
+    chatRevenue: 0,
+    auditRevenue: 0,
     pendingComplaints: 0,
     systemUptime: "..."
   });
@@ -81,8 +85,10 @@ const AdminPortal = () => {
   const [logs, setLogs] = useState([]);
   const [wallets, setWallets] = useState([]);
   const [ledger, setLedger] = useState([]);
+  const [treasuryLedger, setTreasuryLedger] = useState([]);
   const [alertMessage, setAlertMessage] = useState('');
   const [alertLevel, setAlertLevel] = useState('INFO');
+  const [purgeScope, setPurgeScope] = useState('ALL');
   const [purging, setPurging] = useState(null); 
   const [logFilter, setLogFilter] = useState('ALL'); 
   const [expertSearch, setExpertSearch] = useState('');
@@ -95,7 +101,8 @@ const AdminPortal = () => {
     clients: { current: 0, total: 0 },
     complaints: { current: 0, total: 0 },
     finance: { current: 0, total: 0 },
-    logs: { current: 0, total: 0 }
+    logs: { current: 0, total: 0 },
+    treasury: { current: 0, total: 0 }
   });
   
   const updatePage = (tab, current, total) => {
@@ -228,7 +235,10 @@ const AdminPortal = () => {
     if (activeTab === 'experts' && experts.length === 0) fetchTabDetail('experts');
     if (activeTab === 'clients' && clients.length === 0) fetchTabDetail('clients');
     if (activeTab === 'complaints' && complaints.length === 0) fetchTabDetail('complaints');
-    if (activeTab === 'finance' && ledger.length === 0) fetchTabDetail('finance');
+    if (activeTab === 'finance' && ledger.length === 0) {
+       fetchTabDetail('finance');
+       fetchTabDetail('treasury');
+    }
     if (activeTab === 'logs' && logs.length === 0) fetchTabDetail('logs');
     if (activeTab === 'master' && admins.length === 0) fetchTabDetail('master');
   }, [activeTab]);
@@ -262,6 +272,10 @@ const AdminPortal = () => {
         setWallets(walletRes.data);
         setLedger(ledgerRes.data.content || []);
         updatePage('finance', ledgerRes.data.number, ledgerRes.data.totalPages);
+      } else if (tab === 'treasury') {
+        const res = await apiClient.get(`/api/admin/treasury/ledger?page=${page}&size=100`);
+        setTreasuryLedger(res.data.content || []);
+        updatePage('treasury', res.data.number, res.data.totalPages);
       } else if (tab === 'logs') {
         const res = await apiClient.get(`/api/admin/logs?page=${page}&size=50`);
         setLogs(res.data.content || []);
@@ -602,6 +616,27 @@ const AdminPortal = () => {
     }
   };
 
+  const handleResetTreasury = async () => {
+    if (!otp) {
+      setAdminAlert({ title: 'Security Required', message: 'Security Code (OTP) is mandatory for treasury liquidation.', type: 'DANGER' });
+      return;
+    }
+    
+    if (!window.confirm("CRITICAL WARNING: This will permanently zero out all platform earnings and reset the treasury. This action is irreversible. Proceed?")) {
+      return;
+    }
+
+    try {
+      const res = await apiClient.post(`/api/admin/treasury/reset?otp=${otp}&scope=${purgeScope}`);
+      setAdminAlert({ title: 'Liquidation Success', message: res.data.message, type: 'SUCCESS' });
+      setOtp('');
+      setOtpSent(false);
+      fetchInitialData(); // Refresh stats
+    } catch (err) {
+      setAdminAlert({ title: 'Liquidation Failed', message: err.response?.data?.error || 'Security mismatch', type: 'DANGER' });
+    }
+  };
+
   return (
     <div className="admin-portal-wrapper">
       {adminAlert && (
@@ -811,6 +846,10 @@ const AdminPortal = () => {
                     value={expertSearch}
                     onChange={(e) => setExpertSearch(e.target.value)}
                   />
+                  <button className="btn-export" onClick={() => exportLedger('EXPERTS', 
+                    ['ID', 'Name', 'Email', 'Category', 'Verified', 'Status', 'Consultation Fee'],
+                    experts.map(e => [e.id, e.firstName + ' ' + e.lastName, e.email, e.category, e.isVerified, e.status, e.consultationFee])
+                  )}>⬇ Export Experts CSV</button>
                 </div>
               </div>
               <table className="admin-table">
@@ -894,6 +933,10 @@ const AdminPortal = () => {
                 <div className="list-actions">
                   <button className="btn-filter">Filter: Active</button>
                   <input type="text" placeholder="Search Client ID..." className="admin-search-input" />
+                  <button className="btn-export" onClick={() => exportLedger('CLIENTS',
+                    ['ID', 'Name', 'Email', 'Status', 'Wallet Balance'],
+                    clients.map(c => [c.id, c.firstName + ' ' + c.lastName, c.email, c.enabled ? 'ACTIVE' : 'BLOCKED', wallets.find(w => w.id === c.id)?.cashBalance || 0])
+                  )}>⬇ Export Clients CSV</button>
                 </div>
               </div>
               <table className="admin-table">
@@ -1168,6 +1211,9 @@ const AdminPortal = () => {
                 <button className={financeSubTab === 'audit' ? 'active' : ''} onClick={() => setFinanceSubTab('audit')}>
                   🏦 Escrow & Audit
                 </button>
+                <button className={financeSubTab === 'treasury' ? 'active' : ''} onClick={() => setFinanceSubTab('treasury')}>
+                  🪙 Treasury Ledger
+                </button>
               </div>
 
               {(() => {
@@ -1198,18 +1244,14 @@ const AdminPortal = () => {
                   );
                 };
 
-                // 📊 Dashboard Calculations
+                // 📊 Dashboard Calculations (Source of Truth: Platform Treasury)
                 const totalInflow = ledger
                   .filter(l => l.amount > 0 && (l.description.includes('Top-up') || l.description.includes('Deposit')))
                   .reduce((acc, l) => acc + l.amount, 0);
 
-                const commissionRevenue = ledger
-                   .filter(l => l.amount > 0 && isPlatformRev(l) && (l.description.toLowerCase().includes('commission') || l.description.toLowerCase().includes('fee')))
-                   .reduce((acc, l) => acc + (l.amount || 0), 0);
- 
-                const aiRevenue = ledger
-                   .filter(l => l.amount > 0 && isPlatformRev(l) && (l.description.toLowerCase().includes('ai') || l.description.toLowerCase().includes('audit')))
-                   .reduce((acc, l) => acc + (l.amount || 0), 0);
+                const commissionRevenue = stats.commissionRevenue || 0;
+                const aiRevenue = (stats.chatRevenue || 0) + (stats.auditRevenue || 0);
+                const platformFeeRevenue = stats.platformFeeRevenue || 0;
 
                 // Chart Data (Last 7 Days)
                 const chartData = [...new Set(ledger.map(l => new Date(l.timestamp).toLocaleDateString()))]
@@ -1233,31 +1275,36 @@ const AdminPortal = () => {
                   <>
                     {financeSubTab === 'dashboard' && (
                       <div className="finance-dashboard-view animate-fade-in">
-                        <div className="earnings-quick-grid" style={{ gridTemplateColumns: 'repeat(5, 1fr)' }}>
+                        <div className="earnings-quick-grid" style={{ gridTemplateColumns: 'repeat(6, 1fr)' }}>
                           <div className="earning-mini-card highlight-gold">
-                            <label>TOTAL PLATFORM INFLOW</label>
-                            <h3>₹{totalInflow.toLocaleString()}</h3>
-                            <span style={{fontSize:'0.65rem', color:'var(--elite-gold)'}}>Gross Deposits</span>
+                            <label>TOTAL PLATFORM REVENUE</label>
+                            <h3>₹{stats.platformRevenue?.toLocaleString() || '0'}</h3>
+                            <span style={{fontSize:'0.65rem', color:'var(--elite-gold)'}}>Net Institutional Profit</span>
                           </div>
                           <div className="earning-mini-card">
-                            <label>CLIENT WALLET LIABILITIES</label>
-                            <h3>₹{totalClientBalance.toLocaleString()}</h3>
-                            <span style={{fontSize:'0.65rem', color:'rgba(255,255,255,0.4)'}}>Total Payable to Clients</span>
+                            <label>COMMISSION (APPTS)</label>
+                            <h3>₹{stats.commissionRevenue?.toLocaleString() || '0'}</h3>
+                            <span style={{fontSize:'0.65rem', color:'rgba(255,255,255,0.4)'}}>Expert Share Cut</span>
                           </div>
                           <div className="earning-mini-card">
-                            <label>EXPERT EARNINGS (PAYABLE)</label>
-                            <h3>₹{overallPayable.toLocaleString()}</h3>
-                            <span style={{fontSize:'0.65rem', color:'rgba(255,255,255,0.4)'}}>Total Expert Liabilities</span>
-                          </div>
-                          <div className="earning-mini-card highlight-success">
-                            <label>PLATFORM REVENUE (COMMISSION)</label>
-                            <h3>₹{commissionRevenue.toLocaleString()}</h3>
-                            <span style={{fontSize:'0.65rem', color:'#10b981'}}>Platform Earnings</span>
+                            <label>PLATFORM FEES</label>
+                            <h3>₹{stats.platformFeeRevenue?.toLocaleString() || '0'}</h3>
+                            <span style={{fontSize:'0.65rem', color:'rgba(255,255,255,0.4)'}}>General Fees</span>
                           </div>
                           <div className="earning-mini-card">
-                            <label>PLATFORM REVENUE (AI)</label>
-                            <h3>₹{aiRevenue.toLocaleString()}</h3>
-                            <span style={{fontSize:'0.65rem', color:'rgba(255,255,255,0.4)'}}>AI & Document Services</span>
+                            <label>AI CHAT EARNINGS</label>
+                            <h3>₹{stats.chatRevenue?.toLocaleString() || '0'}</h3>
+                            <span style={{fontSize:'0.65rem', color:'rgba(255,255,255,0.4)'}}>AI Intelligence Refills</span>
+                          </div>
+                          <div className="earning-mini-card">
+                            <label>AI AUDIT EARNINGS</label>
+                            <h3>₹{stats.auditRevenue?.toLocaleString() || '0'}</h3>
+                            <span style={{fontSize:'0.65rem', color:'rgba(255,255,255,0.4)'}}>Doc Audit Services</span>
+                          </div>
+                          <div className="earning-mini-card highlight-danger">
+                            <label>TOTAL LIABILITIES</label>
+                            <h3>₹{(overallPayable + totalClientBalance).toLocaleString()}</h3>
+                            <span style={{fontSize:'0.65rem', color:'#ef4444'}}>Total Vault Debt</span>
                           </div>
                         </div>
 
@@ -1296,9 +1343,10 @@ const AdminPortal = () => {
                               <PieChart>
                                 <Pie
                                   data={[
-                                    { name: 'AI Services', value: stats.aiRevenue || 1 },
-                                    { name: 'Consultations', value: stats.chatRevenue || 1 },
-                                    { name: 'Appointments', value: stats.appointmentRevenue || 1 }
+                                    { name: 'AI Chat', value: stats.chatRevenue || 1 },
+                                    { name: 'AI Audit', value: stats.auditRevenue || 1 },
+                                    { name: 'Commissions', value: stats.commissionRevenue || 1 },
+                                    { name: 'Platform Fees', value: stats.platformFeeRevenue || 1 }
                                   ]}
                                   cx="50%"
                                   cy="50%"
@@ -1310,6 +1358,7 @@ const AdminPortal = () => {
                                   <Cell fill="#e0c389" />
                                   <Cell fill="#3b82f6" />
                                   <Cell fill="#10b981" />
+                                  <Cell fill="#f59e0b" />
                                 </Pie>
                                 <Tooltip 
                                    contentStyle={{ background: '#111214', border: '1px solid #2a2c30', borderRadius: '12px' }}
@@ -1317,9 +1366,10 @@ const AdminPortal = () => {
                               </PieChart>
                             </ResponsiveContainer>
                             <div className="pie-legend" style={{ display: 'flex', justifyContent: 'center', gap: '15px', marginTop: '-20px' }}>
-                               <div style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '5px' }}><span style={{ width: '8px', height: '8px', background: '#e0c389', borderRadius: '50%' }}></span> AI</div>
-                               <div style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '5px' }}><span style={{ width: '8px', height: '8px', background: '#3b82f6', borderRadius: '50%' }}></span> Chat</div>
-                               <div style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '5px' }}><span style={{ width: '8px', height: '8px', background: '#10b981', borderRadius: '50%' }}></span> Appt</div>
+                               <div style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '5px' }}><span style={{ width: '8px', height: '8px', background: '#e0c389', borderRadius: '50%' }}></span> Chat</div>
+                               <div style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '5px' }}><span style={{ width: '8px', height: '8px', background: '#3b82f6', borderRadius: '50%' }}></span> Audit</div>
+                               <div style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '5px' }}><span style={{ width: '8px', height: '8px', background: '#10b981', borderRadius: '50%' }}></span> Comm</div>
+                               <div style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '5px' }}><span style={{ width: '8px', height: '8px', background: '#f59e0b', borderRadius: '50%' }}></span> Fees</div>
                             </div>
                           </div>
                         </div>
@@ -1328,7 +1378,11 @@ const AdminPortal = () => {
                         <div className="dashboard-ledger-preview glass animate-slide-up" style={{ marginTop: '32px' }}>
                           <div className="section-header-saas">
                             <h3>📒 Recent Platform Transactions</h3>
-                            <div className="export-controls">
+                            <div className="export-controls" style={{ display: 'flex', gap: '10px' }}>
+                              <button className="btn-export" onClick={() => exportLedger('FULL_LEDGER', 
+                                ['ID','Date','Description','Party','Amount','Status'], 
+                                ledger.map(t => [t.transactionId, new Date(t.timestamp).toLocaleString(), t.description, t.userName || t.userId, t.amount, t.status])
+                              )}>⬇ Download Full Ledger CSV</button>
                               <button className="btn-view-sm" onClick={() => setFinanceSubTab('audit')} style={{ fontSize: '0.7rem', padding: '4px 10px' }}>Full Audit Ledger →</button>
                             </div>
                           </div>
@@ -1580,6 +1634,62 @@ const AdminPortal = () => {
                               </table>
                             </div>
                           )}
+                        </div>
+                      </div>
+                    )}
+                    {financeSubTab === 'treasury' && (
+                      <div className="finance-audit-view animate-fade-in">
+                        <div className="payout-queue-container glass">
+                          <div className="section-header-saas">
+                            <h3>🪙 Institutional Treasury Ledger</h3>
+                            <p style={{fontSize:'0.7rem', color:'rgba(255,255,255,0.4)', marginTop:'4px'}}>Comprehensive audit trail of all platform-retained earnings.</p>
+                            <div className="export-controls" style={{marginTop:'10px'}}>
+                              <button className="btn-view-sm" onClick={() => fetchTabDetail('treasury', pages.treasury.current)} style={{marginRight:'8px'}}>🔄 Refresh</button>
+                              <button className="btn-export csv" onClick={() => exportLedger('TREASURY_LEDGER', ['ID','Date','Category','Party','Amount','Status'], treasuryLedger.map(t => [t.transactionId, new Date(t.timestamp).toLocaleString(), t.description, t.userName || t.userId, t.amount, t.status]))}>CSV</button>
+                              <button className="btn-export pdf" onClick={() => exportToPDF('TREASURY_LEDGER', ['ID','Date','Category','Party','Amount','Status'], treasuryLedger.map(t => [t.transactionId, new Date(t.timestamp).toLocaleString(), t.description, t.userName || t.userId, t.amount, t.status]))}>PDF</button>
+                            </div>
+                          </div>
+                          <table className="payout-table">
+                            <thead>
+                              <tr>
+                                <th>ID</th>
+                                <th>Date</th>
+                                <th>Revenue Category</th>
+                                <th>Source Party</th>
+                                <th>Net Earning</th>
+                                <th>Status</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {isTabLoading ? (
+                                Array(10).fill(0).map((_, i) => (
+                                  <tr key={i}>
+                                    <td><div className="skeleton-pulse" style={{height:'20px', width:'60px', borderRadius:'4px'}}></div></td>
+                                    <td><div className="skeleton-pulse" style={{height:'20px', width:'120px', borderRadius:'4px'}}></div></td>
+                                    <td><div className="skeleton-pulse" style={{height:'20px', width:'180px', borderRadius:'4px'}}></div></td>
+                                    <td><div className="skeleton-pulse" style={{height:'20px', width:'100px', borderRadius:'4px'}}></div></td>
+                                    <td><div className="skeleton-pulse" style={{height:'20px', width:'80px', borderRadius:'4px'}}></div></td>
+                                    <td><div className="skeleton-pulse" style={{height:'20px', width:'60px', borderRadius:'4px'}}></div></td>
+                                  </tr>
+                                ))
+                              ) : treasuryLedger.map(txn => (
+                                <tr key={txn.id}>
+                                  <td className="text-muted" style={{fontSize:'0.75rem'}}>{txn.transactionId}</td>
+                                  <td style={{fontSize:'0.75rem'}}>{new Date(txn.timestamp).toLocaleString()}</td>
+                                  <td style={{fontWeight:600, color:'var(--elite-gold)'}}>{txn.description}</td>
+                                  <td style={{fontSize:'0.8rem'}}>{txn.userName || txn.userId}</td>
+                                  <td className="text-success" style={{fontWeight:800}}>₹{txn.amount.toLocaleString()}</td>
+                                  <td><span className="saas-pill success">{txn.status}</span></td>
+                                </tr>
+                              ))}
+                              {treasuryLedger.length === 0 && (
+                                <tr>
+                                  <td colSpan="6" style={{textAlign:'center', padding:'60px', opacity:0.5}}>No treasury earnings recorded in this period.</td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
+                          <PaginationControls tab="treasury" />
                         </div>
                       </div>
                     )}
@@ -1835,6 +1945,59 @@ const AdminPortal = () => {
                       <div className="m-stat">
                         <label style={{ display: 'block', fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', marginBottom: '5px' }}>Administrative Hierarchy</label>
                         <span style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.6)' }}>Master Admin {'>'} Platform Admin {'>'} Audit Agent</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="master-card glass highlight-danger" style={{ padding: '30px', border: '1px solid rgba(255, 77, 77, 0.2)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div>
+                        <h4 style={{ color: '#ff4d4d', marginBottom: '8px' }}>☢️ Institutional Treasury Liquidation</h4>
+                        <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.4)', maxWidth: '400px' }}>
+                          Surgical financial reset. Choose a scope to purge historical data and recalculate treasury.
+                        </p>
+                        <div className="purge-scope-selector" style={{marginTop:'15px', display:'flex', gap:'10px', alignItems:'center'}}>
+                           <label style={{fontSize:'0.7rem', color:'rgba(255,255,255,0.3)'}}>PURGE SCOPE:</label>
+                           <select 
+                             value={purgeScope} 
+                             onChange={(e) => setPurgeScope(e.target.value)}
+                             style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', padding: '6px 12px', borderRadius: '4px', fontSize: '0.8rem' }}
+                           >
+                             <option value="ALL">Full Platform Wipe (Everything)</option>
+                             <option value="BEFORE_TODAY">Clear Previous (Keep Today)</option>
+                             <option value="TODAY">Clear Today's Records Only</option>
+                             <option value="SIX_MONTHS">Clear Older than 6 Months</option>
+                             <option value="ONE_YEAR">Clear Older than 1 Year</option>
+                           </select>
+                        </div>
+                      </div>
+                      <div className="liquidation-actions" style={{ textAlign: 'right' }}>
+                        {!otpSent ? (
+                          <button 
+                            className="btn-suspend-sm" 
+                            style={{ padding: '12px 20px', fontSize: '0.85rem' }}
+                            onClick={() => handleSendOtp('lawezy2025@gmail.com')}
+                          >
+                            Generate Security Code
+                          </button>
+                        ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'flex-end' }}>
+                             <input 
+                                type="text"
+                                placeholder="ENTER OTP"
+                                value={otp}
+                                onChange={(e) => setOtp(e.target.value)}
+                                style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid #ff4d4d', color: '#ff4d4d', padding: '8px', borderRadius: '4px', width: '120px', textAlign: 'center', fontWeight: 'bold' }}
+                             />
+                             <button 
+                               className="btn-suspend-sm" 
+                               style={{ background: '#ff4d4d', color: '#fff', border: 'none', padding: '10px 20px' }}
+                               onClick={handleResetTreasury}
+                             >
+                               Confirm Liquidation
+                             </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
