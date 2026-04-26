@@ -1130,7 +1130,6 @@ public class AdminController {
             case "ALL":
             default:
                 financialTransactionRepository.deleteAll();
-                payoutRequestRepository.deleteAll();
                 break;
         }
 
