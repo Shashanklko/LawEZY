@@ -868,7 +868,7 @@ public class AdminController {
         reviewRepository.deleteByExpert_Id(id);
         reviewRepository.deleteByClient_Id(id);
         reportRepository.deleteByReporterId(id);
-        reportRepository.deleteByTargetUserId(id);
+        reportRepository.deleteByTargetId(id);
         
         appointmentRepository.deleteByExpert_Id(id);
         appointmentRepository.deleteByClient_Id(id);

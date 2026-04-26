@@ -11,5 +11,5 @@ public interface ReportRepository extends JpaRepository<Report, String> {
 
     @org.springframework.data.jpa.repository.Modifying
     @org.springframework.transaction.annotation.Transactional
-    void deleteByTargetUserId(String targetUserId);
+    void deleteByTargetId(String targetId);
 }
