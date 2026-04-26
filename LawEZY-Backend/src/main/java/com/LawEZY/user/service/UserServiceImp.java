@@ -30,6 +30,9 @@ import java.util.Map;
 import java.util.Arrays;
 import java.util.stream.Collectors;
 import java.util.Optional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageImpl;
 
 
 // @Service tells Spring: "This is a special class that holds business logic." 
@@ -338,7 +341,7 @@ public class UserServiceImp implements UserService {
         .filter(java.util.Objects::nonNull)
         .collect(Collectors.toList());
 
-        return new org.springframework.data.domain.PageImpl<>(dtos, pageable, proUsers.getTotalElements());
+        return new PageImpl<>(dtos, pageable, proUsers.getTotalElements());
     }
 
     private ProfessionalProfileDTO mapUserToProfessionalDTO(User user) {
