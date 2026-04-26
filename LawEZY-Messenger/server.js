@@ -10,7 +10,7 @@ const axios = require('axios');
 dotenv.config();
 
 const app = express();
-const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "http://localhost:5173,http://localhost:8080,https://lawezy-sigma.vercel.app").split(',').map(o => o.trim());
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "http://localhost:5173,http://localhost:8080,https://lawezy-sigma.vercel.app,https://lawezy.in,https://www.lawezy.in").split(',').map(o => o.trim());
 
 app.use(express.json());
 

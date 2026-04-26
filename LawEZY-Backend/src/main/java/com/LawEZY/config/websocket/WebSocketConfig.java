@@ -15,7 +15,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Autowired
     private ChatChannelInterceptor chatChannelInterceptor;
 
-    @org.springframework.beans.factory.annotation.Value("${app.cors.allowed-origins:http://localhost:5173,https://lawezy.onrender.com,https://lawezy-sigma.vercel.app}")
+    @org.springframework.beans.factory.annotation.Value("${app.cors.allowed-origins:http://localhost:5173,https://lawezy.onrender.com,https://lawezy-sigma.vercel.app,https://lawezy.in,https://www.lawezy.in}")
     private String[] allowedOrigins;
 
     @Override
