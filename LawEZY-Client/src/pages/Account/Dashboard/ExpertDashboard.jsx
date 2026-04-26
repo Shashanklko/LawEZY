@@ -119,9 +119,16 @@ const ExpertDashboard = () => {
             const txDate = new Date(tx.timestamp);
             const amount = Number(tx.amount) || 0;
             const status = tx.status?.toUpperCase() || '';
+            const description = tx.description?.toUpperCase() || '';
             
-            // Only count completed revenue
-            if (amount > 0 && (status === 'SUCCESS' || status === 'COMPLETED' || status === 'PAID' || status === 'SETTLED')) {
+            // 🛡️ INSTITUTIONAL REVENUE GOVERNANCE:
+            // Only count 'COMPLETED' payouts that have been RELEASED from vault.
+            // Exclude 'SECURED' or 'ESCROW' transactions as they are not yet earned revenue.
+            const isRevenue = (status === 'SUCCESS' || status === 'COMPLETED' || status === 'PAID' || status === 'SETTLED') && 
+                             !description.includes('SECURED') && 
+                             status !== 'ESCROW';
+
+            if (amount > 0 && isRevenue) {
                 if (txDate.toDateString() === now.toDateString()) daily += amount;
                 if (txDate >= startOfWeek) weekly += amount;
                 if (txDate >= startOfMonth) monthly += amount;
@@ -155,33 +162,6 @@ const ExpertDashboard = () => {
                 return (
                     <div className="wallet-tab-view animate-slide-up">
                         <Wallet transactions={transactions} onRefresh={fetchDashboardData} isExpertView={true} />
-                        
-                        {/* 🔒 ESCROW VAULT BREAKDOWN */}
-                        <div className="escrow-vault-section glass" style={{ marginTop: '40px', padding: '30px', borderRadius: '24px', background: 'rgba(59, 130, 246, 0.02)', border: '1px solid rgba(59, 130, 246, 0.1)' }}>
-                            <div className="section-header-pro" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                                <h3 style={{ color: '#1e40af', fontWeight: 900, margin: 0 }}>🛡️ Escrow Vault Ledger</h3>
-                                <span className="vault-status-pill" style={{ background: '#dbeafe', color: '#1e40af', padding: '4px 12px', borderRadius: '20px', fontSize: '0.7rem', fontWeight: 800 }}>SECURED BY LAW-EZY</span>
-                            </div>
-                            <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '25px' }}>These funds are held in escrow for active appointments and will be released to your main balance upon session completion and client review.</p>
-                            
-                            <div className="escrow-list">
-                                {transactions.filter(t => t.status === 'ESCROW').length > 0 ? (
-                                    transactions.filter(t => t.status === 'ESCROW').map(tx => (
-                                        <div key={tx.id} className="escrow-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 20px', background: 'white', borderRadius: '16px', marginBottom: '10px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
-                                            <div className="e-info">
-                                                <div className="e-desc" style={{ fontWeight: 700, fontSize: '0.9rem', color: '#0f172a' }}>{tx.description}</div>
-                                                <div className="e-meta" style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '2px' }}>{new Date(tx.timestamp).toLocaleString()} • Ref: {tx.transactionRefId?.substring(0, 8)}</div>
-                                            </div>
-                                            <div className="e-amount" style={{ fontWeight: 900, color: '#3b82f6', fontSize: '1rem' }}>₹{tx.amount.toLocaleString()}</div>
-                                        </div>
-                                    ))
-                                ) : (
-                                    <div style={{ textAlign: 'center', padding: '40px', opacity: 0.5, fontStyle: 'italic', fontSize: '0.85rem' }}>
-                                        No active funds currently held in escrow.
-                                    </div>
-                                )}
-                            </div>
-                        </div>
                     </div>
                 );
             default:

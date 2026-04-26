@@ -3,6 +3,8 @@ import { Routes, Route, useLocation, Navigate } from 'react-router-dom'
 import ProtectedRoute from './components/ProtectedRoute'
 import MainLayout from './layouts/MainLayout'
 import useAuthStore from './store/useAuthStore'
+import ToastContainer from './components/ToastContainer'
+import SocketNotificationManager from './components/SocketNotificationManager'
 
 // Dynamic Route Splitting for Performance
 const Home = lazy(() => import('./pages/Home/Home'));
@@ -61,6 +63,8 @@ const LoadingFallback = () => (
 const App = () => {
   return (
     <Suspense fallback={<LoadingFallback />}>
+      <SocketNotificationManager />
+      <ToastContainer />
       <Routes>
         <Route path="/" element={<MainLayout />}>
           <Route index element={<Home />} />

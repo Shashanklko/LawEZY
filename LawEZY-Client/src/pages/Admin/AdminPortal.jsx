@@ -87,6 +87,7 @@ const AdminPortal = () => {
   const [logFilter, setLogFilter] = useState('ALL'); 
   const [expertSearch, setExpertSearch] = useState('');
   const [adminAlert, setAdminAlert] = useState(null);
+  const [isTabLoading, setIsTabLoading] = useState(false);
 
   // 📖 Institutional Pagination State
   const [pages, setPages] = useState({
@@ -233,6 +234,7 @@ const AdminPortal = () => {
   }, [activeTab]);
 
   const fetchTabDetail = async (tab, page = 0) => {
+    setIsTabLoading(true);
     try {
       if (tab === 'experts') {
         // Note: Professionals endpoint currently returns a flat list, 
@@ -255,7 +257,7 @@ const AdminPortal = () => {
       } else if (tab === 'finance') {
         const [walletRes, ledgerRes] = await Promise.all([
           apiClient.get('/api/admin/wallets'),
-          apiClient.get(`/api/admin/ledger?page=${page}&size=50`)
+          apiClient.get(`/api/admin/ledger?page=${page}&size=100`)
         ]);
         setWallets(walletRes.data);
         setLedger(ledgerRes.data.content || []);
@@ -274,6 +276,8 @@ const AdminPortal = () => {
       }
     } catch (err) {
       console.error(`Institutional relay error for tab ${tab}:`, err);
+    } finally {
+      setIsTabLoading(false);
     }
   };
 
@@ -803,7 +807,6 @@ const AdminPortal = () => {
                   <input type="text" placeholder="Search Expert ID..." className="admin-search-input" />
                 </div>
               </div>
-              <table className="admin-table">
                 <thead>
                   <tr>
                     <th>Expert ID</th>
@@ -815,8 +818,20 @@ const AdminPortal = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {experts
-                    .filter(exp => {
+                  {isTabLoading ? (
+                    Array(8).fill(0).map((_, i) => (
+                      <tr key={i}>
+                        <td><div className="skeleton-pulse" style={{height:'20px', width:'80%', borderRadius:'4px'}}></div></td>
+                        <td><div className="skeleton-pulse" style={{height:'20px', width:'150px', borderRadius:'4px'}}></div></td>
+                        <td><div className="skeleton-pulse" style={{height:'20px', width:'60px', borderRadius:'4px'}}></div></td>
+                        <td><div className="skeleton-pulse" style={{height:'20px', width:'80px', borderRadius:'4px'}}></div></td>
+                        <td><div className="skeleton-pulse" style={{height:'20px', width:'100px', borderRadius:'4px'}}></div></td>
+                        <td><div className="skeleton-pulse" style={{height:'32px', width:'120px', borderRadius:'8px'}}></div></td>
+                      </tr>
+                    ))
+                  ) : (
+                    experts
+                      .filter(exp => {
                       if (!expertSearch) return true;
                       if (expertSearch === 'pending:true') return !exp.isVerified;
                       const searchStr = `${exp.firstName} ${exp.lastName} ${exp.id} ${exp.email}`.toLowerCase();
@@ -885,7 +900,17 @@ const AdminPortal = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {clients.map(cli => (
+                  {isTabLoading ? (
+                    Array(8).fill(0).map((_, i) => (
+                      <tr key={i}>
+                        <td><div className="skeleton-pulse" style={{height:'20px', width:'80%', borderRadius:'4px'}}></div></td>
+                        <td><div className="skeleton-pulse" style={{height:'20px', width:'150px', borderRadius:'4px'}}></div></td>
+                        <td><div className="skeleton-pulse" style={{height:'20px', width:'60px', borderRadius:'4px'}}></div></td>
+                        <td><div className="skeleton-pulse" style={{height:'20px', width:'100px', borderRadius:'4px'}}></div></td>
+                        <td><div className="skeleton-pulse" style={{height:'32px', width:'120px', borderRadius:'8px'}}></div></td>
+                      </tr>
+                    ))
+                  ) : clients.map(cli => (
                     <tr key={cli.id}>
                       <td className="id-cell"><code>{cli.id}</code></td>
                       <td className="user-cell">
@@ -1078,7 +1103,18 @@ const AdminPortal = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {logs
+                  {isTabLoading ? (
+                    Array(10).fill(0).map((_, i) => (
+                      <tr key={i}>
+                        <td><div className="skeleton-pulse" style={{height:'20px', width:'60px', borderRadius:'4px'}}></div></td>
+                        <td><div className="skeleton-pulse" style={{height:'20px', width:'120px', borderRadius:'4px'}}></div></td>
+                        <td><div className="skeleton-pulse" style={{height:'20px', width:'180px', borderRadius:'4px'}}></div></td>
+                        <td><div className="skeleton-pulse" style={{height:'20px', width:'100px', borderRadius:'4px'}}></div></td>
+                        <td><div className="skeleton-pulse" style={{height:'20px', width:'80px', borderRadius:'4px'}}></div></td>
+                        <td><div className="skeleton-pulse" style={{height:'20px', width:'80px', borderRadius:'4px'}}></div></td>
+                      </tr>
+                    ))
+                  ) : logs
                     .filter(log => {
                       if (logFilter === 'ALL') return true;
                       if (logFilter === 'SECURITY_ALERT') return log.eventType?.includes('ALERT');
@@ -1357,7 +1393,16 @@ const AdminPortal = () => {
                                   </tr>
                                 </thead>
                                 <tbody>
-                                  {experts.filter(e => e.isVerified).map(exp => {
+                                  {isTabLoading ? (
+                                    Array(5).fill(0).map((_, i) => (
+                                      <tr key={i}>
+                                        <td><div className="skeleton-pulse" style={{height:'20px', width:'150px', borderRadius:'4px'}}></div></td>
+                                        <td><div className="skeleton-pulse" style={{height:'20px', width:'80px', borderRadius:'4px'}}></div></td>
+                                        <td><div className="skeleton-pulse" style={{height:'20px', width:'100px', borderRadius:'4px'}}></div></td>
+                                        <td><div className="skeleton-pulse" style={{height:'32px', width:'100px', borderRadius:'8px'}}></div></td>
+                                      </tr>
+                                    ))
+                                  ) : experts.filter(e => e.isVerified).map(exp => {
                                     const wallet = wallets.find(w => w.id === exp.id || w.user?.id === exp.id);
                                     const bal = wallet?.earnedBalance || 0;
                                     return (
@@ -1480,6 +1525,7 @@ const AdminPortal = () => {
                               <div className="section-header-saas">
                                 <h3>📒 Full Platform Ledger</h3>
                                 <div className="export-controls">
+                                  <button className="btn-view-sm" onClick={() => fetchTabDetail('finance', pages.finance.current)} style={{marginRight:'8px'}}>🔄 Refresh</button>
                                   <button className="btn-export csv" onClick={() => exportLedger('LEDGER', ['ID','Date','Description','Party','Amount','Status'], ledger.map(t => [t.transactionId, new Date(t.timestamp).toLocaleString(), t.description, t.userName || t.userId, t.amount, t.status]))}>CSV</button>
                                   <button className="btn-export pdf" onClick={() => exportToPDF('LEDGER', ['ID','Date','Description','Party','Amount','Status'], ledger.map(t => [t.transactionId, new Date(t.timestamp).toLocaleString(), t.description, t.userName || t.userId, t.amount, t.status]))}>PDF</button>
                                 </div>

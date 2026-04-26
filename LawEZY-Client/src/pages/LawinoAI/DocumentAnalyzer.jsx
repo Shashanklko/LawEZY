@@ -39,6 +39,8 @@ const DocumentAnalyzer = () => {
     const [isProcessing, setIsProcessing] = useState(false);
     const [quotaType, setQuotaType] = useState('DOC_REFILL');
     const [showBanner, setShowBanner] = useState(true);
+    const [isHistoryLoading, setIsHistoryLoading] = useState(false);
+    const [historyError, setHistoryError] = useState(null);
     const fileInputRef = useRef(null);
 
     useEffect(() => {
@@ -69,11 +71,16 @@ const DocumentAnalyzer = () => {
     };
 
     const fetchHistory = async () => {
+        setIsHistoryLoading(true);
+        setHistoryError(null);
         try {
             const response = await apiClient.get('/api/documents/history');
             setHistory(response.data || []);
         } catch (err) {
             console.error('Failed to fetch institutional history:', err);
+            setHistoryError("Sync failed");
+        } finally {
+            setIsHistoryLoading(false);
         }
     };
 
@@ -194,20 +201,39 @@ const DocumentAnalyzer = () => {
                             <span>RECENT AUDITS</span>
                         </div>
                         <div className="history-flow">
-                            {history.map(doc => (
-                                <div 
-                                    key={doc.id} 
-                                    className={`history-entry ${selectedDoc?.id === doc.id ? 'active' : ''}`}
-                                    onClick={() => setSelectedDoc(doc)}
-                                >
-                                    <div className="entry-main">
-                                        <FileText size={16} />
-                                        <span className="entry-title">{doc.fileName}</span>
+                            {isHistoryLoading ? (
+                                Array(5).fill(0).map((_, i) => (
+                                    <div key={i} className="history-entry skeleton" style={{ pointerEvents: 'none' }}>
+                                        <div className="entry-main">
+                                            <div className="skeleton-pulse" style={{ width: '16px', height: '16px', borderRadius: '4px' }}></div>
+                                            <div className="skeleton-pulse" style={{ width: '100px', height: '12px', borderRadius: '4px', marginLeft: '10px' }}></div>
+                                        </div>
+                                        <div className="skeleton-pulse" style={{ width: '40px', height: '10px', borderRadius: '4px' }}></div>
                                     </div>
-                                    <span className="entry-date">{new Date(doc.analyzedAt).toLocaleDateString()}</span>
+                                ))
+                            ) : historyError ? (
+                                <div className="history-empty error">
+                                    <span>⚠️ {historyError}</span>
+                                    <button onClick={fetchHistory} style={{ background: 'none', border: 'none', color: 'var(--elite-gold)', fontSize: '0.7rem', cursor: 'pointer', textDecoration: 'underline' }}>Retry</button>
                                 </div>
-                            ))}
-                            {history.length === 0 && <div className="history-empty">No previous audits</div>}
+                            ) : (
+                                <>
+                                    {history.map(doc => (
+                                        <div 
+                                            key={doc.id || doc._id} 
+                                            className={`history-entry ${selectedDoc?.id === doc.id || selectedDoc?.id === doc._id ? 'active' : ''}`}
+                                            onClick={() => setSelectedDoc(doc)}
+                                        >
+                                            <div className="entry-main">
+                                                <FileText size={16} />
+                                                <span className="entry-title">{doc.fileName}</span>
+                                            </div>
+                                            <span className="entry-date">{new Date(doc.analyzedAt).toLocaleDateString()}</span>
+                                        </div>
+                                    ))}
+                                    {history.length === 0 && <div className="history-empty">No previous audits</div>}
+                                </>
+                            )}
                         </div>
                     </div>
 
