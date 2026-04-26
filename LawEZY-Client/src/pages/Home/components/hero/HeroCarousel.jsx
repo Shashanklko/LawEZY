@@ -104,7 +104,7 @@ const HeroCarousel = () => {
                 className={`story-content ${index === current ? 'active' : ''}`}
               >
                 <span className="story-number">{img.id}</span>
-                <h2 className="story-title">{img.title}</h2>
+                <h1 className="story-title">{img.title}</h1>
                 <p className="story-body">{img.body}</p>
               </div>
             ))}

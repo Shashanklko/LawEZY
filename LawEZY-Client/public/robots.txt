@@ -1,4 +1,9 @@
 User-agent: *
 Allow: /
+Disallow: /admin/
+Disallow: /dashboard/
+Disallow: /messages/
+Disallow: /profile/
+Disallow: /notifications/
 
 Sitemap: https://lawezy.in/sitemap.xml

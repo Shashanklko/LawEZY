@@ -63,6 +63,7 @@ public class SecurityConfig {
             .cors(AbstractHttpConfigurer::disable)
             .csrf(AbstractHttpConfigurer::disable) // Disable CSRF since we are using JWT tokens
             .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/", "/index.html", "/static/**", "/*.js", "/*.css", "/*.png", "/*.ico", "/*.svg").permitAll()
                 .requestMatchers("/api/auth/**").permitAll()         // ALLOW anyone to hit login/register
                 .requestMatchers("/api/professionals/**").permitAll() // ALLOW access to professional listings
                 .requestMatchers("/api/system/mode").permitAll()     // ALLOW system mode check (used by MainLayout on load)

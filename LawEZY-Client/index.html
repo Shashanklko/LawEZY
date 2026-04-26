@@ -5,11 +5,21 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
+    <!-- DNS Prefetch & Preconnect for Performance -->
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com">
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
+    <!-- PWA Manifest & Theme Color -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#7F1D1D" />
+
     <!-- Primary Meta Tags -->
     <title>LawEZY | Elite Legal Services & AI Intelligence Ecosystem</title>
     <meta name="title" content="LawEZY | Elite Legal Services & AI Intelligence Ecosystem" />
-    <meta name="description" content="LawEZY provides a premium legal ecosystem featuring LexChat AI, real-time video consultations with top advocates, and an enterprise resource library. Perfect for MNC compliance and institutional legal networking." />
-    <meta name="keywords" content="legal services, AI lawyer, online legal consultation, LawEZY, legal compliance MNC, institutional legal networking, advocate consultation India" />
+    <meta name="description" content="LawEZY is India's premium legal ecosystem featuring Lawino AI, real-time advocate consultations, and enterprise resource libraries for MNCs and professionals." />
+    <meta name="keywords" content="legal services, AI assistance, online legal consultation, LawEZY, legal compliance, advocate consultation, legal tech India" />
     <meta name="author" content="LawEZY" />
     <meta name="robots" content="index, follow" />
     <link rel="canonical" href="https://lawezy.in/" />
@@ -18,14 +28,14 @@
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://lawezy.in/" />
     <meta property="og:title" content="LawEZY | Elite Legal Services Ecosystem" />
-    <meta property="og:description" content="State-of-the-art legal intelligence featuring LexChat AI and elite advocate networking." />
+    <meta property="og:description" content="India's leading legal intelligence platform. Featuring Lawino AI, real-time advocate consultations, and enterprise compliance tools." />
     <meta property="og:image" content="https://lawezy.in/og-image.jpg" />
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image" />
     <meta property="twitter:url" content="https://lawezy.in/" />
     <meta property="twitter:title" content="LawEZY | Elite Legal Services Ecosystem" />
-    <meta property="twitter:description" content="State-of-the-art legal intelligence featuring LexChat AI and elite advocate networking." />
+    <meta property="twitter:description" content="State-of-the-art legal intelligence featuring Lawino AI and elite advocate networking." />
     <meta property="twitter:image" content="https://lawezy.in/og-image.jpg" />
 
     <!-- Structured Data: Organization & Website -->
@@ -53,10 +63,54 @@
       "@context": "https://schema.org",
       "@type": "WebSite",
       "url": "https://lawezy.in",
+      "name": "LawEZY",
+      "description": "Premium Legal Services and AI Intelligence Ecosystem",
       "potentialAction": {
         "@type": "SearchAction",
         "target": "https://lawezy.in/experts?q={search_term_string}",
         "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
+
+    <!-- Advanced Service Schema -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Service",
+      "serviceType": "Legal and Financial Consultations",
+      "provider": {
+        "@type": "Organization",
+        "name": "LawEZY",
+        "url": "https://lawezy.in"
+      },
+      "areaServed": "IN",
+      "hasOfferCatalog": {
+        "@type": "OfferCatalog",
+        "name": "Legal Intelligence Services",
+        "itemListElement": [
+          {
+            "@type": "Offer",
+            "itemOffered": {
+              "@type": "Service",
+              "name": "Advocate Video Consultation"
+            }
+          },
+          {
+            "@type": "Offer",
+            "itemOffered": {
+              "@type": "Service",
+              "name": "Lawino AI Assistant"
+            }
+          },
+          {
+            "@type": "Offer",
+            "itemOffered": {
+              "@type": "Service",
+              "name": "MNC Compliance Library"
+            }
+          }
+        ]
       }
     }
     </script>
@@ -71,6 +125,20 @@
   </head>
   <body>
     <div id="root"></div>
+    
+    <!-- SEO Crawler Fallback -->
+    <noscript>
+      <h1>LawEZY | Elite Legal Services & AI Intelligence Ecosystem</h1>
+      <p>LawEZY provides premium legal consultations, AI lawyer assistance, and professional networking for MNCs and individuals in India.</p>
+      <nav>
+        <a href="/experts">Find Legal Experts</a>
+        <a href="/lawino-ai">Lawino AI </a>
+        <a href="/library">Legal Resource Library</a>
+        <a href="/about">About LawEZY</a>
+      </nav>
+      <img src="/favicon.svg" alt="LawEZY Logo - Elite Legal Services" />
+    </noscript>
+
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
