@@ -252,7 +252,18 @@ const Library = () => {
 
         <div className={`resources-dynamic-grid ${displayMode}`}>
           {loading ? (
-            <div className="loading-state">Syncing with Archives...</div>
+            <>
+              {[1, 2, 3, 4, 5, 6].map(i => (
+                <div key={i} className="resource-skeleton-card">
+                  <div className="skeleton-cover skeleton-pulse"></div>
+                  <div className="skeleton-info">
+                    <div className="skeleton-line skeleton-pulse" style={{ width: '80%' }}></div>
+                    <div className="skeleton-line skeleton-pulse" style={{ width: '40%', height: '12px' }}></div>
+                    <div className="skeleton-line skeleton-pulse" style={{ width: '100%', height: '32px', marginTop: '10px' }}></div>
+                  </div>
+                </div>
+              ))}
+            </>
           ) : sortedResources.length > 0 ? (
             sortedResources.map(resource => (
               <div 
@@ -311,18 +322,112 @@ const Library = () => {
               </div>
             ))
           ) : (
-            <div className="empty-state">No resources found in this jurisdiction.</div>
+            <div className="library-empty-state animate-reveal">
+              <div className="empty-icon-vault">📂</div>
+              <h3>No verified intelligence found</h3>
+              <p>Try adjusting your jurisdiction filter or search terms. Our archives are synchronized weekly.</p>
+              <div className="empty-actions">
+                <button className="btn-clear-filters" onClick={() => { setActiveCategory('all'); setSearchQuery(''); }}>Clear All Filters</button>
+                <button className="btn-request-arch" onClick={() => alert("Archive request submitted to admin.")}>Request Document</button>
+              </div>
+            </div>
           )}
         </div>
       </main>
 
-      {/* Add Resource Modal (Simplified for the fix) */}
+      {/* Add Resource Modal */}
       {showAddModal && (
-        <div className="elite-modal-overlay">
-           <div className="elite-modal-content glass">
-              <h2>Add Resource</h2>
-              <button onClick={() => setShowAddModal(false)}>Close</button>
-           </div>
+        <div className="elite-modal-overlay animate-reveal">
+          <div className="elite-modal-content glass">
+            <h2>Index New Intelligence</h2>
+            <p>Upload institutional documents or link external Google Drive archives.</p>
+            
+            <div className="elite-form-group">
+              <label>Document Title</label>
+              <input 
+                type="text" 
+                placeholder="e.g. Constitutional Law Handbook 2025" 
+                value={newResource.title}
+                onChange={(e) => setNewResource({...newResource, title: e.target.value})}
+              />
+            </div>
+
+            <div className="elite-form-row">
+              <div className="elite-form-group">
+                <label>Jurisdiction/Category</label>
+                <select 
+                  value={newResource.category}
+                  onChange={(e) => setNewResource({...newResource, category: e.target.value})}
+                >
+                  {MOCK_CATEGORIES.filter(c => c.id !== 'all').map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="elite-form-group">
+                <label>Page Count</label>
+                <input 
+                  type="number" 
+                  placeholder="e.g. 120" 
+                  value={newResource.pageCount}
+                  onChange={(e) => setNewResource({...newResource, pageCount: e.target.value})}
+                />
+              </div>
+            </div>
+
+            <div className="elite-form-group">
+              <label>Google Drive / PDF Link</label>
+              <input 
+                type="text" 
+                placeholder="https://drive.google.com/file/d/..." 
+                value={newResource.driveLink}
+                onChange={(e) => setNewResource({...newResource, driveLink: e.target.value})}
+              />
+              <p style={{ fontSize: '0.65rem', marginTop: '4px', fontStyle: 'italic', color: 'var(--elite-gold)' }}>
+                * Ensure link permissions are set to "Anyone with the link" for public access.
+              </p>
+            </div>
+
+            <div className="elite-form-group">
+              <label>Institutional Cover URL (Optional)</label>
+              <input 
+                type="text" 
+                placeholder="https://images.unsplash.com/..." 
+                value={newResource.coverUrl}
+                onChange={(e) => setNewResource({...newResource, coverUrl: e.target.value})}
+              />
+            </div>
+
+            <div className="elite-form-group">
+              <label>Abstract / Brief Description</label>
+              <textarea 
+                placeholder="Provide a summary of the legal intelligence contained in this resource..."
+                value={newResource.abstractText}
+                onChange={(e) => setNewResource({...newResource, abstractText: e.target.value})}
+              ></textarea>
+            </div>
+
+            <div className="modal-actions-elite">
+              <button className="btn-cancel" onClick={() => setShowAddModal(false)}>Cancel</button>
+              <button className="btn-confirm" onClick={async () => {
+                if (!newResource.title) { alert("Title is required."); return; }
+                try {
+                  const payload = {
+                    ...newResource,
+                    authorId: user?.id,
+                    content: "[]" // External links don't need internal content
+                  };
+                  await apiClient.post('/api/resources', payload);
+                  setShowAddModal(false);
+                  setNewResource({ title: '', category: 'const', abstractText: '', driveLink: '', coverUrl: '', pageCount: '' });
+                  fetchResources();
+                } catch (err) {
+                  console.error("Index failed:", err);
+                  alert("Failed to index resource.");
+                }
+              }}>Index Resource</button>
+            </div>
+          </div>
         </div>
       )}
     </div>
