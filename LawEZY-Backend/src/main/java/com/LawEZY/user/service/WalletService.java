@@ -213,7 +213,6 @@ public class WalletService {
             // 🛡️ Institutional Audit: Explicit Platform Commission Log (Attributed to Master Admin)
             recordPlatformEarning(platformCut, String.format("Platform Fee (Ref: %d) - Client: %s", appt.getId(), userId), appt.getId().toString(), "COMMISSION");
         }
-        }
         
         // 🚀 REAL-TIME BROADCAST: Admin Sync
         adminBroadcastService.broadcastAdminEvent("NEW_TRANSACTION", java.util.Map.of(
