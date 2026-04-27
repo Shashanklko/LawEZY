@@ -136,10 +136,26 @@ const ExpertAuditProfile = () => {
   const handleVerify = async (status) => {
     try {
       await apiClient.put(`/api/admin/experts/${id}/verify?status=${status}`);
-      alert(`Expert state transitioned: ${status ? 'VERIFIED' : 'SUSPENDED'}`);
+      alert(`Expert state transitioned: ${status ? 'VERIFIED' : 'PENDING'}`);
       fetchExpert();
     } catch (err) {
       alert("State transition failure.");
+    }
+  };
+
+  const handleBlock = async () => {
+    try {
+      const isBlocked = expert.enabled === false || expert.status === 'BLOCKED';
+      if (!isBlocked) {
+        await apiClient.put(`/api/admin/users/${id}/block`);
+        alert('Account suspended successfully.');
+      } else {
+        await apiClient.put(`/api/admin/users/${id}/unblock`);
+        alert('Account reactivated successfully.');
+      }
+      fetchExpert();
+    } catch (err) {
+      alert("Governance action failed.");
     }
   };
 
@@ -462,8 +478,17 @@ const ExpertAuditProfile = () => {
                     <button className="btn-saas-primary" onClick={() => handleSave('Dossier')} disabled={saving}>
                       {saving ? 'Synchronizing...' : 'Update Profile'}
                     </button>
+                    
+                    <button 
+                      className="btn-saas-secondary" 
+                      style={{ borderColor: (expert.enabled === false || expert.status === 'BLOCKED') ? '#10b981' : '#ef4444', color: (expert.enabled === false || expert.status === 'BLOCKED') ? '#10b981' : '#ef4444' }} 
+                      onClick={handleBlock}
+                    >
+                      {(expert.enabled === false || expert.status === 'BLOCKED') ? 'Activate / Unblock' : 'Suspend Account'}
+                    </button>
+
                     {expert.isVerified ? (
-                      <button className="btn-saas-secondary" style={{borderColor: '#ef4444', color: '#ef4444'}} onClick={() => handleVerify(false)}>Suspend Account</button>
+                      <button className="btn-saas-secondary" style={{borderColor: '#f59e0b', color: '#f59e0b'}} onClick={() => handleVerify(false)}>Revoke Verification</button>
                     ) : (
                       <button className="btn-saas-primary" style={{background: '#10b981'}} onClick={() => handleVerify(true)}>Verify Credentials</button>
                     )}

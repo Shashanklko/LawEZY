@@ -25,6 +25,9 @@ public class DataSeeder implements CommandLineRunner {
     @Autowired
     private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private com.LawEZY.user.repository.PlatformTreasuryRepository platformTreasuryRepository;
+
     @Value("${app.seed.admin-password:admin123}")
     private String adminPass;
 
@@ -40,7 +43,25 @@ public class DataSeeder implements CommandLineRunner {
 
         seedUser("shekhar Singh", "shekhar@test.com", clientPass, Role.CLIENT);
         seedUser("shashi shekhar", "teach2005shashank@gmail.com", expertPass, Role.LAWYER);
+        
+        seedTreasury();
+        
         log.info("✅ Institutional Data Seeding Complete.");
+    }
+
+    private void seedTreasury() {
+        if (!platformTreasuryRepository.existsById("SYSTEM_TREASURY")) {
+            log.info("🏛️ Initializing Platform Treasury...");
+            com.LawEZY.user.entity.PlatformTreasury treasury = new com.LawEZY.user.entity.PlatformTreasury();
+            treasury.setId("SYSTEM_TREASURY");
+            treasury.setTotalEarnings(0.0);
+            treasury.setCommissionEarnings(0.0);
+            treasury.setPlatformFeeEarnings(0.0);
+            treasury.setAiChatEarnings(0.0);
+            treasury.setAiAuditEarnings(0.0);
+            treasury.setLastUpdatedAt(java.time.LocalDateTime.now());
+            platformTreasuryRepository.save(treasury);
+        }
     }
 
     private void seedUser(String fullName, String email, String password, Role role) {

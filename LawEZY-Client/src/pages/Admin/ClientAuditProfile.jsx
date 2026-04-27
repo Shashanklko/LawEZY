@@ -79,7 +79,8 @@ const ClientAuditProfile = () => {
 
   const handleBlock = async () => {
     try {
-      if (client.enabled) {
+      const isBlocked = client.enabled === false || client.status === 'BLOCKED';
+      if (!isBlocked) {
         await apiClient.put(`/api/admin/users/${id}/block`);
         alert('Account suspended.');
       } else {
@@ -364,10 +365,10 @@ const ClientAuditProfile = () => {
                     </button>
                     <button 
                       className="btn-saas-secondary" 
-                      style={{ borderColor: client?.enabled ? '#ef4444' : '#10b981', color: client?.enabled ? '#ef4444' : '#10b981' }} 
+                      style={{ borderColor: (client?.enabled === false || client?.status === 'BLOCKED') ? '#10b981' : '#ef4444', color: (client?.enabled === false || client?.status === 'BLOCKED') ? '#10b981' : '#ef4444' }} 
                       onClick={handleBlock}
                     >
-                      {client?.enabled ? 'Suspend Account' : 'Reactivate Account'}
+                      {(client?.enabled === false || client?.status === 'BLOCKED') ? 'Activate / Unblock' : 'Suspend Account'}
                     </button>
                   </div>
                 </div>

@@ -297,7 +297,10 @@ const AdminPortal = () => {
     }
   };
 
-  const fetchAdminData = () => fetchInitialData();
+  const fetchAdminData = () => {
+    fetchInitialData();
+    fetchTabDetail(activeTab);
+  };
 
   // 🚀 REAL-TIME COMMAND CENTER: Socket Listener
   useEffect(() => {
@@ -925,8 +928,8 @@ setAdminAlert({ title: 'Liquidation Success', message: res.data.message, type: '
                           >
                             Audit Profile
                           </button>
-                          <button className={`btn-suspend-sm ${exp.enabled === false ? 'reactivate' : ''}`} onClick={() => handleBlockUser(exp.id)}>
-                            {exp.enabled === false ? 'Unblock' : 'Block'}
+                          <button className={`btn-suspend-sm ${(exp.enabled === false || exp.status === 'BLOCKED') ? 'reactivate' : ''}`} onClick={() => handleBlockUser(exp.id)}>
+                            {(exp.enabled === false || exp.status === 'BLOCKED') ? 'Unblock' : 'Block'}
                           </button>
                           <button className="btn-audit-sm" onClick={() => fetchExpertLogs(exp.id)}>Logs</button>
                           <button className="btn-purge-sm" onClick={() => handleDeleteProfile(exp.id, exp.name || exp.firstName)} title="Permanent Delete">🗑️</button>
@@ -994,8 +997,8 @@ setAdminAlert({ title: 'Liquidation Success', message: res.data.message, type: '
                           >
                             Audit Profile
                           </button>
-                          <button className={`btn-suspend-sm ${cli.enabled === false ? 'reactivate' : ''}`} onClick={() => handleBlockUser(cli.id)}>
-                            {cli.enabled === false ? 'Reactivate' : 'Suspend'}
+                          <button className={`btn-suspend-sm ${(cli.enabled === false || cli.status === 'BLOCKED') ? 'reactivate' : ''}`} onClick={() => handleBlockUser(cli.id)}>
+                            {(cli.enabled === false || cli.status === 'BLOCKED') ? 'Unblock' : 'Block'}
                           </button>
                           <button className="btn-audit-sm" onClick={() => navigate(`/admin/clients/${cli.id}/logs`)}>Logs</button>
                           <button className="btn-purge-sm" onClick={() => handleDeleteProfile(cli.id, cli.name || cli.firstName || cli.email)} title="Permanent Delete">🗑️</button>

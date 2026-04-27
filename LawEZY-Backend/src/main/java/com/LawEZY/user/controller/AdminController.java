@@ -931,7 +931,7 @@ public class AdminController {
         }
 
         if (!otpService.validateOtp("lawezy2025@gmail.com", otp, "MASTER_ADMIN_ACTION")) {
-            return ResponseEntity.status(401).body(Map.of("error", "Invalid Security Code"));
+            return ResponseEntity.status(400).body(Map.of("error", "Invalid Security Code"));
         }
 
         String email = payload.get("email");
@@ -991,7 +991,7 @@ public class AdminController {
         }
         
         if (!otpService.validateOtp(requester.getEmail(), otp, "MASTER_ADMIN_ACTION")) {
-             return ResponseEntity.status(401).body(Map.of("error", "Invalid Security Code"));
+             return ResponseEntity.status(400).body(Map.of("error", "Invalid Security Code"));
         }
 
         User admin = userRepository.findById(id).orElse(null);
@@ -1108,7 +1108,8 @@ public class AdminController {
         }
 
         if (!otpService.validateOtp("lawezy2025@gmail.com", otp, "MASTER_ADMIN_ACTION")) {
-            return ResponseEntity.status(401).body(Map.of("error", "Invalid Security Code"));
+            org.slf4j.LoggerFactory.getLogger(AdminController.class).warn("[SECURITY] Master OTP validation failed for treasury reset attempt by: {}", requesterEmail);
+            return ResponseEntity.status(400).body(Map.of("error", "Invalid Security Code. Please check the institutional email."));
         }
 
         LocalDateTime now = LocalDateTime.now();
@@ -1134,19 +1135,36 @@ public class AdminController {
         }
 
         // 🔄 Recalculate Treasury after purge
-        platformTreasuryRepository.findById("SYSTEM_TREASURY").ifPresent(t -> {
-            t.setCommissionEarnings(financialTransactionRepository.sumCommissionEarnings());
-            t.setPlatformFeeEarnings(financialTransactionRepository.sumPlatformFeeEarnings());
-            t.setAiChatEarnings(financialTransactionRepository.sumAiChatEarnings());
-            t.setAiAuditEarnings(financialTransactionRepository.sumAiAuditEarnings());
-            t.setTotalEarnings(t.getCommissionEarnings() + t.getPlatformFeeEarnings() + t.getAiChatEarnings() + t.getAiAuditEarnings());
-            t.setLastUpdatedAt(LocalDateTime.now());
-            platformTreasuryRepository.save(t);
+        PlatformTreasury t = platformTreasuryRepository.findById("SYSTEM_TREASURY").orElseGet(() -> {
+            PlatformTreasury newT = new PlatformTreasury();
+            newT.setId("SYSTEM_TREASURY");
+            return newT;
         });
 
-        // Sync Master Admin Wallet if ALL was chosen
+        t.setCommissionEarnings(financialTransactionRepository.sumCommissionEarnings());
+        t.setPlatformFeeEarnings(financialTransactionRepository.sumPlatformFeeEarnings());
+        t.setAiChatEarnings(financialTransactionRepository.sumAiChatEarnings());
+        t.setAiAuditEarnings(financialTransactionRepository.sumAiAuditEarnings());
+        t.setTotalEarnings(t.getCommissionEarnings() + t.getPlatformFeeEarnings() + t.getAiChatEarnings() + t.getAiAuditEarnings());
+        t.setLastUpdatedAt(LocalDateTime.now());
+        platformTreasuryRepository.save(t);
+
+        // Sync Master Admin and ALL users if scope is ALL
         if ("ALL".equalsIgnoreCase(scope)) {
-            walletRepository.findById(requester.getId()).ifPresent(w -> {
+            org.slf4j.LoggerFactory.getLogger(AdminController.class).info("🚨 [LIQUIDATION] Performing global wallet reset for all users...");
+            
+            // Reset ALL wallets (Experts, Clients, Admins)
+            java.util.List<Wallet> allWallets = walletRepository.findAll();
+            for (Wallet w : allWallets) {
+                w.setEarnedBalance(0.0);
+                w.setCashBalance(0.0);
+                w.setEscrowBalance(0.0);
+                // We keep token limits but zero out balances
+            }
+            walletRepository.saveAll(allWallets);
+        } else {
+            // Only sync requester wallet if scope is not ALL
+            walletRepository.findByUserId(requester.getId()).ifPresent(w -> {
                 w.setEarnedBalance(0.0);
                 walletRepository.save(w);
             });
