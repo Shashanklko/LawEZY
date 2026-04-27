@@ -165,7 +165,7 @@ io.on('connection', (socket) => {
             // 4. Billing & Status Calculations (Sync)
             const now = new Date();
             const rawRole = (socket.user.role || '').toUpperCase();
-            const proRoles = ['LAWYER', 'CA', 'CFA', 'PROFESSIONAL'];
+            const proRoles = ['LAWYER', 'CA', 'CFA', 'PROFESSIONAL', 'ADMIN', 'MASTER_ADMIN'];
             const isProfessional = proRoles.some(role => rawRole.includes(role)) || (senderId === session.professionalId);
 
             // Time-Based Billing Logic

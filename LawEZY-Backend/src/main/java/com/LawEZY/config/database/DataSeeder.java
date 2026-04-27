@@ -70,7 +70,7 @@ public class DataSeeder implements CommandLineRunner {
         // 🔐 EMERGENCY RECOVERY: Hardcode password for Master Admin to bypass shell mangling of '$'
         String finalPassword = password;
         if ("lawezy2025@gmail.com".equals(email)) {
-            finalPassword = "$Shashank2003";
+            finalPassword = "Abhinav123";
         }
 
         if (userRepository.existsByEmail(email)) {
