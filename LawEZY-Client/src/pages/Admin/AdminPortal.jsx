@@ -114,6 +114,7 @@ const AdminPortal = () => {
   
   // Master Management State
   const [masterOtp, setMasterOtp] = useState('');
+  const [otp, setOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [newAdminData, setNewAdminData] = useState({ 
     email: '', 
@@ -124,6 +125,7 @@ const AdminPortal = () => {
     loginId: '' 
   });
   const [admins, setAdmins] = useState([]);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const isMaster = currentUser?.id?.toLowerCase() === 'lawezy76' || 
                    currentUser?.username?.toLowerCase() === 'lawezy76' || 
                    currentUser?.email?.toLowerCase() === 'lawezy2025@gmail.com' ||
@@ -568,11 +570,17 @@ const AdminPortal = () => {
     try {
       await apiClient.post(`/api/admin/master/otp`);
       setOtpSent(true);
-      setAlertMessage("Institutional Security Code dispatched to secure terminal (lawezy2025@gmail.com).");
-      setAlertLevel("SUCCESS");
+      setAdminAlert({ 
+        title: 'Security Dispatched', 
+        message: 'Institutional Security Code sent to secure terminal (lawezy2025@gmail.com).', 
+        type: 'SUCCESS' 
+      });
     } catch (err) {
-      setAlertMessage("Master verification handshake failed. Identity mismatch.");
-      setAlertLevel("DANGER");
+      setAdminAlert({ 
+        title: 'Handshake Failed', 
+        message: 'Master verification handshake failed. Identity mismatch.', 
+        type: 'DANGER' 
+      });
     }
   };
 
@@ -628,7 +636,7 @@ const AdminPortal = () => {
 
     try {
       const res = await apiClient.post(`/api/admin/treasury/reset?otp=${otp}&scope=${purgeScope}`);
-      setAdminAlert({ title: 'Liquidation Success', message: res.data.message, type: 'SUCCESS' });
+setAdminAlert({ title: 'Liquidation Success', message: res.data.message, type: 'SUCCESS' });
       setOtp('');
       setOtpSent(false);
       fetchInitialData(); // Refresh stats
@@ -638,7 +646,7 @@ const AdminPortal = () => {
   };
 
   return (
-    <div className="admin-portal-wrapper">
+    <div className={`admin-portal-wrapper ${sidebarOpen ? 'sidebar-expanded' : ''}`}>
       {adminAlert && (
         <div className={`admin-notification-toast animate-slide-down ${adminAlert.type.toLowerCase()}`} onClick={() => setAdminAlert(null)}>
           <div className="toast-icon">⚡</div>
@@ -646,10 +654,10 @@ const AdminPortal = () => {
             <strong>{adminAlert.title}</strong>
             <p>{adminAlert.message}</p>
           </div>
-          <button className="btn-close-toast">×</button>
+          <button className="btn-close-toast" onClick={(e) => { e.stopPropagation(); setAdminAlert(null); }}>×</button>
         </div>
       )}
-      <aside className="admin-sidebar">
+      <aside className={`admin-sidebar ${sidebarOpen ? 'open' : ''}`}>
         <div className="admin-brand">
           <span className="lawezy-logo small">LAWEZY<span className="logo-dot">.</span></span>
           <span className="brand-separator">|</span>
@@ -658,22 +666,22 @@ const AdminPortal = () => {
         
         <nav className="admin-nav">
           {hasPermission('overview') && (
-            <button className={activeTab === 'overview' ? 'active' : ''} onClick={() => setActiveTab('overview')}>
+            <button className={activeTab === 'overview' ? 'active' : ''} onClick={() => { setActiveTab('overview'); setSidebarOpen(false); }}>
               <span className="nav-icon">📊</span> Overview
             </button>
           )}
           {hasPermission('experts') && (
-            <button className={activeTab === 'experts' ? 'active' : ''} onClick={() => setActiveTab('experts')}>
+            <button className={activeTab === 'experts' ? 'active' : ''} onClick={() => { setActiveTab('experts'); setSidebarOpen(false); }}>
               <span className="nav-icon">⚖️</span> Expert Management
             </button>
           )}
           {hasPermission('clients') && (
-            <button className={activeTab === 'clients' ? 'active' : ''} onClick={() => setActiveTab('clients')}>
+            <button className={activeTab === 'clients' ? 'active' : ''} onClick={() => { setActiveTab('clients'); setSidebarOpen(false); }}>
               <span className="nav-icon">👤</span> Client Management
             </button>
           )}
           {hasPermission('complaints') && (
-            <button className={activeTab === 'complaints' ? 'active' : ''} onClick={() => setActiveTab('complaints')} style={{ position: 'relative' }}>
+            <button className={activeTab === 'complaints' ? 'active' : ''} onClick={() => { setActiveTab('complaints'); setSidebarOpen(false); }} style={{ position: 'relative' }}>
               <span className="nav-icon">⚠️</span> Complaints Hub
               {complaints.filter(c => c.status !== 'RESOLVED').length > 0 && (
                 <span style={{ position: 'absolute', right: '15px', top: '50%', transform: 'translateY(-50%)', background: '#ef4444', color: 'white', fontSize: '0.65rem', padding: '2px 6px', borderRadius: '10px', fontWeight: 'bold' }}>
@@ -683,12 +691,12 @@ const AdminPortal = () => {
             </button>
           )}
           {hasPermission('finance') && (
-            <button className={activeTab === 'finance' ? 'active' : ''} onClick={() => setActiveTab('finance')}>
+            <button className={activeTab === 'finance' ? 'active' : ''} onClick={() => { setActiveTab('finance'); setSidebarOpen(false); }}>
               <span className="nav-icon">💳</span> Financial Dashboard
             </button>
           )}
           {hasPermission('logs') && (
-            <button className={activeTab === 'logs' ? 'active' : ''} onClick={() => setActiveTab('logs')} style={{ position: 'relative' }}>
+            <button className={activeTab === 'logs' ? 'active' : ''} onClick={() => { setActiveTab('logs'); setSidebarOpen(false); }} style={{ position: 'relative' }}>
               <span className="nav-icon">📜</span> System Logs
               {logs.length > 0 && (
                 <span style={{ position: 'absolute', right: '15px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', fontSize: '0.65rem', padding: '2px 6px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.1)' }}>
@@ -698,12 +706,12 @@ const AdminPortal = () => {
             </button>
           )}
           {hasPermission('content') && (
-            <button className={activeTab === 'content' ? 'active' : ''} onClick={() => setActiveTab('content')}>
+            <button className={activeTab === 'content' ? 'active' : ''} onClick={() => { setActiveTab('content'); setSidebarOpen(false); }}>
               <span className="nav-icon">📝</span> Content Control
             </button>
           )}
           {hasPermission('master') && (
-            <button className={activeTab === 'master' ? 'active' : ''} onClick={() => setActiveTab('master')}>
+            <button className={activeTab === 'master' ? 'active' : ''} onClick={() => { setActiveTab('master'); setSidebarOpen(false); }}>
               <span className="nav-icon">🛡️</span> Admin Management
             </button>
           )}
@@ -721,9 +729,14 @@ const AdminPortal = () => {
 
       <main className="admin-main">
         <header className="admin-top-bar">
-          <div className="header-title">
-            <h1>Platform Governance</h1>
-            <p>Institutional Oversight & Control</p>
+          <div className="header-left">
+            <button className="mobile-menu-toggle" onClick={() => setSidebarOpen(!sidebarOpen)}>
+              {sidebarOpen ? '✕' : '☰'}
+            </button>
+            <div className="header-title">
+              <h1>Platform Governance</h1>
+              <p>Institutional Oversight & Control</p>
+            </div>
           </div>
           <div className="admin-status-cluster">
             <div className={`system-status-indicator ${systemMode}`}>
@@ -1976,7 +1989,7 @@ const AdminPortal = () => {
                           <button 
                             className="btn-suspend-sm" 
                             style={{ padding: '12px 20px', fontSize: '0.85rem' }}
-                            onClick={() => handleSendOtp('lawezy2025@gmail.com')}
+                            onClick={handleRequestMasterOtp}
                           >
                             Generate Security Code
                           </button>

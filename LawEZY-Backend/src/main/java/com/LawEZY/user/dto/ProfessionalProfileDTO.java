@@ -38,8 +38,12 @@ public class ProfessionalProfileDTO {
     private String ifscCode;
     private String accountHolderName;
     private String upiId;
+    private String status;
 
     public ProfessionalProfileDTO() {}
+
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
 
     public String getPhoneNumber() { return phoneNumber; }
     public void setPhoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; }

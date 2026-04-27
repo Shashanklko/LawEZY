@@ -376,6 +376,15 @@ public class UserServiceImp implements UserService {
         dto.setCategory(user.getRole() != null ? user.getRole().name() : "OTHER");
         dto.setOnline(p.getOnline() != null ? p.getOnline() : true);
         
+        // 🛡️ GOVERNANCE STATUS CALCULATION
+        if (!user.isEnabled()) {
+            dto.setStatus("BLOCKED");
+        } else if (p.getOnline() != null && !p.getOnline()) {
+            dto.setStatus("INACTIVE"); // Temporary Unavailable
+        } else {
+            dto.setStatus("ACTIVE");
+        }
+        
         if (p instanceof com.LawEZY.user.entity.BaseProfile) {
             com.LawEZY.user.entity.BaseProfile bp = (com.LawEZY.user.entity.BaseProfile) p;
             

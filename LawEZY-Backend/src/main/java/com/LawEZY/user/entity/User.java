@@ -59,4 +59,9 @@ public class User {
         }
         return email;
     }
+
+    @com.fasterxml.jackson.annotation.JsonProperty("status")
+    public String getStatus() {
+        return enabled ? "ACTIVE" : "BLOCKED";
+    }
 }

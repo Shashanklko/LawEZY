@@ -3274,3 +3274,125 @@
   0% { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
 }
+
+/* RESPONSIVE GOVERNANCE: Mobile & Tablet Overhaul */
+@media (max-width: 1024px) {
+  .admin-sidebar {
+    position: fixed;
+    left: -280px;
+    top: 0;
+    bottom: 0;
+    z-index: 1000;
+    transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 20px 0 50px rgba(0,0,0,0.5);
+  }
+
+  .admin-sidebar.open {
+    left: 0;
+  }
+
+  .admin-top-bar {
+    padding: 0 20px;
+    height: 70px;
+  }
+
+  .mobile-menu-toggle {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    background: rgba(224, 195, 137, 0.1);
+    color: #e0c389;
+    border: 1px solid rgba(224, 195, 137, 0.2);
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    margin-right: 15px;
+  }
+
+  .header-title h1 {
+    font-size: 1.1rem;
+  }
+
+  .header-title p {
+    display: none;
+  }
+
+  .admin-status-cluster {
+    display: none;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    padding: 15px !important;
+    gap: 10px !important;
+  }
+
+  .admin-main {
+    padding-bottom: 80px;
+  }
+}
+
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .master-grid {
+    grid-template-columns: 1fr !important;
+    padding: 15px !important;
+  }
+
+  .finance-summary-grid {
+    grid-template-columns: 1fr !important;
+    padding: 15px !important;
+  }
+
+  .purge-scope-selector {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 10px;
+  }
+
+  .purge-scope-selector select {
+    width: 100%;
+  }
+
+  .liquidation-actions {
+    text-align: left !important;
+    margin-top: 15px;
+  }
+
+  .liquidation-actions div {
+    align-items: flex-start !important;
+  }
+
+  .admin-notification-toast {
+    left: 10px;
+    right: 10px;
+    min-width: 0;
+    max-width: none;
+  }
+}
+
+.mobile-menu-toggle {
+  display: none;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+}
+
+select option {
+  background: #1a1c1e;
+  color: white;
+  padding: 10px;
+}
+
+/* Additional Status Badge Styles */
+.status-badge.blocked { color: #ff4d4d; background: rgba(255, 77, 77, 0.1); border: 1px solid rgba(255, 77, 77, 0.2); }
+.status-badge.inactive { color: #888; background: rgba(136, 136, 136, 0.1); border: 1px solid rgba(136, 136, 136, 0.2); }
+.status-badge.active { background: rgba(0, 255, 136, 0.1); border: 1px solid rgba(0, 255, 136, 0.2); }
+
