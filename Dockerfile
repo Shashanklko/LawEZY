@@ -6,7 +6,7 @@ COPY ./LawEZY-Backend/src ./src
 RUN mvn clean package -DskipTests
 
 # --- STAGE 2: Final Production Image ---
-FROM openjdk:17-slim
+FROM eclipse-temurin:17-jre-jammy
 WORKDIR /app
 
 # Copy the built jar from the build stage
