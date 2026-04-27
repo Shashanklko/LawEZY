@@ -1,12 +1,11 @@
 import React, { Suspense, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import SockJS from 'sockjs-client';
-import Stomp from 'stompjs';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import FloatingMessenger from '../components/FloatingMessenger';
 import useAuthStore from '../store/useAuthStore';
 import apiClient from '../services/apiClient';
+import { whenConnected, subscribe, unsubscribe } from '../services/stompClient';
 
 const MainLayout = () => {
   const location = useLocation();
@@ -38,34 +37,26 @@ const MainLayout = () => {
     apiClient.get('/api/system/mode').then(res => {
       if (res.data?.mode) setSystemMode(res.data.mode);
     }).catch(err => console.error("Failed to sync system mode"));
+  }, [path, setSystemMode]);
 
-    // 🚀 REAL-TIME SYSTEM SYNC: Listen for Global Status Changes
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080';
-    const wsUrl = apiUrl.replace('/api', '') + '/ws';
-    const socket = new SockJS(wsUrl);
-    const stompClient = Stomp.over(socket);
-    stompClient.debug = null; // Disable logging to keep console clean
-
-    stompClient.connect({}, () => {
-      stompClient.subscribe('/topic/system-status', (message) => {
-        const data = JSON.parse(message.body);
-        if (data.mode) {
-          setSystemMode(data.mode);
-        }
+  // 🚀 REAL-TIME SYSTEM SYNC: Listen for Global Status Changes via shared STOMP client
+  useEffect(() => {
+    whenConnected(() => {
+      subscribe('/topic/system-status', (data) => {
+        if (data.mode) setSystemMode(data.mode);
       });
 
-      stompClient.subscribe('/topic/public-alerts', (message) => {
-        const data = JSON.parse(message.body);
+      subscribe('/topic/public-alerts', (data) => {
         setActiveAlert(data);
-        // Auto-dismiss after 15 seconds
         setTimeout(() => setActiveAlert(null), 15000);
       });
     });
 
     return () => {
-      if (stompClient.connected) stompClient.disconnect();
+      unsubscribe('/topic/system-status');
+      unsubscribe('/topic/public-alerts');
     };
-  }, [path, setSystemMode]);
+  }, [setSystemMode]);
 
   // 🛡️ NAVIGATION GOVERNANCE
   const isAuthPage = path === '/login' || path === '/signup';

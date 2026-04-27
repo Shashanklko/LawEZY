@@ -2,15 +2,9 @@ package com.LawEZY.notification.service;
 
 import com.LawEZY.notification.model.Notification;
 import com.LawEZY.notification.repository.NotificationRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @Service
 public class NotificationService {
@@ -18,16 +12,12 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
 
+    @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
+
     public NotificationService(NotificationRepository notificationRepository) {
         this.notificationRepository = notificationRepository;
     }
-    private final RestTemplate restTemplate = new RestTemplate();
-
-    @Value("${app.messenger.url:http://127.0.0.1:8081}")
-    private String messengerUrl;
-
-    @Value("${app.internal.secret:internal-secret}")
-    private String internalSecret;
 
     public Notification sendNotification(String userId, String title, String message, String type, String category, String actionLink) {
         // 1. Persist to MongoDB
@@ -42,20 +32,12 @@ public class NotificationService {
         Notification saved = notificationRepository.save(notification);
         log.info("🔔 [NOTIFICATION] Saved alert for user {}: {} [{}]", userId, title, category);
 
-        // 2. Trigger Real-Time Relay via Messenger Bridge (Protected)
+        // 2. Real-Time Relay via Internal WebSocket (No external HTTP bridge needed)
         try {
-            Map<String, Object> payload = new HashMap<>();
-            payload.put("userId", userId);
-            payload.put("notification", saved);
-            
-            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
-            headers.set("X-Internal-Secret", internalSecret);
-            org.springframework.http.HttpEntity<Map<String, Object>> entity = new org.springframework.http.HttpEntity<>(payload, headers);
-            
-            restTemplate.postForObject(messengerUrl + "/api/internal/emit-notification", entity, String.class);
-            log.info("🛰️ [RELAY] Real-time pulse sent to Messenger for user {}", userId);
+            messagingTemplate.convertAndSend("/topic/user/" + userId + "/notifications", saved);
+            log.info("🛰️ [RELAY] Real-time notification sent directly to user {} via WebSocket", userId);
         } catch (Exception e) {
-            log.warn("🛰️ [RELAY SILENT] Messenger bridge skipped or inactive. Local persistence confirmed.");
+            log.warn("🛰️ [RELAY] WebSocket notification delivery failed. Persistence confirmed: {}", e.getMessage());
         }
 
         return saved;

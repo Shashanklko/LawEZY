@@ -105,11 +105,6 @@ const ClientDashboard = () => {
                         </button>
                     </div>
                     <div className="expert-identity-card">
-                        <div className="avatar-wrapper-elite">
-                            <div className="letter-avatar" style={{ background: 'var(--midnight-primary)', color: 'var(--elite-gold)', width: '60px', height: '60px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1.5rem', border: '3px solid var(--elite-gold)' }}>
-                                {(profile?.name || user?.firstName || 'C')[0].toUpperCase()}
-                            </div>
-                        </div>
                         <div className="id-text">
                             <div className="name-bold">{profile?.name || user?.firstName || 'Institutional Client'}</div>
                             <div className="role-tag">CLIENT IDENTITY</div>

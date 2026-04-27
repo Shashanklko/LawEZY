@@ -520,23 +520,8 @@ const LawinoAI = () => {
           </button>
         </div>
 
-        {/* 🛡️ INSTITUTIONAL SAFETY BANNER */}
-        <div className="safety-advisory-banner animate-reveal" style={{
-          background: 'rgba(239, 68, 68, 0.05)',
-          borderBottom: '1px solid rgba(239, 68, 68, 0.15)',
-          padding: '12px 24px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-          zIndex: 50,
-          backdropFilter: 'blur(5px)'
-        }}>
-          <ShieldCheck size={16} color="#ef4444" />
-          <span style={{ fontSize: '0.75rem', color: '#dc2626', fontWeight: 700, letterSpacing: '0.5px', textTransform: 'uppercase' }}>
-            Institutional Disclaimer: AI insights are for orientation and may not reflect the latest regulatory updates. 
-            <span className="cta-link" onClick={() => navigate('/experts')} style={{ marginLeft: '8px', textDecoration: 'underline', cursor: 'pointer' }}>Verify critical findings with LawEZY Experts.</span>
-          </span>
-        </div>
+
+
 
         {isMobile && (
           <button 

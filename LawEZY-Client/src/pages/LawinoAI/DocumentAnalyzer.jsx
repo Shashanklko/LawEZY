@@ -281,35 +281,8 @@ const DocumentAnalyzer = () => {
                     </button>
                 </div>
 
-                {/* 🛡️ INSTITUTIONAL SAFETY BANNER */}
-                {showBanner && (
-                    <div className="safety-advisory-banner animate-reveal" style={{
-                        background: 'rgba(239, 68, 68, 0.05)',
-                        borderBottom: '1px solid rgba(239, 68, 68, 0.15)',
-                        padding: '12px 24px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: '12px',
-                        zIndex: 50,
-                        backdropFilter: 'blur(5px)'
-                    }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <ShieldCheck size={16} color="#ef4444" />
-                            <span style={{ fontSize: '0.75rem', color: '#dc2626', fontWeight: 700, letterSpacing: '0.5px', textTransform: 'uppercase' }}>
-                                Institutional Disclaimer: AI analysis is for diagnostic orientation and may not reflect the latest legal precedents. 
-                                <span className="cta-link" onClick={() => navigate('/experts')} style={{ marginLeft: '8px', textDecoration: 'underline', cursor: 'pointer' }}>Verify findings with LawEZY Experts.</span>
-                            </span>
-                        </div>
-                        <button 
-                            onClick={() => setShowBanner(false)}
-                            style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', opacity: 0.7 }}
-                            title="Close Disclaimer"
-                        >
-                            <X size={14} />
-                        </button>
-                    </div>
-                )}
+
+
 
                 {isLoading && (
                     <div className="loading-overlay">

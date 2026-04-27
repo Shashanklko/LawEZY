@@ -87,30 +87,8 @@ public class ChatController {
     }
 
 
-    // --- WEBSOCKET HANDLERS (STOMP) ---
+    // WebSocket message handlers moved to ChatWebSocketController
 
-    @MessageMapping("/chat.send")
-    public void sendMessage(SendMessageRequest request) {
-        // 1. Process message via Service (Business Rules)
-        ChatMessageResponse response = chatService.sendMessage(request);
-
-        // 2. Broadcast to the specific session topic
-        // Clients should subscribe to: /topic/chat/{sessionId}
-        messagingTemplate.convertAndSend("/topic/chat/" + request.getChatSessionId(), response);
-    }
-
-    @MessageMapping("/chat.endByUser")
-    public void endByUser(String sessionId) {
-        chatService.endChatByUser(sessionId);
-        // Notify all participants about resolution
-        messagingTemplate.convertAndSend("/topic/chat/" + sessionId + "/status", "RESOLVED");
-    }
-
-    @MessageMapping("/chat.endByProfessional")
-    public void endByProfessional(String sessionId) {
-        chatService.endChatByProfessional(sessionId);
-        messagingTemplate.convertAndSend("/topic/chat/" + sessionId + "/status", "PENDING_RESOLUTION");
-    }
 
     @DeleteMapping("/session/{sessionId}")
     public ResponseEntity<ApiResponse<Void>> deleteSession(@NonNull @PathVariable String sessionId) {

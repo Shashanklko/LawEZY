@@ -60,7 +60,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            .cors(AbstractHttpConfigurer::disable)
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(AbstractHttpConfigurer::disable) // Disable CSRF since we are using JWT tokens
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/", "/index.html", "/static/**", "/*.js", "/*.css", "/*.png", "/*.ico", "/*.svg").permitAll()
@@ -86,7 +86,7 @@ public class SecurityConfig {
             .formLogin(AbstractHttpConfigurer::disable)
             .httpBasic(AbstractHttpConfigurer::disable)
             .headers(headers -> headers
-                .frameOptions(org.springframework.security.config.annotation.web.configurers.HeadersConfigurer.FrameOptionsConfig::sameOrigin)
+                .frameOptions(org.springframework.security.config.annotation.web.configurers.HeadersConfigurer.FrameOptionsConfig::disable)
             )
             .exceptionHandling(exceptions -> exceptions
                 .authenticationEntryPoint(new org.springframework.security.web.authentication.HttpStatusEntryPoint(org.springframework.http.HttpStatus.UNAUTHORIZED))
@@ -99,6 +99,17 @@ public class SecurityConfig {
         http.authenticationProvider(authenticationProvider());
 
         return http.build();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOrigins(Arrays.asList(allowedOrigins.split(",")));
+        config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+        config.setAllowedHeaders(Arrays.asList("*"));
+        config.setAllowCredentials(true);
+        config.setMaxAge(3600L);
+        return (request) -> config;
     }
 
 }

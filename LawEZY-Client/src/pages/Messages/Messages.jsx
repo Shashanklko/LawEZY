@@ -164,7 +164,13 @@ const Messages = () => {
       const cached = localStorage.getItem(`lawezy_chats_${user.id}`);
       if (cached) {
         try {
-          setChats(JSON.parse(cached));
+          const parsed = JSON.parse(cached).map(s => ({
+            ...s,
+            name: s.name || s.otherPartyName || 'Expert Counsel',
+            unread: s.unread ?? s.unreadCount ?? 0,
+            online: s.status === 'ACTIVE' || s.status === 'AWAITING_REPLY'
+          }));
+          setChats(parsed);
         } catch (e) {
           console.warn('Failed to parse cached session data');
         }
@@ -179,7 +185,14 @@ const Messages = () => {
       const response = await apiClient.get(endpoint);
       
       if (response.data && response.data.data) {
-        const incoming = Array.isArray(response.data.data) ? response.data.data : [];
+        const incoming = (Array.isArray(response.data.data) ? response.data.data : []).map(s => ({
+            ...s,
+            name: s.name || s.otherPartyName || 'Expert Counsel',
+            avatar: s.avatar || s.otherPartyAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.otherPartyName || 'E')}&background=0D1B2A&color=E0C389`,
+            unread: s.unread ?? s.unreadCount ?? 0,
+            time: s.status === 'EXPIRED' ? 'Expired' : (s.status === 'RESOLVED' || s.status === 'ENDED' ? 'Closed' : (s.lastMessageTime || 'Active')),
+            online: s.status === 'ACTIVE' || s.status === 'AWAITING_REPLY' // Active sessions show as online
+          }));
         
         setChats(prev => {
             // [INSTITUTIONAL SYNC] Merge new data while preserving state of existing chats
@@ -1315,42 +1328,11 @@ const Messages = () => {
             )}
           </div>
           
-          <div 
-            className="sidebar-user-profile" 
-            onClick={() => setShowUserSettings(!showUserSettings)}
-            style={{ position: 'relative' }}
-            title="Account Options"
-          >
-            <div className="sidebar-user-avatar">
-              <div className="letter-avatar" style={{ background: 'var(--midnight-primary)', color: 'var(--elite-gold)', width: '42px', height: '42px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1rem', border: '2px solid var(--elite-gold)' }}>
-                {(user?.firstName || user?.name || 'U')[0].toUpperCase()}
-              </div>
-              <div className="user-online-status"></div>
-            </div>
+          <div className="sidebar-user-profile" style={{ position: 'relative' }}>
             <div className="sidebar-user-info">
-              <h4>{user ? `${user.firstName} ${user.lastName}` : 'Guest User'}</h4>
-              <p>{user?.role?.toUpperCase() || 'CLIENT'}</p>
+              <h4 style={{ textTransform: 'capitalize' }}>{user ? `${user.firstName?.toLowerCase() || ''} ${user.lastName?.toLowerCase() || ''}`.trim() : 'Guest User'}</h4>
+              <p style={{ textTransform: 'capitalize' }}>{user?.role?.toLowerCase().replace('_', ' ') || 'Client'}</p>
             </div>
-            <button className="sidebar-user-settings" onClick={(e) => { e.stopPropagation(); setShowUserSettings(!showUserSettings); }}>
-              <i className="fi fi-rr-settings"></i>
-            </button>
-
-            {showUserSettings && (
-              <div className="user-settings-popover animate-reveal" onClick={(e) => e.stopPropagation()}>
-                <div className="popover-header">
-                  <strong>Account Settings</strong>
-                </div>
-                <ul className="popover-menu">
-                  <li onClick={() => { setShowUserSettings(false); navigate('/dashboard'); }}>
-                    <i className="fi fi-rr-layout-fluid"></i> Dashboard
-                  </li>
-                  <li className="menu-divider"></li>
-                  <li className="logout-item" onClick={() => { logout(); navigate('/login'); }}>
-                    <i className="fi fi-rr-exit"></i> Logout Securely
-                  </li>
-                </ul>
-              </div>
-            )}
           </div>
         </aside>
 
