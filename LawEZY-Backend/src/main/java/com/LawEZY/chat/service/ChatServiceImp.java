@@ -831,19 +831,22 @@ public class ChatServiceImp implements ChatService {
     }
 
     @Override
+    @org.springframework.transaction.annotation.Transactional
     public void markAsRead(@NonNull String sessionId) {
+        String currentId = getCurrentAuthenticatedId();
         ChatSession session = chatSessionRepository.findById(sessionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Session not found"));
         
         verifySessionAccess(session);
-        List<com.LawEZY.chat.model.ChatMessage> unread = chatMessageRepository.findByChatSessionIdOrderByTimestampAsc(sessionId);
-        unread.forEach(msg -> {
-            if (!Boolean.TRUE.equals(msg.getIsRead())) {
-                msg.setIsRead(true);
-            }
-        });
-        chatMessageRepository.saveAll(unread);
-        log.info("[CHAT] Session {} marked as read.", sessionId);
+
+        // Fetch only unread messages where the current user is the recipient
+        List<com.LawEZY.chat.model.ChatMessage> unread = chatMessageRepository.findByChatSessionIdAndReceiverIdAndIsReadFalse(sessionId, currentId);
+        
+        if (!unread.isEmpty()) {
+            unread.forEach(msg -> msg.setIsRead(true));
+            chatMessageRepository.saveAll(unread);
+            log.info("[CHAT] Marked {} messages as read in session {} for user {}", unread.size(), sessionId, currentId);
+        }
     }
 
     @Override
