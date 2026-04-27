@@ -4,6 +4,8 @@ import com.LawEZY.user.dto.UserRequest;
 import com.LawEZY.user.enums.Role;
 import com.LawEZY.user.service.UserService;
 import com.LawEZY.user.repository.UserRepository;
+import com.LawEZY.user.repository.PlatformTreasuryRepository;
+import com.LawEZY.user.entity.PlatformTreasury;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
@@ -26,7 +28,7 @@ public class DataSeeder implements CommandLineRunner {
     private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
     @Autowired
-    private com.LawEZY.user.repository.PlatformTreasuryRepository platformTreasuryRepository;
+    private PlatformTreasuryRepository platformTreasuryRepository;
 
     @Value("${app.seed.admin-password:admin123}")
     private String adminPass;
@@ -52,7 +54,7 @@ public class DataSeeder implements CommandLineRunner {
     private void seedTreasury() {
         if (!platformTreasuryRepository.existsById("SYSTEM_TREASURY")) {
             log.info("🏛️ Initializing Platform Treasury...");
-            com.LawEZY.user.entity.PlatformTreasury treasury = new com.LawEZY.user.entity.PlatformTreasury();
+            PlatformTreasury treasury = new PlatformTreasury();
             treasury.setId("SYSTEM_TREASURY");
             treasury.setTotalEarnings(0.0);
             treasury.setCommissionEarnings(0.0);

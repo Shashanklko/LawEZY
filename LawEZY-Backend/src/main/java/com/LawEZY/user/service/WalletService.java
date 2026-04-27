@@ -10,6 +10,8 @@ import com.LawEZY.user.repository.ClientProfileRepository;
 import com.LawEZY.user.repository.ProfessionalProfileRepository;
 import com.LawEZY.notification.service.NotificationService;
 import com.LawEZY.common.exception.ResourceNotFoundException;
+import com.LawEZY.user.entity.PlatformTreasury;
+import com.LawEZY.user.repository.PlatformTreasuryRepository;
 import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,7 +36,7 @@ public class WalletService {
     private final NotificationService notificationService;
     private final com.LawEZY.common.service.EmailService emailService;
     private final AdminBroadcastService adminBroadcastService;
-    private final com.LawEZY.user.repository.PlatformTreasuryRepository treasuryRepository;
+    private final PlatformTreasuryRepository treasuryRepository;
 
     public WalletService(
             WalletRepository walletRepository,
@@ -45,7 +47,7 @@ public class WalletService {
             NotificationService notificationService,
             com.LawEZY.common.service.EmailService emailService,
             AdminBroadcastService adminBroadcastService,
-            com.LawEZY.user.repository.PlatformTreasuryRepository treasuryRepository
+            PlatformTreasuryRepository treasuryRepository
     ) {
         this.walletRepository = walletRepository;
         this.transactionRepository = transactionRepository;
@@ -278,8 +280,8 @@ public class WalletService {
         if (amount == null || amount <= 0) return;
 
         // 1. Update the Specialized Platform Treasury Table
-        com.LawEZY.user.entity.PlatformTreasury treasury = treasuryRepository.findById("SYSTEM_TREASURY")
-                .orElse(new com.LawEZY.user.entity.PlatformTreasury());
+        PlatformTreasury treasury = treasuryRepository.findById("SYSTEM_TREASURY")
+                .orElse(new PlatformTreasury());
         
         treasury.addEarning(amount, category);
         treasuryRepository.save(treasury);

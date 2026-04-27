@@ -5,7 +5,9 @@ import com.LawEZY.user.entity.Report;
 import com.LawEZY.user.entity.User;
 import com.LawEZY.user.entity.Wallet;
 import com.LawEZY.user.entity.FinancialTransaction;
+import com.LawEZY.user.entity.PlatformTreasury;
 import com.LawEZY.user.entity.ClientProfile;
+import com.LawEZY.user.repository.PlatformTreasuryRepository;
 import com.LawEZY.user.repository.ReportRepository;
 import com.LawEZY.user.repository.SystemConfigRepository;
 import com.LawEZY.user.repository.UserRepository;
@@ -62,7 +64,7 @@ public class AdminController {
     private final com.LawEZY.auth.service.OtpService otpService;
     private final ReviewRepository reviewRepository;
     private final ProfessionalProfileRepository professionalProfileRepository;
-    private final com.LawEZY.user.repository.PlatformTreasuryRepository platformTreasuryRepository;
+    private final PlatformTreasuryRepository platformTreasuryRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Autowired
@@ -87,7 +89,7 @@ public class AdminController {
                            com.LawEZY.user.service.WalletService walletService,
                            com.LawEZY.auth.service.OtpService otpService,
                            ReviewRepository reviewRepository,
-                           com.LawEZY.user.repository.PlatformTreasuryRepository platformTreasuryRepository,
+                           PlatformTreasuryRepository platformTreasuryRepository,
                            PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.reportRepository = reportRepository;
