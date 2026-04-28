@@ -49,6 +49,12 @@ public class AuthController {
     @Autowired
     private com.LawEZY.auth.service.OtpService otpService;
 
+    @Autowired
+    private com.LawEZY.user.repository.UserRepository userRepository;
+
+    @Autowired
+    private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<com.LawEZY.user.dto.UserResponse>> register(
             @RequestBody com.LawEZY.user.dto.UserRequest userRequest, 
@@ -106,6 +112,22 @@ public class AuthController {
         }
         
         try{
+            // 🔍 TEMP DEBUG: Direct password check before Spring Security
+            try {
+                var dbUser = userRepository.findByEmail(email);
+                if (dbUser.isPresent()) {
+                    var u = dbUser.get();
+                    boolean pwMatch = passwordEncoder.matches(authRequest.getPassword(), u.getPassword());
+                    log.info("[LOGIN-DEBUG] User: {} | ID: {} | Enabled: {} | PW-Match: {} | InputLen: {}", 
+                        email, u.getId(), u.isEnabled(), pwMatch, 
+                        authRequest.getPassword() != null ? authRequest.getPassword().length() : -1);
+                } else {
+                    log.warn("[LOGIN-DEBUG] NO USER FOUND for email: {}", email);
+                }
+            } catch (Exception dbg) {
+                log.warn("[LOGIN-DEBUG] Check failed: {}", dbg.getMessage());
+            }
+
             authManager.authenticate(
                 new UsernamePasswordAuthenticationToken(email, authRequest.getPassword()));
             
