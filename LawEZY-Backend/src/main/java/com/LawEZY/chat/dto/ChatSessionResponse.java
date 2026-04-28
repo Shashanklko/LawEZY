@@ -2,6 +2,7 @@ package com.LawEZY.chat.dto;
 
 import java.time.LocalDateTime;
 import com.LawEZY.chat.enums.ChatStatus;
+import com.fasterxml.jackson.annotation.JsonFormat;
 
 public class ChatSessionResponse {
     private String id;
@@ -15,11 +16,14 @@ public class ChatSessionResponse {
     private Integer unreadCount;
     private ChatStatus status;
     private Integer peerTokenBalance; // Institutional visibility for liquidity status
-    private LocalDateTime expiryTime; // New: Current window end
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "UTC")
+    private LocalDateTime expiryTime; // Current window end
     private Boolean trialEnded; // New: Trial state
     private Double textChatFee; // New: Rate for next block
     private Integer chatDurationMinutes; // New: Duration for next block
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "UTC")
     private LocalDateTime createdAt;
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "UTC")
     private LocalDateTime lastUpdateAt;
     private Boolean isOtherPartyEnabled; // Institutional Safety: Filter blocked contacts
 

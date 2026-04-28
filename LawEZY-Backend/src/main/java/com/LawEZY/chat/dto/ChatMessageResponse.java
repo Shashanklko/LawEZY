@@ -2,6 +2,7 @@ package com.LawEZY.chat.dto;
 
 import com.LawEZY.chat.enums.ChatStatus;
 import com.LawEZY.chat.enums.MessageType;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import java.time.LocalDateTime;
 
 public class ChatMessageResponse {
@@ -17,6 +18,7 @@ public class ChatMessageResponse {
     private String appointmentTime;
     private Double appointmentPrice;
     private String appointmentStatus;
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "UTC")
     private LocalDateTime timestamp;
     private ChatStatus status;
     private Boolean isRead = false;
