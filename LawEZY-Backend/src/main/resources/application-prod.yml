@@ -33,6 +33,36 @@ spring:
         model: gemini-1.5-pro
         python-url: ${PYTHON_SERVICE_URL}
 
+  gmail:
+    client-id: ${GMAIL_CLIENT_ID}
+    client-secret: ${GMAIL_CLIENT_SECRET}
+    refresh-token: ${GMAIL_REFRESH_TOKEN}
+    user-email: ${GMAIL_USER_EMAIL}
+
+jwt:
+  secret: ${JWT_SECRET}
+  expirationMs: ${JWT_EXPIRATION_MS:86400000}
+
+app:
+  cors:
+    allowed-origins: ${ALLOWED_ORIGINS}
+  messenger:
+    url: ${MESSENGER_URL:http://127.0.0.1:8081}
+  internal:
+    secret: ${INTERNAL_SECRET}
+  seed:
+    enabled: ${APP_SEED_ENABLED:true}
+
+supabase:
+  url: ${SUPABASE_URL}
+  key: ${SUPABASE_KEY}
+  bucket: ${SUPABASE_BUCKET:legal-docs}
+
+razorpay:
+  key:
+    id: ${RAZORPAY_KEY_ID}
+    secret: ${RAZORPAY_KEY_SECRET}
+
 logging:
   level:
     com.LawEZY: INFO
