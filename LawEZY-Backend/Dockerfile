@@ -12,9 +12,13 @@ WORKDIR /app
 # Copy the built JAR from the previous stage
 COPY --from=build /app/target/*.jar app.jar
 
-# Standard Spring Boot port
-EXPOSE 8080
+# Render expects port 10000 by default; override via SERVER_PORT env var
+ENV SERVER_PORT=10000
+EXPOSE ${SERVER_PORT}
 
-# Run the project
-# Using -Djava.security.egd=file:/dev/./urandom to speed up Tomcat startup
-ENTRYPOINT ["java", "-Djava.security.egd=file:/dev/./urandom", "-jar", "app.jar"]
+# Run the project with container-optimized JVM flags
+ENTRYPOINT ["java", \
+  "-Djava.security.egd=file:/dev/./urandom", \
+  "-XX:+UseContainerSupport", \
+  "-XX:MaxRAMPercentage=75.0", \
+  "-jar", "app.jar"]

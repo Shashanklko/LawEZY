@@ -142,7 +142,13 @@ public class AuthController {
             
             if (user.getRole() != Role.CLIENT) {
                 log.info("[MFA] Login successful, but challenge required for {} role: {}", user.getRole(), email);
-                otpService.generateAndSendOtp(email, "LOGIN_MFA");
+                try {
+                    otpService.generateAndSendOtp(email, "LOGIN_MFA");
+                } catch (Exception mfaEx) {
+                    log.error("[MFA] Failed to dispatch OTP email for {}: {}", email, mfaEx.getMessage());
+                    return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                        .body(ApiResponse.error("MFA_EMAIL_FAILED: Login credentials verified, but the verification email could not be sent. Please try again shortly."));
+                }
                 return ResponseEntity.ok(ApiResponse.success(null, "MFA_REQUIRED: A verification code has been sent to your registered email."));
             }
 
