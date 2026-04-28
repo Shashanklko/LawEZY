@@ -14,6 +14,13 @@ public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+    @ExceptionHandler(org.springframework.web.servlet.resource.NoResourceFoundException.class)
+    public ResponseEntity<ApiResponse<String>> handleNoResourceFound(
+            org.springframework.web.servlet.resource.NoResourceFoundException ex) {
+        // Silently return 404 for missing static resources (e.g., favicon.ico)
+        return new ResponseEntity<>(ApiResponse.error("Resource not found"), HttpStatus.NOT_FOUND);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<String>> handleAllExceptions(Exception ex, WebRequest request) {
         log.error("Unhandled Institutional Exception: ", ex);
