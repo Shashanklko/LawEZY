@@ -1,0 +1,39 @@
+# ====================================================
+# LawEZY Backend - PRODUCTION Profile (Render / Cloud)
+# Activate: SPRING_PROFILES_ACTIVE=prod on Render
+# All values come from Render environment variables
+# ====================================================
+
+server:
+  port: ${SERVER_PORT:10000}
+
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 2
+      max-lifetime: 120000
+      connection-timeout: 30000
+      idle-timeout: 60000
+
+  jpa:
+    show-sql: false
+
+  data:
+    mongodb:
+      uri: ${MONGO_URI}
+
+  ai:
+    google:
+      gemini:
+        api-key: ${GOOGLE_AI_API_KEY}
+        model: gemini-1.5-pro
+        python-url: ${PYTHON_SERVICE_URL}
+
+logging:
+  level:
+    com.LawEZY: INFO
+    org.hibernate.SQL: WARN
