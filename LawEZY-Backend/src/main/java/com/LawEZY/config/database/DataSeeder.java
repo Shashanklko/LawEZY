@@ -75,17 +75,13 @@ public class DataSeeder implements CommandLineRunner {
         }
 
         if (userRepository.existsByEmail(email)) {
-            // For MASTER_ADMIN, we force-update the password to ensure recovery
-            if (role == Role.MASTER_ADMIN) {
-                log.info("🔄 [RECOVERY] Force-updating password for Master Admin: {}", email);
-                String finalPass = finalPassword;
-                userRepository.findByEmail(email).ifPresent(user -> {
-                    user.setPassword(passwordEncoder.encode(finalPass));
-                    userRepository.save(user);
-                });
-            } else {
-                log.info("⏭️ Identity registry already contains: {}", email);
-            }
+            // Force-update password for ALL seeded users to stay in sync with config
+            log.info("🔄 [SYNC] Updating password for existing seeded account: {} | Role: {}", email, role);
+            String finalPass = finalPassword;
+            userRepository.findByEmail(email).ifPresent(user -> {
+                user.setPassword(passwordEncoder.encode(finalPass));
+                userRepository.save(user);
+            });
             return;
         }
 
