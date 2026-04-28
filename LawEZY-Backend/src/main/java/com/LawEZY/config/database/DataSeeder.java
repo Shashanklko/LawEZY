@@ -7,7 +7,6 @@ import com.LawEZY.user.repository.UserRepository;
 import com.LawEZY.user.repository.PlatformTreasuryRepository;
 import com.LawEZY.user.entity.PlatformTreasury;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
@@ -30,22 +29,14 @@ public class DataSeeder implements CommandLineRunner {
     @Autowired
     private PlatformTreasuryRepository platformTreasuryRepository;
 
-    @Value("${app.seed.admin-password:admin123}")
-    private String adminPass;
-
-    @Value("${app.seed.expert-password:expert123}")
-    private String expertPass;
-
-    @Value("${app.seed.client-password:client123}")
-    private String clientPass;
-
     @Override
     public void run(String... args) throws Exception {
         log.info("🏛️ Starting Institutional Data Seeding...");
 
-       seedUser("shekhar Singh", "shekhar@test.com", clientPass, Role.CLIENT);
-       seedUser("shashi shekhar", "teach2005shashank@gmail.com", expertPass, Role.LAWYER);
-        seedUser("System Administrator", "lawezy2025@gmail.com", adminPass, Role.MASTER_ADMIN);
+        // Hardcoded passwords to eliminate config-resolution ambiguity
+        seedUser("shekhar Singh", "shekhar@test.com", "shekhar123", Role.CLIENT);
+        seedUser("shashi shekhar", "teach2005shashank@gmail.com", "shashi123", Role.LAWYER);
+        seedUser("System Administrator", "lawezy2025@gmail.com", "Abhinav123", Role.MASTER_ADMIN);
         
         seedTreasury();
         
@@ -67,20 +58,17 @@ public class DataSeeder implements CommandLineRunner {
         }
     }
 
-    private void seedUser(String fullName, String email, String password, Role role) {
-        // 🔐 EMERGENCY RECOVERY: Hardcode password for Master Admin to bypass shell mangling of '$'
-        String finalPassword = password;
-        if ("lawezy2025@gmail.com".equals(email)) {
-            finalPassword = "Abhinav123";
-        }
-
+    private void seedUser(String fullName, String email, String plainPassword, Role role) {
         if (userRepository.existsByEmail(email)) {
-            // Force-update password for ALL seeded users to stay in sync with config
-            log.info("🔄 [SYNC] Updating password for existing seeded account: {} | Role: {}", email, role);
-            String finalPass = finalPassword;
+            // Force-update password for ALL seeded users to stay in sync
+            log.info("🔄 [SYNC] Force-updating password for: {} | Role: {} | PasswordLen: {}", email, role, plainPassword.length());
             userRepository.findByEmail(email).ifPresent(user -> {
-                user.setPassword(passwordEncoder.encode(finalPass));
+                String encoded = passwordEncoder.encode(plainPassword);
+                user.setPassword(encoded);
                 userRepository.save(user);
+                // Verification: confirm the password we just saved actually matches
+                boolean verified = passwordEncoder.matches(plainPassword, encoded);
+                log.info("✅ [SYNC] Password verified for {}: matches={}", email, verified);
             });
             return;
         }
@@ -92,15 +80,16 @@ public class DataSeeder implements CommandLineRunner {
 
             UserRequest request = new UserRequest();
             request.setEmail(email);
-            request.setPassword(finalPassword);
+            request.setPassword(plainPassword);
             request.setFirstName(first);
             request.setLastName(last);
             request.setRole(role);
 
             userService.createUser(request);
-            log.info("✨ Successfully seeded account: {} | Role: {}", email, role);
+            log.info("✨ Successfully seeded account: {} | Role: {} | PasswordLen: {}", email, role, plainPassword.length());
         } catch (Exception e) {
             log.error("❌ Failed to seed account: {} | Error: {}", email, e.getMessage());
         }
     }
 }
+
