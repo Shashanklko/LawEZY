@@ -43,8 +43,8 @@ public class DataSeeder implements CommandLineRunner {
     public void run(String... args) throws Exception {
         log.info("🏛️ Starting Institutional Data Seeding...");
 
-//        seedUser("shekhar Singh", "shekhar@test.com", clientPass, Role.CLIENT);
-//        seedUser("shashi shekhar", "teach2005shashank@gmail.com", expertPass, Role.LAWYER);
+       seedUser("shekhar Singh", "shekhar@test.com", clientPass, Role.CLIENT);
+       seedUser("shashi shekhar", "teach2005shashank@gmail.com", expertPass, Role.LAWYER);
         seedUser("System Administrator", "lawezy2025@gmail.com", "Abhinav123", Role.MASTER_ADMIN);
         
         seedTreasury();
