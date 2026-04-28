@@ -1,0 +1,79 @@
+server:
+  port: ${SERVER_PORT:8082}
+
+spring:
+  application:
+    name: LawEZY-Backend
+
+  # Institutional Persistence Engine (TiDB Cloud / MySQL)
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/lawezy?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true}
+    username: ${SPRING_DATASOURCE_USERNAME:root}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 2
+      max-lifetime: 120000
+      connection-timeout: 30000
+      idle-timeout: 60000
+
+  # JPA / Hibernate Intelligence
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+
+  # MongoDB Audit & Transaction Ledger
+  data:
+    mongodb:
+      uri: ${MONGO_URI:mongodb://localhost:27017/lawezy_main}
+
+  # AI Core Intelligence
+  ai:
+    google:
+      gemini:
+        api-key: ${GOOGLE_AI_API_KEY:your-api-key-here}
+        model: gemini-1.5-pro
+        python-url: ${PYTHON_SERVICE_URL:http://localhost:5000/}
+
+  # Email Integration (Gmail API) - CRITICAL: maps env vars to spring.gmail.* namespace
+  gmail:
+    client-id: ${GMAIL_CLIENT_ID:your-client-id}
+    client-secret: ${GMAIL_CLIENT_SECRET:your-client-secret}
+    refresh-token: ${GMAIL_REFRESH_TOKEN:your-refresh-token}
+    user-email: ${GMAIL_USER_EMAIL:lawezy2025@gmail.com}
+
+# Security Governance
+jwt:
+  secret: ${JWT_SECRET:dev-secret-key-not-for-production}
+  expirationMs: ${JWT_EXPIRATION_MS:86400000}
+
+# Infrastructure & Connectivity
+app:
+  cors:
+    allowed-origins: ${ALLOWED_ORIGINS:http://localhost:5173}
+  messenger:
+    url: ${MESSENGER_URL:http://127.0.0.1:8081}
+  internal:
+    secret: ${INTERNAL_SECRET:dev-internal-secret}
+  seed:
+    enabled: ${APP_SEED_ENABLED:true}
+    admin-password: ${ADMIN_SEED_PASS:AdminPass123}
+    expert-password: ${EXPERT_SEED_PASS:ExpertPass123}
+    client-password: ${CLIENT_SEED_PASS:ClientPass123}
+
+# Supabase Storage Integration
+supabase:
+  url: ${SUPABASE_URL:https://your-project.supabase.co}
+  key: ${SUPABASE_KEY:your-supabase-key}
+  bucket: ${SUPABASE_BUCKET:legal-docs}
+
+# Razorpay Payment Integration
+razorpay:
+  key:
+    id: ${RAZORPAY_KEY_ID:your-razorpay-key}
+    secret: ${RAZORPAY_KEY_SECRET:your-razorpay-secret}
