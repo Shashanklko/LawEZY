@@ -107,9 +107,9 @@ public class EmailService {
         NetHttpTransport httpTransport = GoogleNetHttpTransport.newTrustedTransport();
         
         UserCredentials credentials = UserCredentials.newBuilder()
-                .setClientId(clientId)
-                .setClientSecret(clientSecret)
-                .setRefreshToken(refreshToken)
+                .setClientId(clientId.replace("\"", "").trim())
+                .setClientSecret(clientSecret.replace("\"", "").trim())
+                .setRefreshToken(refreshToken.replace("\"", "").trim())
                 .build();
 
         return new Gmail.Builder(httpTransport, JSON_FACTORY, new HttpCredentialsAdapter(credentials))
