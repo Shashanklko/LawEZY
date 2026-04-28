@@ -14,7 +14,7 @@ COPY --from=build /app/target/*.jar app.jar
 
 # Render expects port 10000 by default; override via SERVER_PORT env var
 ENV SERVER_PORT=10000
-EXPOSE ${SERVER_PORT}
+EXPOSE 10000
 
 # Run the project with container-optimized JVM flags
 ENTRYPOINT ["java", \
